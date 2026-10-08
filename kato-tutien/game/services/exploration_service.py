@@ -9,6 +9,7 @@ from game.content.events import EXPLORATION_EVENTS, CHOICE_EVENTS
 from game.content.zones import EXPLORE_ZONES
 from game.repositories.inventory_repository import InventoryRepository
 from game.repositories.player_repository import PlayerRepository
+from game.repositories.exploration_repository import ExplorationRepository
 from game.rules.cultivation_rules import realm_text
 from game.services.combat_service import CombatService
 from game.services.quest_service import QuestService
@@ -24,14 +25,18 @@ STAT_DISPLAY_NAMES = {
 }
 
 from game.utils import weighted_pick
+from game.content.talents import talent_mod, destiny_mod
 
 
 class ExplorationService:
     def __init__(self, players: PlayerRepository, inventory: InventoryRepository,
                  combat: CombatService, quests: QuestService | None = None, world: WorldService | None = None,
-                 rng: random.Random | None = None):
+                 rng: random.Random | None = None, pending: ExplorationRepository | None = None):
         self.players = players
         self.inventory = inventory
+        if pending is None:
+            raise ValueError("ExplorationRepository must be injected by the engine.")
+        self.pending_repo = pending
         self.combat = combat
         self.quests = quests
         self.world = world
@@ -65,21 +70,17 @@ class ExplorationService:
         return {"zone": z, "key": zone_key, "player": p}
 
     def pending(self, user_id: str) -> dict | None:
-        row = self.players.db.fetchone(
-            "SELECT * FROM pending_exploration_events WHERE user_id=?", (user_id,))
+        row = self.pending_repo.get_pending(user_id)
         if not row:
             return None
         payload = json.loads(row["payload"])
         return {"event": payload, "zone_key": row["zone_key"], "created_at": row["created_at"]}
 
     def _save_pending(self, user_id: str, event: dict, zone_key: str) -> None:
-        self.players.db.execute(
-            "INSERT OR REPLACE INTO pending_exploration_events(user_id,event_key,zone_key,payload,created_at) VALUES(?,?,?,?,?)",
-            (user_id, event["key"], zone_key, json.dumps(event, ensure_ascii=False), int(time.time())),
-        )
+        self.pending_repo.save_pending(user_id, event, zone_key)
 
     def _clear_pending(self, user_id: str) -> None:
-        self.players.db.execute("DELETE FROM pending_exploration_events WHERE user_id=?", (user_id,))
+        self.pending_repo.clear_pending(user_id)
 
     def explore(self, user_id: str, zone_key: str | None = None) -> dict:
         p = self._require(user_id)
@@ -105,7 +106,8 @@ class ExplorationService:
         else:
             spawned = None
         # 37% chance to enter a multi-choice narrative event.
-        if CHOICE_EVENTS and self.rng.random() < 0.37:
+        choice_chance = min(0.70, 0.37 + float(talent_mod(p.talent, "rare_event", 0.0)) + float(destiny_mod(p.destiny, "luck", 0.0)) * 0.20 + p.fate * 0.001)
+        if CHOICE_EVENTS and self.rng.random() < choice_chance:
             candidates = [e for e in CHOICE_EVENTS if not e.get("zones") or key in e["zones"]]
             if candidates:
                 event = weighted_pick(self.rng, [(e, e["weight"]) for e in candidates])
@@ -116,6 +118,8 @@ class ExplorationService:
                     result["world_event"] = spawned
                 if self.quests:
                     result["quest_progress"] = self.quests.progress(user_id, "explore_zone", key)
+                if getattr(self, "sect_tower", None) is not None:
+                    self.sect_tower.record_activity(user_id, "explore", 1)
                 return result
 
         event = weighted_pick(self.rng, [(e, e["weight"]) for e in EXPLORATION_EVENTS])
@@ -133,6 +137,8 @@ class ExplorationService:
             if spawned:
                 result["world_event"] = spawned
             self.players.save(p)
+            if getattr(self, "sect_tower", None) is not None:
+                self.sect_tower.record_activity(user_id, "explore", 1)
             return result
         self._apply_effect(p, user_id, event, result)
         self.players.save(p)
@@ -140,6 +146,8 @@ class ExplorationService:
         result["quest_progress"] = result_quest
         if spawned:
             result["world_event"] = spawned
+        if getattr(self, "sect_tower", None) is not None:
+            self.sect_tower.record_activity(user_id, "explore", 1)
         return result
 
     def choose(self, user_id: str, choice_id: str) -> dict:
@@ -187,6 +195,12 @@ class ExplorationService:
         if "fate" in effect:
             p.fate = max(0, min(100, p.fate + int(effect["fate"])))
             result["fate"] = int(effect["fate"])
+        if "reputation" in effect:
+            delta=int(effect["reputation"]); p.reputation += delta; result["reputation"]=delta
+        if "dao_insight" in effect and p.dao_type:
+            amount=int(effect["dao_insight"]); p.dao_insight += amount
+            from game.rules.dao_rules import stage_from_insight
+            p.dao_stage=stage_from_insight(p.dao_insight); result["dao_insight"]=amount
         if "item" in effect:
             self.inventory.add(user_id, effect["item"], 1)
             result["item"] = effect["item"]
@@ -201,5 +215,8 @@ class ExplorationService:
             raise GameError(f"Săn còn chờ **{remain}s**.")
         p.last_hunt = now
         self.players.save(p)
-        enc = self.combat.start_encounter(user_id, boss=self.rng.random() < 0.15)
+        from game.content.monsters import BOSS_MONSTERS
+        eligible_bosses=[b for b in BOSS_MONSTERS if p.realm_index >= b["min_realm"]]
+        boss=bool(eligible_bosses) and self.rng.random() < min(0.15,0.05+p.fate*0.001)
+        enc=self.combat.start_encounter(user_id,boss=boss)
         return {"encounter": enc, "player": p, "realm": realm_text(p.realm_index, p.realm_layer)}

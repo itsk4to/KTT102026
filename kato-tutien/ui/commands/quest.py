@@ -4,9 +4,9 @@ import discord
 from game.services.errors import GameError
 from ui.embeds import base_embed, error_embed, success_embed
 from ui.views.quest_view import QuestOfferView, QuestChoiceView
-from ui.views.quest_gui import QuestMenuView
-from ui.views.npc_gui import NPCMenuView
-from ui.views.world_gui import WorldMenuView
+from ui.views.quest_view import QuestMenuView
+from ui.views.npc_view import NPCMenuView
+from ui.views.world_view import WorldMenuView
 
 
 async def cmd_npc(ctx, message: discord.Message, args: list[str] | None = None) -> None:

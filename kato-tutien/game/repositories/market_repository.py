@@ -20,10 +20,10 @@ class MarketRepository:
         row = self.db.fetchone("SELECT * FROM market_listings WHERE id=?", (listing_id,))
         return MarketListing.from_row(row) if row else None
 
-    def create(self, seller_id: str, item_id: str, quantity: int, price: int) -> int:
+    def create(self, seller_id: str, item_id: str, quantity: int, price_total: int, unit_price: int) -> int:
         cur = self.db.execute(
-            "INSERT INTO market_listings(seller_id, item_id, quantity, price, created_at) VALUES(?,?,?,?,?)",
-            (seller_id, item_id, quantity, price, int(time.time())),
+            "INSERT INTO market_listings(seller_id, item_id, quantity, price, unit_price, created_at) VALUES(?,?,?,?,?,?)",
+            (seller_id, item_id, quantity, price_total, unit_price, int(time.time())),
         )
         return int(cur.lastrowid)
 

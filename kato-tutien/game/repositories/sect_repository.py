@@ -130,6 +130,10 @@ class SectRepository:
         )
         return [dict(r) for r in rows]
 
+    def get_invitation(self, inv_id: int) -> dict | None:
+        row = self.db.fetchone("SELECT * FROM sect_invitations WHERE id=?", (int(inv_id),))
+        return dict(row) if row else None
+
     def set_invitation_status(self, inv_id: int, status: str) -> None:
         self.db.execute("UPDATE sect_invitations SET status=? WHERE id=?", (status, inv_id))
 

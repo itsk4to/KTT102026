@@ -1,6 +1,6 @@
-Kato Tu Tiên v3.3.2 — Utilities & Vietnamese UI
+Kato Tu Tiên v3.4.0 — Core Gameplay Integrity & Canonical Architecture
 
-# Kato Tu Tiên v3.3.2
+# Kato Tu Tiên v3.4.0
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
@@ -42,9 +42,9 @@ Models  = domain data
 
 ### 1. Database migration thật
 
-- Schema version tăng lên `4`.
-- Migration chạy từng bước, idempotent.
-- DB cũ thiếu known columns được tự sửa bằng `ALTER TABLE` an toàn.
+- Schema version hiện tại: `10`.
+- Migration chạy từng bước, idempotent, có đường nâng cấp 0 → 10.
+- DB cũ thiếu known columns được tự sửa bằng `ALTER TABLE` an toàn; migration 9 → 10 bổ sung giá / cái cho chợ.
 - Không còn kiểu chỉ đổi số version rồi giả vờ migration đã xong.
 - Thêm `sect_role_history` để lưu lịch sử chức vụ.
 
@@ -129,11 +129,13 @@ Bộ test Shop vẫn chạy đầy đủ.
 python -m pytest -q
 ```
 
-Current gameplay/service test result:
+Current core/gameplay regression result:
 
 ```text
-29 passed
+40 passed
 ```
+
+The full suite also includes Discord UI import checks; the current build environment used for this release does not have `discord.py` installed, so that environment-specific collection check cannot run here.
 
 Ngoài full shop suite còn có test cho:
 
@@ -155,7 +157,7 @@ python bot.py
 - Không commit secret/token/password vào GitHub.
 - v2 production không cần bị xóa để thử v3.
 - Migration không tự reset database.
-- Nên chạy v3.0.1 trên branch/test DB trước khi cho Railway dùng DB production.
+- Nên chạy v3.4.0 trên branch/test DB trước khi cho Railway dùng DB production.
 
 
 ## UX nhanh

@@ -6,7 +6,7 @@ from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, success_embed, combat_embed
 from ui.views.combat_view import CombatView
 from ui.views.exploration_view import ExplorationChoiceView
-from ui.views.exploration_gui import ExplorationMenuView
+from ui.views.exploration_view import ExplorationMenuView
 from game.content.items import ITEMS
 
 async def cmd_explore(ctx, message: discord.Message, args: list[str] | None = None) -> None:

@@ -1,0 +1,1 @@
+DUNGEONS={"co_dong_phu":{"name":"Cổ Động Phủ","zone":"dongphu","min_realm":3,"boss":"Sơn Quân"},"hai_long_cung":{"name":"Hải Long Cung","zone":"haivuc","min_realm":5,"boss":"Hải Vương"},"ma_cung":{"name":"Ma Cung Phế Tích","zone":"mavuc","min_realm":7,"boss":"Ma Tôn Phân Thân"}}

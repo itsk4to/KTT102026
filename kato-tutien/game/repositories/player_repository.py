@@ -8,6 +8,9 @@ class PlayerRepository:
     def __init__(self, db: Database):
         self.db = db
 
+    def transaction(self):
+        return self.db.transaction()
+
     def get(self, user_id: str) -> Player | None:
         row = self.db.fetchone("SELECT * FROM players WHERE user_id=?", (user_id,))
         return Player.from_row(row) if row else None
@@ -20,16 +23,16 @@ class PlayerRepository:
         self.db.execute(
             """INSERT INTO players (
                 user_id, display_name, path, realm_index, realm_layer, cultivation,
-                spirit_stones, root, insight, luck, fate, mind, destiny, talent,
+                spirit_stones, root, insight, luck, fate, mind, reputation, destiny, talent,
                 hp, max_hp, attack, defense, injury, lifespan,
                 dao_type, dao_stage, dao_insight, sect_id, explore_zone,
                 loadout, equipped, created_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 player.user_id, player.display_name, player.path,
                 player.realm_index, player.realm_layer, player.cultivation,
                 player.spirit_stones, player.root, player.insight, player.luck,
-                player.fate, player.mind, player.destiny, player.talent,
+                player.fate, player.mind, player.reputation, player.destiny, player.talent,
                 player.hp, player.max_hp, player.attack, player.defense,
                 player.injury, player.lifespan, player.dao_type, player.dao_stage,
                 player.dao_insight, player.sect_id, player.explore_zone,
@@ -41,7 +44,7 @@ class PlayerRepository:
         self.db.execute(
             """UPDATE players SET
                 display_name=?, path=?, realm_index=?, realm_layer=?, cultivation=?,
-                spirit_stones=?, root=?, insight=?, luck=?, fate=?, mind=?,
+                spirit_stones=?, root=?, insight=?, luck=?, fate=?, mind=?, reputation=?,
                 destiny=?, talent=?, hp=?, max_hp=?, attack=?, defense=?,
                 injury=?, lifespan=?, dao_type=?, dao_stage=?, dao_insight=?,
                 sect_id=?, explore_zone=?, loadout=?, equipped=?,
@@ -52,7 +55,7 @@ class PlayerRepository:
             (
                 player.display_name, player.path, player.realm_index, player.realm_layer,
                 player.cultivation, player.spirit_stones, player.root, player.insight,
-                player.luck, player.fate, player.mind, player.destiny, player.talent,
+                player.luck, player.fate, player.mind, player.reputation, player.destiny, player.talent,
                 player.hp, player.max_hp, player.attack, player.defense, player.injury,
                 player.lifespan, player.dao_type, player.dao_stage, player.dao_insight,
                 player.sect_id, player.explore_zone, player.loadout_json(), player.equipped,

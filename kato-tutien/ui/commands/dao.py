@@ -4,7 +4,7 @@ import discord
 from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, success_embed
-from ui.views.dao_gui import DaoMenuView
+from ui.views.dao_view import DaoMenuView
 from game.content.dao_paths import DAO_PATHS
 
 async def cmd_dao(ctx, message: discord.Message, args: list[str] | None = None) -> None:

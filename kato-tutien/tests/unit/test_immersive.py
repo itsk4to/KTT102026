@@ -33,6 +33,9 @@ class ImmersiveGameplayTests(unittest.TestCase):
         self.assertIn("mon_no_cua_lao_truong", npc["quests"])
         # Force a deterministic world event through repository, avoiding spawn probability.
         self.eng.world.world.create("hon_hac_long", "yeuthusonmach", 1, 9999999999)
+        player = self.eng.players.get("u1")
+        player.explore_zone = "yeuthusonmach"
+        self.eng._players.save(player)
         result = self.eng.world.contribute("u1", "hon_hac_long")
         self.assertTrue(result["finished"])
         self.assertEqual(self.eng.world.active(), [])

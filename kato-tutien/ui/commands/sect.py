@@ -5,7 +5,7 @@ from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, success_embed
 from game.utils import fmt_amount
-from ui.views.sect_gui import SectMenuView
+from ui.views.sect_view import SectMenuView
 
 async def cmd_sect(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:

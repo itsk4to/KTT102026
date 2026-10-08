@@ -11,7 +11,7 @@ from game.content.items import ITEMS
 
 async def cmd_shop(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     catalog = ctx.engine.economy.shop_catalog()
-    await message.reply(embed=shop_embed(catalog), view=ShopView(ctx.engine, catalog))
+    await message.reply(embed=shop_embed(catalog), view=ShopView(ctx.engine, catalog, str(message.author.id)))
 
 async def cmd_buy(ctx, message: discord.Message, args: list[str]) -> None:
     if not args:
@@ -84,23 +84,17 @@ async def cmd_unequip(ctx, message: discord.Message, args: list[str] | None = No
         await message.reply(embed=error_embed(str(e)))
 
 async def cmd_market(ctx, message: discord.Message, args: list[str] | None = None) -> None:
-    listings = ctx.engine.economy.market_browse()
-    if not listings:
-        await message.reply(embed=base_embed("🏪 Chợ", "Chưa có tin đăng."))
-        return
-    lines = [
-        f"`#{L['id']}` **{L['name']}** ×{L['qty']} — {fmt_amount(L['price'])} {EMOJI['spirit_stone']}"
-        for L in listings[:20]
-    ]
-    await message.reply(embed=base_embed("🏪 Chợ", "\n".join(lines)))
+    from ui.views.market_view import MarketView
+    view = MarketView(ctx.engine, str(message.author.id))
+    await message.reply(embed=view.build_embed(), view=view)
 
 async def cmd_market_list(ctx, message: discord.Message, args: list[str]) -> None:
     if len(args) < 3:
-        await message.reply(embed=error_embed("Cách dùng: `.dangban <vật_phẩm> <số_lượng> <giá>`"))
+        await message.reply(embed=error_embed("Cách dùng: `.dangban <vật_phẩm> <số_lượng> <giá_mỗi_cái>`"))
         return
     try:
         r = ctx.engine.economy.market_list(str(message.author.id), args[0], int(args[1]), int(args[2]))
-        await message.reply(embed=success_embed("✅ Đăng bán", f"#{r['listing_id']} **{r['item']['name']}** ×{r['qty']}"))
+        await message.reply(embed=success_embed("✅ Đăng bán", f"#{r['listing_id']} **{r['item']['name']}** ×{r['qty']} · {fmt_amount(r['price'])}/cái · {fmt_amount(r['total'])} tổng"))
     except (GameError, ValueError) as e:
         await message.reply(embed=error_embed(str(e)))
 

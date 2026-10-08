@@ -57,7 +57,7 @@ class AdminService:
         player = self.players.get(target_id)
         if not player:
             raise GameError("Không tìm thấy người chơi.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             player.spirit_stones += amount
             self.players.save(player)
             self.audit.log(actor_id, "grant_stones", target_id, f"amount={amount}")
@@ -73,7 +73,7 @@ class AdminService:
         player = self.players.get(target_id)
         if not player:
             raise GameError("Không tìm thấy người chơi.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             player.realm_index = realm_index
             player.realm_layer = realm_layer
             player.cultivation = 0
@@ -90,7 +90,7 @@ class AdminService:
         self.ensure_access(actor_id)
         if not is_owner(actor_id):
             raise GameError("Chỉ chủ quản mới được cấp quyền quản trị.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             self.audit.add_admin(target_id)
             self.audit.log(actor_id, "add_admin", target_id)
 
@@ -100,6 +100,6 @@ class AdminService:
             raise GameError("Chỉ chủ quản mới được gỡ quyền quản trị.")
         if is_owner(target_id):
             raise GameError("Không thể gỡ chủ quản bằng lệnh này.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             self.audit.remove_admin(target_id)
             self.audit.log(actor_id, "remove_admin", target_id)

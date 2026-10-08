@@ -57,7 +57,7 @@ class SectService:
             created_at=int(time.time()),
         )
         member = SectMember(sect_id=sid, user_id=user_id, role="Tông Chủ", joined_at=int(time.time()))
-        with self.players.db.transaction():
+        with self.players.transaction():
             p.spirit_stones -= 10_000
             self.sects.create(sect)
             self.sects.add_member(member)
@@ -91,7 +91,7 @@ class SectService:
         if target.sect_id:
             self.sects.set_application_status(app_id, "rejected")
             raise GameError("Người này đã có tông môn.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             self.sects.set_application_status(app_id, "accepted")
             self.sects.add_member(SectMember(
                 sect_id=actor.sect_id,
@@ -102,6 +102,18 @@ class SectService:
             target.sect_id = actor.sect_id
             self.players.save(target)
         return {"user_id": target.user_id, "sect_id": actor.sect_id}
+
+    def reject_application(self, actor_id: str, app_id: int) -> dict:
+        actor, member = self._require_member(actor_id)
+        if not has_permission(member.role, "sect.accept_application"): raise GameError("Không có quyền xử lý đơn.")
+        app = next((a for a in self.sects.list_applications(actor.sect_id) if a["id"] == app_id), None)
+        if not app: raise GameError("Đơn không tồn tại.")
+        self.sects.set_application_status(app_id,"rejected"); return {"user_id":app["user_id"]}
+
+    def reject_invite(self,user_id: str,inv_id: int)->dict:
+        self._require_player(user_id); inv=next((x for x in self.sects.list_invitations(user_id) if x["id"]==inv_id),None)
+        if not inv: raise GameError("Lời mời không tồn tại.")
+        self.sects.set_invitation_status(inv_id,"rejected"); return inv
 
     def invite(self, actor_id: str, target_id: str) -> dict:
         actor, member = self._require_member(actor_id)
@@ -119,6 +131,16 @@ class SectService:
         inv_id = self.sects.create_invitation(actor.sect_id, target_id, actor_id)
         return {"invitation_id": inv_id}
 
+    def cancel_invite(self, actor_id: str, inv_id: int) -> dict:
+        actor, member = self._require_member(actor_id)
+        if not has_permission(member.role, "sect.invite"):
+            raise GameError("Không có quyền hủy lời mời.")
+        inv = self.invitation_info(inv_id)
+        if not inv or inv["sect_id"] != actor.sect_id or inv["status"] != "pending":
+            raise GameError("Lời mời không tồn tại.")
+        self.sects.set_invitation_status(inv_id, "cancelled")
+        return inv
+
     def accept_invite(self, user_id: str, inv_id: int) -> dict:
         p = self._require_player(user_id)
         if p.sect_id:
@@ -130,7 +152,7 @@ class SectService:
         sect = self.sects.get(inv["sect_id"])
         if not sect:
             raise GameError("Tông môn không còn tồn tại.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             self.sects.set_invitation_status(inv_id, "accepted")
             self.sects.add_member(SectMember(
                 sect_id=inv["sect_id"],
@@ -151,20 +173,22 @@ class SectService:
         sect = self.sects.get(p.sect_id)
         if not sect:
             raise GameError("Tông môn không tồn tại.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             p.spirit_stones -= amount
             sect.treasury += amount
             member.contribution += amount
             self.players.save(p)
             self.sects.save(sect)
             self.sects.update_member(member)
+        if getattr(self, "sect_tower", None) is not None:
+            self.sect_tower.record_activity(user_id, "donate", amount)
         return {"amount": amount, "treasury": sect.treasury, "contribution": member.contribution}
 
     def leave(self, user_id: str) -> dict:
         p, member = self._require_member(user_id)
         if member.role == "Tông Chủ":
             raise GameError("Tông Chủ phải nhường chức hoặc giải tán trước.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             self.sects.remove_member(p.sect_id, user_id)
             p.sect_id = None
             self.players.save(p)
@@ -175,7 +199,7 @@ class SectService:
         if not has_permission(member.role, "sect.dissolve"):
             raise GameError("Chỉ Tông Chủ mới giải tán được.")
         members = self.sects.list_members(p.sect_id)
-        with self.players.db.transaction():
+        with self.players.transaction():
             for m in members:
                 mp = self.players.get(m.user_id)
                 if mp:
@@ -184,10 +208,18 @@ class SectService:
             self.sects.delete(p.sect_id)
         return {"ok": True}
 
+    def invitation_info(self, invitation_id: int) -> dict | None:
+        data = self.sects.get_invitation(invitation_id)
+        if not data:
+            return None
+        sect = self.sects.get(data["sect_id"])
+        data["sect_name"] = sect.name if sect else "một tông môn"
+        return data
+
     def overview(self, user_id: str) -> dict:
         p = self._require_player(user_id)
         if not p.sect_id:
-            return {"in_sect": False, "sects": self.list_sects()}
+            return {"in_sect": False, "sects": self.list_sects(), "invitations": self.sects.list_invitations(user_id)}
         sect = self.sects.get(p.sect_id)
         members = self.sects.list_members(p.sect_id)
         member = self.sects.get_member(p.sect_id, user_id)
@@ -216,7 +248,7 @@ class SectService:
         promote = SECT_ROLES.index(new_role) < SECT_ROLES.index(old_role)
         if not can_change_role(am.role, old_role, new_role, promote=promote):
             raise GameError("Không đủ thẩm quyền thay đổi chức vụ này.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             tm.role = new_role
             self.sects.update_member(tm)
             self.sects.record_role_change(actor.sect_id, actor_id, target_id, old_role, new_role)
@@ -232,7 +264,7 @@ class SectService:
             raise GameError("Không phải thành viên.")
         if not can_kick(am.role, tm.role):
             raise GameError("Không đủ thẩm quyền khai trừ người này.")
-        with self.players.db.transaction():
+        with self.players.transaction():
             self.sects.remove_member(actor.sect_id, target_id)
             target.sect_id = None
             self.players.save(target)
@@ -246,7 +278,7 @@ class SectService:
         if not target or target_id == actor_id:
             raise GameError("Người nhận chức không hợp lệ.")
         old_role = target.role
-        with self.players.db.transaction():
+        with self.players.transaction():
             actor.role = "Phó Tông Chủ"
             target.role = "Tông Chủ"
             self.sects.update_member(actor)

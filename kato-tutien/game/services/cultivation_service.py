@@ -5,6 +5,7 @@ import time
 
 from config import CULTIVATE_COOLDOWN, DAILY_COOLDOWN
 from game.content.realms import REALMS, cultivation_requirement, TRIBULATION_REALM_INDEX
+from game.content.talents import talent_mod, destiny_mod
 from game.repositories.player_repository import PlayerRepository
 from game.rules.cultivation_rules import (
     breakthrough_chance,
@@ -14,12 +15,14 @@ from game.rules.cultivation_rules import (
     realm_text,
 )
 from game.services.errors import GameError
+from game.rules.breakthrough_rules import apply_failure_injury
 
 
 class CultivationService:
-    def __init__(self, players: PlayerRepository, rng: random.Random | None = None):
+    def __init__(self, players: PlayerRepository, rng: random.Random | None = None, inventory=None):
         self.players = players
         self.rng = rng or random.Random()
+        self.inventory = inventory
 
     def _require(self, user_id: str):
         p = self.players.get(user_id)
@@ -38,10 +41,16 @@ class CultivationService:
         room = headroom(p.cultivation, p.realm_index, p.realm_layer)
         if room <= 0:
             raise GameError("Tu vi đã đầy. Hãy **đột phá**.")
-        gain = min(room, cultivate_gain(p.root, p.insight, p.luck))
+        gain = min(room, int(cultivate_gain(p.root, p.insight, p.luck) * float(talent_mod(p.talent, "cultivation", 1.0)) * float(destiny_mod(p.destiny, "cultivation", 1.0))))
         p.cultivation += gain
+        if p.dao_type:
+            p.dao_insight += 1
+            from game.rules.dao_rules import stage_from_insight
+            p.dao_stage = stage_from_insight(p.dao_insight)
         p.last_cultivate = now
         self.players.save(p)
+        if getattr(self, "sect_tower", None) is not None:
+            self.sect_tower.record_activity(user_id, "cultivate", 1)
         return {
             "gain": gain,
             "cultivation": p.cultivation,
@@ -55,7 +64,7 @@ class CultivationService:
         req = cultivation_requirement(p.realm_index, p.realm_layer)
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus,
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)),
         )
         return {
             "ready": p.cultivation >= req and not is_max_realm(p.realm_index, p.realm_layer),
@@ -82,7 +91,7 @@ class CultivationService:
             raise GameError("Cần **Ứng Thiên Kiếp** để vượt Độ Kiếp.")
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus,
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)),
         )
         success = self.rng.random() < chance
         if success:
@@ -99,7 +108,7 @@ class CultivationService:
             self.players.add_history(user_id, "breakthrough", realm_text(p.realm_index, p.realm_layer))
         else:
             p.cultivation = int(p.cultivation * 0.85)
-            p.injury = min(100, p.injury + 5)
+            p.injury = apply_failure_injury(p.injury, 5, float(talent_mod(p.talent, "injury_mult", 1.0)))
         self.players.save(p)
         return {
             "success": success,
@@ -108,16 +117,13 @@ class CultivationService:
             "player": p,
         }
 
-    def use_breakthrough_item(self, user_id: str, item_id: str) -> dict:
+    def breakthrough_item_bonus(self, user_id: str, item_id: str) -> dict:
         from game.content.items import ITEMS
-        p = self._require(user_id)
         item = ITEMS.get(item_id) or {}
         bonus = float(item.get("breakthrough_bonus", 0.0))
         if item.get("type") != "consumable" or bonus <= 0:
             raise GameError("Đạo cụ này không hỗ trợ đột phá.")
-        from game.repositories.inventory_repository import InventoryRepository
-        inventory = InventoryRepository(self.players.db)
-        if not inventory.remove(user_id, item_id, 1):
+        if not self.inventory or self.inventory.get_count(user_id, item_id) < 1:
             raise GameError("Không có đạo cụ này trong túi.")
         return {"bonus": bonus, "item_id": item_id, "item": item}
 

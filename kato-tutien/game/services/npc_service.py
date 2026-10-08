@@ -29,7 +29,7 @@ class NPCService:
         npc = NPCS.get(npc_key)
         if not npc:
             raise GameError("Không tìm thấy NPC này.")
-        if npc["zone"] != p.explore_zone and p.realm_index < 3:
+        if npc["zone"] != p.explore_zone:
             raise GameError("NPC này không ở khu vực hiện tại.")
         rel = self.relationships.get(user_id, npc_key)
         available = []

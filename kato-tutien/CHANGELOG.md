@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.4.0 — Gameplay Integrity & Canonical Tree
+- Schema 10: explicit reputation, mission claim state and market unit price.
+- Fixed sect mission infinite reward using per-member daily progress/claim state.
+- Added sect inbox GUI for applications and invitations.
+- Breakthrough items are only consumed on confirmed breakthrough.
+- Fixed Dao Lu request rollback when DM delivery fails.
+- Connected Dao stage, crit and spirit modifiers to combat.
+- Added active talent/destiny modifiers.
+- Added reputation state and real reputation consequences.
+- Restricted quests/world events to valid context and realm.
+- Matched combat encounters/bosses to player realm.
+- Added canonical content/economy architecture modules.
+- Clarified new market listings as price-per-item.
+- Added player-market GUI and full sect member-management GUI.
+- Canonicalized UI view files; legacy `*_gui.py` paths remain as compatibility shims only.
+- Removed direct database access from services/UI/economy; repositories own persistence boundaries.
+- Connected talent injury modifiers and strict NPC zone checks.
+
 ## 3.3.8 — Gameplay GUI Expansion
 - Chuẩn hóa custom emoji theo semantic mapping do server cung cấp.
 - `.tutien` mở GUI chọn Tiên/Ma; giữ legacy args để tương thích.
@@ -27,8 +45,6 @@
 - Mở Túi và Đạo trực tiếp từ trang Nhân vật.
 - Không đổi service/rules/repository/database schema.
 - Kiểm tra: `compileall` + static checks PASS; pytest không collect được vì môi trường thiếu `discord.py`.
-
-# Changelog
 
 ## 3.3.5 — Main Hub & GUI Navigation
 - Thêm `.menu` / `.mn` làm Trung Tâm giao diện chính.
@@ -77,3 +93,13 @@ Kato Tu Tiên v3.3.2 — Utilities & Vietnamese UI
 - Cleaner NPC, quest journal, and world-event embeds.
 - Action-oriented footers for common next steps.
 - No gameplay/database changes; custom emoji mapping remains centralized for the upcoming emoji pack.
+
+## 3.3.9 — UX Fixes & Gameplay Audit
+
+- Fixed Dao selection GUI by replacing the single select with direct Dao buttons.
+- Added `.ketduyen @player` request flow with recipient DM GUI for Accept/Reject.
+- Updated Help with current quick commands, GUI sections, advanced actions and Dao Lu request flow.
+- Expanded Shop into a full GUI: category -> item -> quantity -> purchase, with centralized emoji mapping.
+- Added Sect "Tuyển thành viên" GUI action for authorized roles.
+- Added Dao Lu rejection service.
+- Version metadata synchronized to 3.3.9.

@@ -21,8 +21,17 @@ from game.repositories.audit_repository import AuditRepository
 from game.repositories.quest_repository import QuestRepository
 from game.repositories.world_repository import WorldRepository
 from game.repositories.npc_repository import NPCRepository
+from game.repositories.exploration_repository import ExplorationRepository
+from game.repositories.dao_lu_repository import DaoLuRepository
+from game.repositories.code_repository import CodeRepository
+from game.repositories.heavenly_dao_repository import HeavenlyDaoRepository
+from game.repositories.mission_repository import MissionRepository
 from game.services.player_service import PlayerService
 from game.services.cultivation_service import CultivationService
+from game.services.breakthrough_service import BreakthroughService
+from game.services.fate_service import FateService
+from game.services.reputation_service import ReputationService
+from game.services.death_service import DeathService
 from game.services.combat_service import CombatService
 from game.services.economy_service import EconomyService
 from game.services.exploration_service import ExplorationService
@@ -57,23 +66,35 @@ class GameEngine:
         self._quests = QuestRepository(db)
         self._world = WorldRepository(db)
         self._npcs = NPCRepository(db)
+        self._exploration = ExplorationRepository(db)
+        self._dao_lu = DaoLuRepository(db)
+        self._codes = CodeRepository(db)
+        self._heavenly = HeavenlyDaoRepository(db)
+        self._missions = MissionRepository(db)
 
         # services
         self.players = PlayerService(self._players, self.rng)
-        self.cultivation = CultivationService(self._players, self.rng)
+        self.cultivation = CultivationService(self._players, self.rng, self._inventory)
+        self.breakthrough = BreakthroughService(self.cultivation, self._players, self._inventory)
         self.combat = CombatService(self._players, self._inventory, self.rng)
-        self.economy = EconomyService(self._players, self._inventory, self._market, self.rng)
+        self.economy = EconomyService(self._players, self._inventory, self._market, self.rng, self._codes)
         self.quests = QuestService(self._players, self._quests, self._inventory)
         self.world = WorldService(self._players, self._world, self.rng)
         self.npc = NPCService(self._players, self.quests, self._npcs)
         self.quests.npc_service = self.npc
-        self.exploration = ExplorationService(self._players, self._inventory, self.combat, self.quests, self.world, self.rng)
+        self.exploration = ExplorationService(self._players, self._inventory, self.combat, self.quests, self.world, self.rng, self._exploration)
         self.sect = SectService(self._players, self._sects)
-        self.sect_tower = SectTowerService(self._players, self._sects, self.rng)
+        self.sect_tower = SectTowerService(self._players, self._sects, self.rng, self._missions)
+        self.cultivation.sect_tower = self.sect_tower
+        self.sect.sect_tower = self.sect_tower
+        self.exploration.sect_tower = self.sect_tower
         self.dao = DaoService(self._players)
-        self.dao_lu = DaoLuService(self._players)
-        self.heavenly_dao = HeavenlyDaoService(self._players, self._audit)
-        self.codes = CodeService(self._players, self._audit)
+        self.fate = FateService(self._players)
+        self.reputation = ReputationService(self._players)
+        self.death = DeathService(self._players)
+        self.dao_lu = DaoLuService(self._players, self._dao_lu)
+        self.heavenly_dao = HeavenlyDaoService(self._players, self._audit, self._heavenly)
+        self.codes = CodeService(self._players, self._audit, self._codes)
         self.admin_auth = AdminAuth()
         self.admin = AdminService(self._players, self._sects, self._audit, self.admin_auth)
         self.audit = self._audit

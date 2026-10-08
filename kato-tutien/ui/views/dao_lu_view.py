@@ -42,7 +42,7 @@ class DaoLuView(discord.ui.View):
         song.callback = self._song
         self.add_item(song)
         if self.engine.dao_lu.pending(self.user_id):
-            accept = discord.ui.Button(label="Chấp nhận lời cầu duyên", emoji=EMOJI["ok"], style=discord.ButtonStyle.success, row=2)
+            accept = discord.ui.Button(label="Chấp nhận lời cầu duyên", emoji=EMOJI["accept"], style=discord.ButtonStyle.success, row=2)
             accept.callback = self._accept_pending
             self.add_item(accept)
         back = discord.ui.Button(label="Trung tâm", emoji="🏠", style=discord.ButtonStyle.secondary, row=3)
@@ -81,5 +81,50 @@ class DaoLuView(discord.ui.View):
 
     async def _back(self, interaction):
         if not self._guard(interaction): return await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
-        from ui.views.gui_navigation import MainMenuView, build_main_embed
+        from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))
+
+
+class DaoLuRequestView(discord.ui.View):
+    def __init__(self, engine, target_id: str, requester_id: str, requester_name: str, timeout: float = 300):
+        super().__init__(timeout=timeout)
+        self.engine = engine
+        self.target_id = target_id
+        self.requester_id = requester_id
+        self.requester_name = requester_name
+
+        accept = discord.ui.Button(label="Đồng ý", emoji=EMOJI["accept"], style=discord.ButtonStyle.success)
+        reject = discord.ui.Button(label="Từ chối", emoji=EMOJI["reject"], style=discord.ButtonStyle.danger)
+        accept.callback = self._accept
+        reject.callback = self._reject
+        self.add_item(accept)
+        self.add_item(reject)
+
+    @staticmethod
+    def build_request_embed(requester_name: str) -> discord.Embed:
+        return base_embed("💞 Lời Cầu Duyên", f"**{requester_name}** muốn kết duyên cùng ngươi.\n\nNgươi có đồng ý trở thành đạo lữ không?")
+
+    def _guard(self, interaction):
+        return str(interaction.user.id) == self.target_id
+
+    async def _accept(self, interaction: discord.Interaction):
+        if not self._guard(interaction):
+            await interaction.response.send_message("Lời cầu duyên này không thuộc về ngươi.", ephemeral=True)
+            return
+        try:
+            self.engine.dao_lu.accept(self.target_id, self.requester_id)
+            self.stop()
+            await interaction.response.edit_message(embed=success_embed("💞 Kết Duyên Thành Công", f"Ngươi và **{self.requester_name}** đã trở thành đạo lữ."), view=None)
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+
+    async def _reject(self, interaction: discord.Interaction):
+        if not self._guard(interaction):
+            await interaction.response.send_message("Lời cầu duyên này không thuộc về ngươi.", ephemeral=True)
+            return
+        try:
+            self.engine.dao_lu.reject(self.target_id, self.requester_id)
+            self.stop()
+            await interaction.response.edit_message(embed=base_embed("💞 Cầu Duyên", "Ngươi đã từ chối lời cầu duyên."), view=None)
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)

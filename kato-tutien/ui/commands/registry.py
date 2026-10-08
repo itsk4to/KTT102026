@@ -60,6 +60,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("gacha", ("gc", "thienco"), "trade", ".gacha", "Thiên Cơ gacha.", cmd_gacha),
     CommandSpec("dao", (), "dao", ".dao [kiem|dao|phap|the|ma]", "Mở giao diện Đạo; mã vẫn hỗ trợ chọn nhanh.", cmd_dao, True),
     CommandSpec("daolu", ("dlp",), "social", ".daolu", "Mở giao diện Đạo Lữ.", cmd_dao_lu),
+    CommandSpec("ketduyen", ("kd",), "social", ".ketduyen @người_chơi", "Gửi lời cầu duyên tới một đạo hữu.", cmd_dao_lu, True),
     CommandSpec("tongmon", ("tm",), "sect", ".tongmon", "Mở giao diện tông môn.", cmd_sect),
     CommandSpec("taotong", (), "sect", ".taotong <tên>", "Sáng lập tông môn.", cmd_sect_create, True),
     CommandSpec("xintong", (), "sect", ".xintong <sect_id>", "Xin gia nhập.", cmd_sect_apply, True),

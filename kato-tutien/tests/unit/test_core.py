@@ -106,8 +106,8 @@ class MarketTests(unittest.TestCase):
         listed = self.eng.economy.market_list("s", "tu_khi_dan", 2, 5000)
         lid = listed["listing_id"]
         r = self.eng.economy.market_buy("b", lid)
-        self.assertEqual(r["tax"], 100)  # 2% of 5000
-        self.assertEqual(r["seller_gain"], 4900)
+        self.assertEqual(r["tax"], 200)  # 2% of 10000 total
+        self.assertEqual(r["seller_gain"], 9800)
 
 
 class ExplorationChoiceTests(unittest.TestCase):

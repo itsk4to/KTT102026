@@ -34,7 +34,8 @@ class BreakthroughItemSelect(discord.ui.Select):
             await interaction.response.send_message("Ngươi chưa có đạo cụ hỗ trợ đột phá.", ephemeral=True)
             return
         try:
-            r = self.owner.engine.cultivation.use_breakthrough_item(self.owner.user_id, self.values[0])
+            r = self.owner.engine.breakthrough.preview_item(self.owner.user_id, self.values[0])
+            self.owner.selected_item = self.values[0]
             self.owner.bonus = r["bonus"]
             self.owner.rebuild()
             await interaction.response.edit_message(embed=cultivation_preview_embed(self.owner.engine.cultivation.breakthrough_preview(self.owner.user_id, self.owner.bonus)), view=self.owner)
@@ -48,6 +49,7 @@ class BreakthroughView(discord.ui.View):
         self.engine = engine
         self.user_id = user_id
         self.bonus = 0.0
+        self.selected_item: str | None = None
         self.rebuild()
 
     def _guard(self, interaction: discord.Interaction) -> bool:
@@ -72,7 +74,7 @@ class BreakthroughView(discord.ui.View):
             await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
             return
         try:
-            r = self.engine.cultivation.breakthrough(self.user_id, self.bonus)
+            r = self.engine.breakthrough.breakthrough(self.user_id, self.bonus, self.selected_item)
             if r["success"]:
                 await interaction.response.edit_message(embed=success_embed(f"{EMOJI['breakthrough']} Đột phá thành công", f"Cảnh giới: **{r['realm']}** · tỷ lệ **{r['chance']:.0%}**"), view=None)
             else:
@@ -91,4 +93,4 @@ class BreakthroughView(discord.ui.View):
         if not self._guard(interaction):
             await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
             return
-        await interaction.response.send_message("Chọn đạo cụ trong menu phía trên rồi dùng trước khi đồng ý đột phá.", ephemeral=True)
+        await interaction.response.send_message("Đạo cụ chỉ được tiêu hao khi ngươi bấm **Đồng ý đột phá**.", ephemeral=True)

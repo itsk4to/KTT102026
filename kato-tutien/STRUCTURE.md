@@ -1,135 +1,157 @@
-# Kato Tu Tiên v3.3.2 — Structure Map
-
-## Muốn sửa gì → mở file nào
-
-| Việc | File |
-|------|------|
-| Command routing / startup | `bot.py` |
-| Command nhân vật / help | `ui/commands/core.py` |
-| Command tu luyện | `ui/commands/cultivation.py` |
-| Command khám phá | `ui/commands/exploration.py` |
-| Shop / túi / market commands | `ui/commands/economy.py` |
-| Đạo commands | `ui/commands/dao.py` |
-| Tông môn commands | `ui/commands/sect.py` |
-| Admin commands | `ui/commands/admin.py` |
-| Damage / hit / mastery | `game/rules/combat_rules.py` |
-| Tu luyện / đột phá | `game/rules/cultivation_rules.py` |
-| Thuế chợ / currency rules | `game/rules/economy_rules.py` |
-| Quyền tông môn | `game/rules/sect_rules.py` + `game/content/sects_content.py` |
-| Logic mua / dùng / market | `game/services/economy_service.py` |
-| Logic tông môn | `game/services/sect_service.py` |
-| Logic admin | `game/services/admin_service.py` |
-| Combat PvE | `game/services/combat_service.py` |
-| Khám phá / event | `game/services/exploration_service.py` |
-| NPC / nhiệm vụ | `game/services/npc_service.py`, `quest_service.py` |
-| Nội dung NPC / quest | `game/content/npcs.py`, `quests.py` |
-| Biến động thế giới | `game/services/world_service.py`, `game/content/world_events.py` |
-| Item / shop data | `game/content/items.py` |
-| Monster / zone | `game/content/monsters.py`, `zones.py` |
-| DB connection / transaction | `game/database/connection.py` |
-| DB schema | `game/database/schema.py` |
-| DB version migrations | `game/database/migrations.py` |
-| Quest persistence | `game/repositories/quest_repository.py` |
-| World event persistence | `game/repositories/world_repository.py` |
-| Emoji | `ui/emoji.py` |
-| Embed | `ui/embeds.py` |
-| Shop UI | `ui/views/shop_view.py` |
-| Inventory UI | `ui/views/inventory_view.py` |
-| Admin UI | `ui/views/admin_view.py` |
-
-## Dependency direction
+# Kato Tu Tiên v3.4.0 — Canonical Architecture Tree
 
 ```text
-bot.py
-  ↓
-ui/commands + ui/views
-  ↓
-game/services
-  ↓
-game/rules
-  ↓
-game/repositories
-  ↓
-game/database
+KatoTuTien-v3.4.0/
+├── bot.py
+├── config.py
+├── VERSION.txt
+├── pyproject.toml
+├── requirements.txt
+├── requirements-dev.txt
+├── README.md
+├── STRUCTURE.md
+├── CHANGELOG.md
+├── .env.example
+├── game/
+│   ├── engine.py
+│   ├── models/
+│   │   ├── player.py
+│   │   ├── sect.py
+│   │   ├── item.py
+│   │   ├── combat.py
+│   │   ├── world.py
+│   │   └── economy.py
+│   ├── services/
+│   │   ├── player_service.py
+│   │   ├── cultivation_service.py
+│   │   ├── breakthrough_service.py
+│   │   ├── dao_service.py
+│   │   ├── dao_lu_service.py
+│   │   ├── combat_service.py
+│   │   ├── exploration_service.py
+│   │   ├── fate_service.py
+│   │   ├── reputation_service.py
+│   │   ├── npc_service.py
+│   │   ├── quest_service.py
+│   │   ├── sect_service.py
+│   │   ├── sect_tower_service.py
+│   │   ├── economy_service.py
+│   │   ├── world_service.py
+│   │   ├── death_service.py
+│   │   ├── heavenly_dao_service.py
+│   │   ├── code_service.py
+│   │   ├── admin_service.py
+│   │   └── errors.py
+│   ├── repositories/
+│   │   ├── player_repository.py
+│   │   ├── inventory_repository.py
+│   │   ├── market_repository.py
+│   │   ├── sect_repository.py
+│   │   ├── quest_repository.py
+│   │   ├── npc_repository.py
+│   │   ├── world_repository.py
+│   │   ├── exploration_repository.py
+│   │   ├── dao_lu_repository.py
+│   │   ├── code_repository.py
+│   │   ├── heavenly_dao_repository.py
+│   │   ├── mission_repository.py
+│   │   └── audit_repository.py
+│   ├── rules/
+│   │   ├── cultivation_rules.py
+│   │   ├── breakthrough_rules.py
+│   │   ├── combat_rules.py
+│   │   ├── dao_rules.py
+│   │   ├── sect_rules.py
+│   │   ├── economy_rules.py
+│   │   └── death_rules.py
+│   ├── content/
+│   │   ├── realms.py
+│   │   ├── dao_paths.py
+│   │   ├── talents.py
+│   │   ├── items.py
+│   │   ├── pills.py
+│   │   ├── talismans.py
+│   │   ├── artifacts.py
+│   │   ├── techniques.py
+│   │   ├── monsters.py
+│   │   ├── zones.py
+│   │   ├── dungeons.py
+│   │   ├── events.py
+│   │   ├── quests.py
+│   │   ├── npcs.py
+│   │   ├── sects_content.py
+│   │   ├── towers.py
+│   │   └── world_events.py
+│   ├── economy/
+│   │   ├── currency.py
+│   │   ├── crafting.py
+│   │   ├── npc_shop.py
+│   │   ├── player_market.py
+│   │   └── auction.py
+│   ├── security/
+│   │   ├── permissions.py
+│   │   └── admin_auth.py
+│   └── database/
+│       ├── connection.py
+│       ├── schema.py
+│       └── migrations.py
+├── ui/
+│   ├── emoji.py
+│   ├── colors.py
+│   ├── embeds.py
+│   ├── menus.py
+│   ├── buttons.py
+│   ├── selects.py
+│   ├── commands/
+│   │   ├── core.py
+│   │   ├── cultivation.py
+│   │   ├── exploration.py
+│   │   ├── quest.py
+│   │   ├── economy.py
+│   │   ├── dao.py
+│   │   ├── dao_lu.py
+│   │   ├── sect.py
+│   │   ├── admin.py
+│   │   ├── context.py
+│   │   └── registry.py
+│   └── views/
+│       ├── main_menu_view.py
+│       ├── player_view.py
+│       ├── cultivation_view.py
+│       ├── breakthrough_view.py
+│       ├── inventory_view.py
+│       ├── combat_view.py
+│       ├── exploration_view.py
+│       ├── quest_view.py
+│       ├── npc_view.py
+│       ├── sect_view.py
+│       ├── sect_management_view.py
+│       ├── sect_member_admin_view.py
+│       ├── shop_view.py
+│       ├── market_view.py
+│       ├── dao_view.py
+│       ├── dao_lu_view.py
+│       ├── world_view.py
+│       ├── start_path_view.py
+│       └── admin_view.py
+└── tests/
+    └── unit/
 ```
 
-`game/rules/` không làm I/O.
-`game/content/` không làm database.
-Discord code không được chứa gameplay formula.
-
-## Database transaction rule
-
-Business operation có nhiều bước phải dùng:
-
-```python
-with repository.db.transaction():
-    ...
-```
-
-Repositories vẫn là nơi chạy SQL; service điều phối transaction.
-
-## Public API
-
-```python
-from game.engine import GameEngine, GameError
-
-engine = GameEngine("kato_tutien.db")
-engine.players.create(user_id, name, "tien")
-engine.cultivation.cultivate(user_id)
-engine.economy.buy(user_id, "tu_khi_dan", 1)
-engine.combat.start_encounter(user_id)
-engine.sect.create(user_id, "Tông Name")
-```
-
-
-## Player UI policy
-
-Player-facing interaction follows two paths:
+## Layer boundary
 
 ```text
-Fast commands
-.tu .dp .tk .dl .info .code ...
-
-GUI systems
-.menu -> Inventory / Shop / Exploration / Quest / NPC / Sect / Dao / World
+Discord command/view
+        ↓
+Service / use-case
+        ↓
+Rules / pure gameplay logic
+        ↓
+Repository / persistence boundary
+        ↓
+Database
 ```
 
-Source identifiers remain English. Only rendered Discord text, labels, descriptions, and buttons are Vietnamese.
+`game/content/` chỉ chứa dữ liệu tĩnh. `game/models/` chỉ mô tả state. `game/engine.py` chỉ compose/facade, không chứa Discord UI và không chứa SQL.
 
-Main GUI modules:
-```text
-ui/views/gui_navigation.py
-ui/views/inventory_view.py
-ui/views/exploration_gui.py
-ui/views/quest_gui.py
-ui/views/npc_gui.py
-ui/views/sect_gui.py
-ui/views/dao_gui.py
-ui/views/world_gui.py
-```
-
-
-## v3.3.8 module boundaries
-
-```text
-game/services/
-├── cultivation_service.py      # cultivation / breakthrough
-├── exploration_service.py     # world exploration
-├── combat_service.py          # combat rules orchestration
-├── dao_lu_service.py          # partner / intimacy
-├── sect_service.py            # membership / roles
-├── sect_tower_service.py      # sect tower / missions / linh mach
-├── heavenly_dao_service.py    # admin-defined great-dao rules
-└── code_service.py            # admin redeem-code creation
-
-ui/views/
-├── gui_navigation.py          # main player hub
-├── start_path_view.py         # Tiên / Ma onboarding
-├── inventory_view.py          # inventory filters / multi-use
-├── combat_view.py             # combat buttons + selectors
-├── breakthrough_view.py       # breakthrough confirmation flow
-├── dao_lu_view.py             # Dao Lu GUI
-└── sect_gui.py                # sect GUI
-```
-
-Player-facing text stays Vietnamese. Source identifiers and tree boundaries stay English.
+Các file `*_gui.py` cũ (`player_gui.py`, `dao_gui.py`, `npc_gui.py`, `exploration_gui.py`, `quest_gui.py`, `sect_gui.py`, `world_gui.py`, `gui_navigation.py`) chỉ còn là compatibility shims để code cũ không vỡ; code mới phải dùng file canonical trong `ui/views/`.

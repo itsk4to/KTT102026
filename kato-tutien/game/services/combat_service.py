@@ -20,6 +20,7 @@ from game.rules.combat_rules import (
 )
 from game.rules.dao_rules import dao_combat_mods
 from game.rules.death_rules import defeat_penalty, apply_injury_cap
+from game.content.talents import talent_mod, destiny_mod
 from game.services.errors import GameError
 
 
@@ -53,26 +54,28 @@ class CombatService:
             it = ITEMS.get(item_id, {})
             atk += int(it.get("attack", 0))
             defense += int(it.get("defense", 0))
-        atk = int(atk * mods.get("atk", 1.0))
+        atk = int(atk * mods.get("atk", 1.0) * float(talent_mod(player.talent, "combat_atk", 1.0)))
         defense = int(defense * mods.get("def", 1.0))
-        hp = int(hp * mods.get("hp", 1.0))
+        hp = int(hp * mods.get("hp", 1.0) * float(talent_mod(player.talent, "combat_hp", 1.0)))
         accuracy = 50 + player.insight * 0.3 + mods.get("acc", 1.0) * 10
         evasion = 40 + player.luck * 0.25
-        return {
-            "attack": atk,
-            "defense": defense,
-            "max_hp": hp,
-            "accuracy": accuracy,
-            "evasion": evasion,
-        }
+        crit = min(0.50, 0.05 + max(0.0, mods.get("crit", 1.0) - 1.0) + float(talent_mod(player.talent, "combat_crit", 0.0)) + float(destiny_mod(player.destiny, "luck", 0.0)))
+        spirit_mult = mods.get("spirit", 1.0) * float(talent_mod(player.talent, "skill_power", 1.0))
+        return {"attack": atk, "defense": defense, "max_hp": hp, "accuracy": accuracy, "evasion": evasion, "crit": crit, "spirit_mult": spirit_mult}
 
     def start_encounter(self, user_id: str, boss: bool = False) -> Encounter:
         p = self._require(user_id)
         pool = BOSS_MONSTERS if boss else MONSTERS
-        eligible = [m for m in pool if m["min_realm"] <= p.realm_index]
-        if not eligible:
-            eligible = pool[:1]
-        mon = self.rng.choice(eligible)
+        if boss:
+            low, high = max(0, p.realm_index - 1), p.realm_index + 1
+            eligible = [m for m in pool if low <= m["min_realm"] <= high]
+            if not eligible:
+                eligible = [min(pool, key=lambda m: abs(m["min_realm"] - p.realm_index))]
+        else:
+            low, high = max(0,p.realm_index-1), p.realm_index+1
+            eligible=[m for m in pool if low <= m["min_realm"] <= high]
+            if not eligible: eligible=[min(pool,key=lambda m: abs(m["min_realm"]-p.realm_index))]
+        mon=self.rng.choice(eligible)
         stats = self.battle_stats(p)
         scale = 1.0 + p.realm_index * 0.08
         enc = Encounter(
@@ -154,9 +157,11 @@ class CombatService:
             logs.append("Bạn bị **choáng**, bỏ lượt!")
         else:
             if self.rng.random() < hit_chance(stats["accuracy"], 40):
+                crit = self.rng.random() < stats.get("crit", 0.05)
                 dmg = calculate_damage(stats["attack"], enc.enemy_defense, rng=self.rng)
+                if crit: dmg = int(dmg * 1.75)
                 enc.enemy_hp = max(0, enc.enemy_hp - dmg)
-                logs.append(f"Bạn gây **{dmg}** sát thương.")
+                logs.append(f"Bạn {'**BẠO KÍCH** · ' if crit else ''}gây **{dmg}** sát thương.")
                 applied = self._maybe_apply_status(enc, "enemy", self.rng.choice(["burn", "bleed", "poison"]))
                 if applied:
                     logs.append(f"Gây hiệu ứng **{applied}**!")
@@ -186,7 +191,7 @@ class CombatService:
             return self._enemy_turn(enc, p, stats, logs)
         row = self.players.get_mastery(user_id, technique_id)
         mastery = int(row["mastery"]) if row else 1
-        power = float(item.get("skill_power", 1.2)) * mastery_multiplier(mastery)
+        power = float(item.get("skill_power", 1.2)) * mastery_multiplier(mastery) * float(stats.get("spirit_mult", 1.0))
         dmg = calculate_damage(stats["attack"], enc.enemy_defense, power=power, rng=self.rng)
         enc.enemy_hp = max(0, enc.enemy_hp - dmg)
         logs.append(f"Thi triển **{item.get('name', technique_id)}** gây **{dmg}** sát thương.")
@@ -259,9 +264,13 @@ class CombatService:
         enc.victory = victory
         p.hp = max(1, enc.player_hp) if victory else max(1, int(p.max_hp * 0.3))
         rewards = {}
+        if victory and p.dao_type:
+            p.dao_insight += 3 if enc.is_boss else 1
+            from game.rules.dao_rules import stage_from_insight
+            p.dao_stage = stage_from_insight(p.dao_insight)
         if victory:
             stones = self.rng.randint(20, 80) * (2 if enc.is_boss else 1)
-            cult = self.rng.randint(10, 40) * (2 if enc.is_boss else 1)
+            cult = int(self.rng.randint(10, 40) * (2 if enc.is_boss else 1) * float(talent_mod(p.talent, "cultivation_on_victory", 1.0)))
             p.spirit_stones += stones
             p.cultivation += cult
             rewards = {"stones": stones, "cultivation": cult}

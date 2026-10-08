@@ -19,6 +19,7 @@ class Player:
     luck: int = 50
     fate: int = 50
     mind: int = 50
+    reputation: int = 0
     destiny: str = ""
     talent: str = ""
     hp: int = 100

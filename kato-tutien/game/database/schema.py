@@ -1,7 +1,7 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 10
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS players (
     luck INTEGER NOT NULL DEFAULT 50,
     fate INTEGER NOT NULL DEFAULT 50,
     mind INTEGER NOT NULL DEFAULT 50,
+    reputation INTEGER NOT NULL DEFAULT 0,
     destiny TEXT NOT NULL DEFAULT '',
     talent TEXT NOT NULL DEFAULT '',
     hp INTEGER NOT NULL DEFAULT 100,
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS market_listings (
     item_id TEXT NOT NULL,
     quantity INTEGER NOT NULL,
     price INTEGER NOT NULL,
+    unit_price INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL
 );
 
@@ -203,6 +205,7 @@ CREATE TABLE IF NOT EXISTS mission_progress (
     mission_key TEXT NOT NULL,
     progress INTEGER NOT NULL DEFAULT 0,
     day_key TEXT NOT NULL DEFAULT '',
+    claimed INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (user_id, sect_id, mission_key, day_key)
 );
 
@@ -261,7 +264,7 @@ CREATE TABLE IF NOT EXISTS npc_relationships (
 );
 """
 
-# Known columns from the canonical v4 schema. This allows old SQLite files to
+# Known columns from the canonical v10 schema. This allows old SQLite files to
 # be repaired safely instead of only bumping a version flag.
 _REQUIRED_COLUMNS = {
     "players": {
@@ -276,6 +279,7 @@ _REQUIRED_COLUMNS = {
         "luck": "INTEGER NOT NULL DEFAULT 50",
         "fate": "INTEGER NOT NULL DEFAULT 50",
         "mind": "INTEGER NOT NULL DEFAULT 50",
+        "reputation": "INTEGER NOT NULL DEFAULT 0",
         "destiny": "TEXT NOT NULL DEFAULT ''",
         "talent": "TEXT NOT NULL DEFAULT ''",
         "hp": "INTEGER NOT NULL DEFAULT 100",
@@ -305,6 +309,9 @@ _REQUIRED_COLUMNS = {
         "ascension_floor": "INTEGER NOT NULL DEFAULT 0",
         "created_at": "INTEGER NOT NULL DEFAULT 0",
     },
+    "market_listings": {
+        "unit_price": "INTEGER NOT NULL DEFAULT 0",
+    },
     "sects": {
         "tower_floor": "INTEGER NOT NULL DEFAULT 0",
         "mission_day": "TEXT NOT NULL DEFAULT ''",
@@ -330,6 +337,10 @@ def ensure_schema(db) -> None:
         for name, definition in columns.items():
             if name not in existing:
                 db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+
+    mission_cols = _table_columns(db, "mission_progress")
+    if "claimed" not in mission_cols:
+        db.execute("ALTER TABLE mission_progress ADD COLUMN claimed INTEGER NOT NULL DEFAULT 0")
 
     if db.fetchone("SELECT value FROM schema_meta WHERE key='version'") is None:
         db.execute("INSERT INTO schema_meta(key, value) VALUES('version', '0')")

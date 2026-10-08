@@ -31,21 +31,29 @@ class QuestService:
         return p
 
     def list_available(self, user_id: str) -> list[dict]:
-        self._require(user_id)
+        p = self._require(user_id)
         active = {q["quest_key"] for q in self.quests.active(user_id)}
         result = []
         for key, quest in QUESTS.items():
             if key in active or self.quests.has_completed(user_id, key):
                 continue
             npc = NPCS.get(quest["npc"], {})
+            if npc.get("zone") != p.explore_zone or p.realm_index < int(quest.get("min_realm",0)):
+                continue
+            if p.reputation < int(quest.get("min_reputation",-9999)):
+                continue
             result.append({"key": key, "name": quest["name"], "description": quest["description"], "npc": npc.get("name", quest["npc"])})
         return result
 
     def start(self, user_id: str, quest_key: str) -> dict:
-        self._require(user_id)
+        p = self._require(user_id)
         quest = QUESTS.get(quest_key)
         if not quest:
             raise GameError("Nhiệm vụ không tồn tại.")
+        npc = NPCS.get(quest["npc"], {})
+        if npc.get("zone") != p.explore_zone: raise GameError("Hãy đến đúng khu vực để gặp NPC này.")
+        if p.realm_index < int(quest.get("min_realm",0)): raise GameError("Cảnh giới chưa đủ để nhận nhiệm vụ này.")
+        if p.reputation < int(quest.get("min_reputation",-9999)): raise GameError("Danh vọng chưa đủ để mở nhiệm vụ này.")
         if self.quests.get(user_id, quest_key):
             raise GameError("Ngươi đã từng nhận nhiệm vụ này.")
         self.quests.start(user_id, quest_key)
@@ -117,6 +125,8 @@ class QuestService:
         if effect.get("insight"):
             p.insight = max(0, min(100, p.insight + int(effect["insight"])))
             changes.append(f"{effect['insight']:+d} ngộ tính")
+        if effect.get("reputation"):
+            p.reputation += int(effect["reputation"]); changes.append(f"{effect['reputation']:+d} danh vọng")
         if effect.get("item"):
             self.inventory.add(user_id, effect["item"], 1)
             changes.append(f"nhận **{ITEMS.get(effect['item'], {}).get('name', effect['item'])}**")
@@ -151,6 +161,7 @@ class QuestService:
         p.cultivation += int(reward.get("cultivation", 0))
         p.fate = max(0, min(100, p.fate + int(reward.get("fate", 0))))
         p.insight = max(0, min(100, p.insight + int(reward.get("insight", 0))))
+        p.reputation += int(reward.get("reputation", 0))
         self.players.save(p)
         self.quests.complete(user_id, quest_key)
         self.players.add_history(user_id, "quest_complete", quest_key)

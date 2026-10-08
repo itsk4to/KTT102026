@@ -7,6 +7,7 @@ from game.content.items import ITEMS, SHOP_CATEGORIES, SHOP_ORDER, item_slot, EQ
 from game.content.techniques import GACHA_TABLE
 from game.content.talents import REDEEM_CODES
 from game.repositories.inventory_repository import InventoryRepository
+from game.repositories.code_repository import CodeRepository
 from game.repositories.market_repository import MarketRepository
 from game.repositories.player_repository import PlayerRepository
 from game.rules.combat_rules import mastery_stage
@@ -24,10 +25,14 @@ class EconomyService:
         inventory: InventoryRepository,
         market: MarketRepository,
         rng: random.Random | None = None,
+        codes: CodeRepository | None = None,
     ):
         self.players = players
         self._inventory = inventory
         self.market = market
+        if codes is None:
+            raise ValueError("CodeRepository must be injected by the engine.")
+        self.codes = codes
         self.rng = rng or random.Random()
 
     def _require(self, user_id: str):
@@ -57,7 +62,7 @@ class EconomyService:
         return {"categories": categories}
 
     def buy(self, user_id: str, item_id: str, qty: int = 1) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             if qty < 1 or qty > 100:
                 raise GameError("Số lượng phải từ 1 đến 100.")
             item = ITEMS.get(item_id)
@@ -73,12 +78,14 @@ class EconomyService:
             return {"item": item, "qty": qty, "total": total, "player": p}
 
     def use_item(self, user_id: str, item_id: str, qty: int = 1) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             if qty < 1 or qty > 100:
                 raise GameError("Số lượng phải từ 1 đến 100.")
             item = ITEMS.get(item_id)
             if not item or item.get("type") not in ("consumable",):
                 raise GameError("Không thể dùng vật phẩm này.")
+            if item.get("breakthrough_bonus"):
+                raise GameError("Đây là đạo cụ đột phá. Hãy mở `.dotpha` và chọn đạo cụ trong giao diện đột phá để dùng đúng công dụng.")
             p = self._require(user_id)
             if not self._inventory.remove(user_id, item_id, qty):
                 raise GameError("Không đủ số lượng.")
@@ -107,7 +114,7 @@ class EconomyService:
             return {"item": item, "qty": qty, "notes": notes, "player": p}
 
     def learn_technique(self, user_id: str, item_id: str) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             item = ITEMS.get(item_id)
             if not item or item.get("type") != "technique":
                 raise GameError("Không phải công pháp.")
@@ -175,7 +182,7 @@ class EconomyService:
 
     # ----- Market -----
     def market_list(self, user_id: str, item_id: str, qty: int, price: int) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             if qty < 1 or price < 1:
                 raise GameError("Số lượng và giá phải > 0.")
             item = ITEMS.get(item_id)
@@ -184,8 +191,9 @@ class EconomyService:
             self._require(user_id)
             if not self._inventory.remove(user_id, item_id, qty):
                 raise GameError("Không đủ vật phẩm.")
-            lid = self.market.create(user_id, item_id, qty, price)
-            return {"listing_id": lid, "item": item, "qty": qty, "price": price}
+            total = price * qty
+            lid = self.market.create(user_id, item_id, qty, total, price)
+            return {"listing_id": lid, "item": item, "qty": qty, "price_each": price, "total": total}
 
     def market_browse(self, limit: int = 30) -> list[dict]:
         listings = self.market.list_all(limit)
@@ -194,12 +202,12 @@ class EconomyService:
             it = ITEMS.get(L.item_id, {"name": L.item_id})
             out.append({
                 "id": L.id, "item_id": L.item_id, "name": it.get("name"),
-                "qty": L.quantity, "price": L.price, "seller_id": L.seller_id,
+                "qty": L.quantity, "price_total": L.price, "price_each": L.unit_price, "seller_id": L.seller_id,
             })
         return out
 
     def market_buy(self, buyer_id: str, listing_id: int) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             listing = self.market.get(listing_id)
             if not listing:
                 raise GameError("Tin đăng không tồn tại.")
@@ -226,7 +234,7 @@ class EconomyService:
             }
 
     def market_cancel(self, user_id: str, listing_id: int) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             listing = self.market.get(listing_id)
             if not listing:
                 raise GameError("Tin đăng không tồn tại.")
@@ -237,7 +245,7 @@ class EconomyService:
             return {"item_id": listing.item_id, "qty": listing.quantity}
 
     def transfer(self, from_id: str, to_id: str, amount: int) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             if amount < 1:
                 raise GameError("Số lượng phải > 0.")
             if from_id == to_id:
@@ -255,12 +263,12 @@ class EconomyService:
             return {"amount": amount, "player": sender}
 
     def redeem_code(self, user_id: str, code: str) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             code = code.strip().upper()
             meta = REDEEM_CODES.get(code)
             dynamic = False
             if not meta:
-                row = self.players.db.fetchone("SELECT * FROM redeem_codes WHERE code=?", (code,))
+                row = self.codes.get(code)
                 if row:
                     dynamic = True
                     meta = {"stones": int(row["reward_stones"]), "item": row["reward_item"], "qty": int(row["reward_qty"]), "max_uses": int(row["max_uses"]), "used_count": int(row["used_count"])}
@@ -282,11 +290,11 @@ class EconomyService:
                 self._inventory.add(user_id, item_id, qty)
             self.players.save(p)
             if dynamic:
-                self.players.db.execute("UPDATE redeem_codes SET used_count=used_count+1 WHERE code=?", (code,))
+                self.codes.increment_used(code)
             return {"stones": stones, "item": item_id, "qty": qty, "player": p}
 
     def gacha(self, user_id: str) -> dict:
-        with self.players.db.transaction():
+        with self.players.transaction():
             p = self._require(user_id)
             if self._inventory.get_count(user_id, GACHA_TICKET_ID) >= 1:
                 self._inventory.remove(user_id, GACHA_TICKET_ID, 1)

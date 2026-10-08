@@ -90,8 +90,26 @@ def migrate_6_to_7(db) -> None:
 
 def migrate_7_to_8(db) -> None:
     # Sect expansion: persistent tower progress and daily mission state.
-    # ensure_schema() repairs these columns on existing databases.
     _set_version(db, 8)
+
+
+def migrate_8_to_9(db) -> None:
+    # Per-member mission claim state and global reputation.
+    if "claimed" not in {r["name"] for r in db.fetchall("PRAGMA table_info(mission_progress)")}:
+        db.execute("ALTER TABLE mission_progress ADD COLUMN claimed INTEGER NOT NULL DEFAULT 0")
+    if "reputation" not in {r["name"] for r in db.fetchall("PRAGMA table_info(players)")}:
+        db.execute("ALTER TABLE players ADD COLUMN reputation INTEGER NOT NULL DEFAULT 0")
+    _set_version(db, 9)
+
+
+def migrate_9_to_10(db) -> None:
+    cols = {r["name"] for r in db.fetchall("PRAGMA table_info(market_listings)")}
+    if "unit_price" not in cols:
+        db.execute("ALTER TABLE market_listings ADD COLUMN unit_price INTEGER NOT NULL DEFAULT 0")
+    # Legacy v9 listings stored only the stack total in price. Preserve them
+    # while making the per-unit price explicit for all future listings.
+    db.execute("UPDATE market_listings SET unit_price = CASE WHEN quantity > 0 THEN MAX(1, price / quantity) ELSE MAX(1, price) END WHERE unit_price <= 0")
+    _set_version(db, 10)
 
 _MIGRATIONS = {
     0: migrate_0_to_1,
@@ -102,6 +120,8 @@ _MIGRATIONS = {
     5: migrate_5_to_6,
     6: migrate_6_to_7,
     7: migrate_7_to_8,
+    8: migrate_8_to_9,
+    9: migrate_9_to_10,
 }
 
 
