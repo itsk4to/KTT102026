@@ -19,7 +19,7 @@ class PlayerService:
     def get(self, user_id: str) -> Player:
         p = self.players.get(user_id)
         if not p:
-            raise GameError("Ngươi chưa khai đạo. Dùng `.tutien` để bắt đầu.")
+            raise GameError("Ngươi chưa bước lên con đường tu hành. Dùng `.tutien` để bắt đầu.")
         return p
 
     def exists(self, user_id: str) -> bool:

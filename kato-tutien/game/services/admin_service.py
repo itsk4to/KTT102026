@@ -89,7 +89,7 @@ class AdminService:
     def add_admin(self, actor_id: str, target_id: str) -> None:
         self.ensure_access(actor_id)
         if not is_owner(actor_id):
-            raise GameError("Chỉ chủ quản mới được cấp quyền Admin.")
+            raise GameError("Chỉ chủ quản mới được cấp quyền quản trị.")
         with self.players.db.transaction():
             self.audit.add_admin(target_id)
             self.audit.log(actor_id, "add_admin", target_id)
@@ -97,7 +97,7 @@ class AdminService:
     def remove_admin(self, actor_id: str, target_id: str) -> None:
         self.ensure_access(actor_id)
         if not is_owner(actor_id):
-            raise GameError("Chỉ chủ quản mới được gỡ quyền Admin.")
+            raise GameError("Chỉ chủ quản mới được gỡ quyền quản trị.")
         if is_owner(target_id):
             raise GameError("Không thể gỡ chủ quản bằng lệnh này.")
         with self.players.db.transaction():

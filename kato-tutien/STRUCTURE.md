@@ -1,4 +1,4 @@
-# Kato Tu Tiên v3.0.1 — Structure Map
+# Kato Tu Tiên v3.3.2 — Structure Map
 
 ## Muốn sửa gì → mở file nào
 
@@ -21,14 +21,20 @@
 | Logic admin | `game/services/admin_service.py` |
 | Combat PvE | `game/services/combat_service.py` |
 | Khám phá / event | `game/services/exploration_service.py` |
+| NPC / nhiệm vụ | `game/services/npc_service.py`, `quest_service.py` |
+| Nội dung NPC / quest | `game/content/npcs.py`, `quests.py` |
+| Biến động thế giới | `game/services/world_service.py`, `game/content/world_events.py` |
 | Item / shop data | `game/content/items.py` |
 | Monster / zone | `game/content/monsters.py`, `zones.py` |
 | DB connection / transaction | `game/database/connection.py` |
 | DB schema | `game/database/schema.py` |
 | DB version migrations | `game/database/migrations.py` |
+| Quest persistence | `game/repositories/quest_repository.py` |
+| World event persistence | `game/repositories/world_repository.py` |
 | Emoji | `ui/emoji.py` |
 | Embed | `ui/embeds.py` |
 | Shop UI | `ui/views/shop_view.py` |
+| Inventory UI | `ui/views/inventory_view.py` |
 | Admin UI | `ui/views/admin_view.py` |
 
 ## Dependency direction
@@ -74,3 +80,56 @@ engine.economy.buy(user_id, "tu_khi_dan", 1)
 engine.combat.start_encounter(user_id)
 engine.sect.create(user_id, "Tông Name")
 ```
+
+
+## Player UI policy
+
+Player-facing interaction follows two paths:
+
+```text
+Fast commands
+.tu .dp .tk .dl .info .code ...
+
+GUI systems
+.menu -> Inventory / Shop / Exploration / Quest / NPC / Sect / Dao / World
+```
+
+Source identifiers remain English. Only rendered Discord text, labels, descriptions, and buttons are Vietnamese.
+
+Main GUI modules:
+```text
+ui/views/gui_navigation.py
+ui/views/inventory_view.py
+ui/views/exploration_gui.py
+ui/views/quest_gui.py
+ui/views/npc_gui.py
+ui/views/sect_gui.py
+ui/views/dao_gui.py
+ui/views/world_gui.py
+```
+
+
+## v3.3.8 module boundaries
+
+```text
+game/services/
+├── cultivation_service.py      # cultivation / breakthrough
+├── exploration_service.py     # world exploration
+├── combat_service.py          # combat rules orchestration
+├── dao_lu_service.py          # partner / intimacy
+├── sect_service.py            # membership / roles
+├── sect_tower_service.py      # sect tower / missions / linh mach
+├── heavenly_dao_service.py    # admin-defined great-dao rules
+└── code_service.py            # admin redeem-code creation
+
+ui/views/
+├── gui_navigation.py          # main player hub
+├── start_path_view.py         # Tiên / Ma onboarding
+├── inventory_view.py          # inventory filters / multi-use
+├── combat_view.py             # combat buttons + selectors
+├── breakthrough_view.py       # breakthrough confirmation flow
+├── dao_lu_view.py             # Dao Lu GUI
+└── sect_gui.py                # sect GUI
+```
+
+Player-facing text stays Vietnamese. Source identifiers and tree boundaries stay English.

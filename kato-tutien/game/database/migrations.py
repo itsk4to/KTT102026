@@ -50,11 +50,58 @@ def migrate_3_to_4(db) -> None:
     _set_version(db, 4)
 
 
+def migrate_4_to_5(db) -> None:
+    db.execute("""CREATE TABLE IF NOT EXISTS pending_exploration_events (
+        user_id TEXT PRIMARY KEY,
+        event_key TEXT NOT NULL,
+        zone_key TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+    )""")
+    _set_version(db, 5)
+
+
+def migrate_5_to_6(db) -> None:
+    # v6 added immersive exploration/quest/world-event persistence.
+    db.execute("""CREATE TABLE IF NOT EXISTS player_quests (
+        user_id TEXT NOT NULL, quest_key TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
+        step INTEGER NOT NULL DEFAULT 0, progress INTEGER NOT NULL DEFAULT 0,
+        started_at INTEGER NOT NULL, completed_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, quest_key)
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS world_events (
+        event_key TEXT PRIMARY KEY, zone_key TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0,
+        target INTEGER NOT NULL, expires_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'active', created_at INTEGER NOT NULL
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS world_event_contributors (
+        event_key TEXT NOT NULL, user_id TEXT NOT NULL, created_at INTEGER NOT NULL,
+        PRIMARY KEY (event_key, user_id)
+    )""")
+    _set_version(db, 6)
+
+
+def migrate_6_to_7(db) -> None:
+    db.execute("""CREATE TABLE IF NOT EXISTS npc_relationships (
+        user_id TEXT NOT NULL, npc_key TEXT NOT NULL, affinity INTEGER NOT NULL DEFAULT 0,
+        flags TEXT NOT NULL DEFAULT '{}', interactions INTEGER NOT NULL DEFAULT 0,
+        last_interaction INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, npc_key)
+    )""")
+    _set_version(db, 7)
+
+def migrate_7_to_8(db) -> None:
+    # Sect expansion: persistent tower progress and daily mission state.
+    # ensure_schema() repairs these columns on existing databases.
+    _set_version(db, 8)
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
     2: migrate_2_to_3,
     3: migrate_3_to_4,
+    4: migrate_4_to_5,
+    5: migrate_5_to_6,
+    6: migrate_6_to_7,
+    7: migrate_7_to_8,
 }
 
 

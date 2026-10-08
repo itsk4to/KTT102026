@@ -38,7 +38,7 @@ class CombatService:
     def _require(self, user_id: str) -> Player:
         p = self.players.get(user_id)
         if not p:
-            raise GameError("Ngươi chưa khai đạo.")
+            raise GameError("Ngươi chưa bước lên con đường tu hành.")
         return p
 
     def battle_stats(self, player: Player) -> dict:

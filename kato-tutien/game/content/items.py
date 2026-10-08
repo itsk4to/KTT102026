@@ -21,13 +21,13 @@ ITEMS: dict[str, dict] = {
     },
     "tru_co_dan": {
         "category": "Đan dược", "name": "Trúc Cơ Đan", "rarity": "Huyền", "type": "consumable",
-        "price": 15_000, "marketable": True, "cultivation": 2_000, "root": 1,
-        "description": "Hỗ trợ trúc cơ, tăng nhẹ căn cơ.",
+        "price": 15_000, "marketable": True, "cultivation": 2_000, "root": 1, "breakthrough_bonus": 0.08,
+        "description": "Hỗ trợ trúc cơ, tăng nhẹ căn cơ và giúp đột phá.",
     },
     "kim_dan_dai_duoc": {
         "category": "Đan dược", "name": "Kim Đan Đại Dược", "rarity": "Địa", "type": "consumable",
-        "price": 50_000, "marketable": True, "cultivation": 5_000, "insight": 2,
-        "description": "Đại dược hỗ trợ kết đan.",
+        "price": 50_000, "marketable": True, "cultivation": 5_000, "insight": 2, "breakthrough_bonus": 0.12,
+        "description": "Đại dược hỗ trợ kết đan và tăng tỷ lệ đột phá.",
     },
     # --- Bùa chú ---
     "liet_hoa_phu": {

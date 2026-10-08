@@ -4,10 +4,15 @@ import discord
 from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, success_embed
+from ui.views.dao_gui import DaoMenuView
 from game.content.dao_paths import DAO_PATHS
 
 async def cmd_dao(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     uid = str(message.author.id)
+    if not args:
+        view = DaoMenuView(ctx.engine, uid)
+        await message.reply(embed=view.build_embed(), view=view)
+        return
     if args and args[0] in DAO_PATHS:
         try:
             r = ctx.engine.dao.choose(uid, args[0])

@@ -33,7 +33,7 @@ class EconomyService:
     def _require(self, user_id: str):
         p = self.players.get(user_id)
         if not p:
-            raise GameError("Ngươi chưa khai đạo.")
+            raise GameError("Ngươi chưa bước lên con đường tu hành.")
         return p
 
     # ----- Shop -----
@@ -258,8 +258,16 @@ class EconomyService:
         with self.players.db.transaction():
             code = code.strip().upper()
             meta = REDEEM_CODES.get(code)
+            dynamic = False
+            if not meta:
+                row = self.players.db.fetchone("SELECT * FROM redeem_codes WHERE code=?", (code,))
+                if row:
+                    dynamic = True
+                    meta = {"stones": int(row["reward_stones"]), "item": row["reward_item"], "qty": int(row["reward_qty"]), "max_uses": int(row["max_uses"]), "used_count": int(row["used_count"])}
             if not meta:
                 raise GameError("Mã không hợp lệ.")
+            if dynamic and int(meta.get("used_count", 0)) >= int(meta.get("max_uses", 1)):
+                raise GameError("Mã đã hết lượt sử dụng.")
             p = self._require(user_id)
             # simple discovery key as redemption flag
             key = f"code:{code}"
@@ -273,6 +281,8 @@ class EconomyService:
             if item_id and qty:
                 self._inventory.add(user_id, item_id, qty)
             self.players.save(p)
+            if dynamic:
+                self.players.db.execute("UPDATE redeem_codes SET used_count=used_count+1 WHERE code=?", (code,))
             return {"stones": stones, "item": item_id, "qty": qty, "player": p}
 
     def gacha(self, user_id: str) -> dict:

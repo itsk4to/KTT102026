@@ -19,7 +19,7 @@ class SectService:
     def _require_player(self, user_id: str):
         p = self.players.get(user_id)
         if not p:
-            raise GameError("Ngươi chưa khai đạo.")
+            raise GameError("Ngươi chưa bước lên con đường tu hành.")
         return p
 
     def _require_member(self, user_id: str):

@@ -1,7 +1,7 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 8
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -91,7 +91,11 @@ CREATE TABLE IF NOT EXISTS sects (
     exp INTEGER NOT NULL DEFAULT 0,
     treasury INTEGER NOT NULL DEFAULT 0,
     linh_mach_level INTEGER NOT NULL DEFAULT 0,
-    created_at INTEGER NOT NULL DEFAULT 0
+    created_at INTEGER NOT NULL DEFAULT 0,
+    tower_floor INTEGER NOT NULL DEFAULT 0,
+    mission_day TEXT NOT NULL DEFAULT '',
+    mission_key TEXT NOT NULL DEFAULT '',
+    mission_progress INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sect_members (
@@ -165,6 +169,14 @@ CREATE TABLE IF NOT EXISTS redeem_codes (
     used_count INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS heavenly_rules (
+    rule_key TEXT PRIMARY KEY,
+    rule_text TEXT NOT NULL DEFAULT '',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    updated_by TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS code_redemptions (
     code TEXT NOT NULL,
     user_id TEXT NOT NULL,
@@ -200,6 +212,52 @@ CREATE TABLE IF NOT EXISTS player_history (
     event_type TEXT NOT NULL,
     detail TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS pending_exploration_events (
+    user_id TEXT PRIMARY KEY,
+    event_key TEXT NOT NULL,
+    zone_key TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS player_quests (
+    user_id TEXT NOT NULL,
+    quest_key TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    step INTEGER NOT NULL DEFAULT 0,
+    progress INTEGER NOT NULL DEFAULT 0,
+    started_at INTEGER NOT NULL,
+    completed_at INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, quest_key)
+);
+
+CREATE TABLE IF NOT EXISTS world_events (
+    event_key TEXT PRIMARY KEY,
+    zone_key TEXT NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0,
+    target INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS world_event_contributors (
+    event_key TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (event_key, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS npc_relationships (
+    user_id TEXT NOT NULL,
+    npc_key TEXT NOT NULL,
+    affinity INTEGER NOT NULL DEFAULT 0,
+    flags TEXT NOT NULL DEFAULT '{}',
+    interactions INTEGER NOT NULL DEFAULT 0,
+    last_interaction INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, npc_key)
 );
 """
 
@@ -246,6 +304,12 @@ _REQUIRED_COLUMNS = {
         "trial_day": "TEXT NOT NULL DEFAULT ''",
         "ascension_floor": "INTEGER NOT NULL DEFAULT 0",
         "created_at": "INTEGER NOT NULL DEFAULT 0",
+    },
+    "sects": {
+        "tower_floor": "INTEGER NOT NULL DEFAULT 0",
+        "mission_day": "TEXT NOT NULL DEFAULT ''",
+        "mission_key": "TEXT NOT NULL DEFAULT ''",
+        "mission_progress": "INTEGER NOT NULL DEFAULT 0",
     },
 }
 

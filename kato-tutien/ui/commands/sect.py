@@ -5,29 +5,15 @@ from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, success_embed
 from game.utils import fmt_amount
+from ui.views.sect_gui import SectMenuView
 
 async def cmd_sect(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:
-        ov = ctx.engine.sect.overview(str(message.author.id))
-        if not ov["in_sect"]:
-            lines = [f"`{s['sect_id']}` **{s['name']}** Lv{s['level']}" for s in ov["sects"][:15]]
-            await message.reply(embed=base_embed(
-                f"{EMOJI['sect']} Tông môn",
-                "Chưa gia nhập.\n`.taotong <tên>` · `.xintong <id>`\n\n" + ("\n".join(lines) or "Chưa có tông."),
-            ))
-            return
-        s = ov["sect"]
-        lines = [
-            f"**{s.name}** Lv{s.level} · Khố {fmt_amount(s.treasury)}",
-            f"Vai trò: **{ov['my_role']}**",
-            "",
-            "Thành viên:",
-        ]
-        for m in ov["members"][:10]:
-            lines.append(f"• <@{m.user_id}> — {m.role} ({fmt_amount(m.contribution)})")
-        await message.reply(embed=base_embed(f"{EMOJI['sect']} Nội Vụ", "\n".join(lines)))
+        view = SectMenuView(ctx.engine, str(message.author.id))
+        await message.reply(embed=view.build_embed(), view=view)
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
+
 
 async def cmd_sect_create(ctx, message: discord.Message, args: list[str]) -> None:
     if not args:

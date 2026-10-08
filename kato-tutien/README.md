@@ -1,4 +1,6 @@
-# Kato Tu Tiên v3.0.1
+Kato Tu Tiên v3.3.2 — Utilities & Vietnamese UI
+
+# Kato Tu Tiên v3.3.2
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
@@ -36,7 +38,7 @@ Models  = domain data
 | Database | `game/database/` | Connection, schema, migrations |
 | Security | `game/security/` | Admin auth / permissions |
 
-## v3.0.1 updates
+## Architecture / v3.0 rework
 
 ### 1. Database migration thật
 
@@ -127,10 +129,10 @@ Bộ test Shop vẫn chạy đầy đủ.
 python -m pytest -q
 ```
 
-Current local result:
+Current gameplay/service test result:
 
 ```text
-26 passed
+29 passed
 ```
 
 Ngoài full shop suite còn có test cho:
@@ -154,3 +156,9 @@ python bot.py
 - v2 production không cần bị xóa để thử v3.
 - Migration không tự reset database.
 - Nên chạy v3.0.1 trên branch/test DB trước khi cho Railway dùng DB production.
+
+
+## UX nhanh
+
+` .menu ` (bỏ khoảng trắng khi dùng) mở Trung Tâm giao diện.
+Các hệ thống nhiều lựa chọn ưu tiên GUI; các hành động lặp lại giữ lệnh tắt như `.tu`, `.dp`, `.tk`, `.dl`.

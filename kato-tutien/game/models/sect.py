@@ -14,6 +14,10 @@ class Sect:
     treasury: int = 0
     linh_mach_level: int = 0
     created_at: int = 0
+    tower_floor: int = 0
+    mission_day: str = ""
+    mission_key: str = ""
+    mission_progress: int = 0
 
     @classmethod
     def from_row(cls, row) -> "Sect":

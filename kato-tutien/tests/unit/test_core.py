@@ -110,5 +110,33 @@ class MarketTests(unittest.TestCase):
         self.assertEqual(r["seller_gain"], 4900)
 
 
+class ExplorationChoiceTests(unittest.TestCase):
+    def setUp(self):
+        import random
+        self.eng = GameEngine(":memory:", rng=random.Random(1))
+        self.eng.players.create("u1", "A", "tien")
+        p = self.eng.players.get("u1")
+        p.last_explore = 0
+        p.mind = 100
+        p.insight = 100
+        self.eng._players.save(p)
+
+    def test_choice_event_can_be_resolved_and_persisted(self):
+        # Force the narrative branch without relying on global randomness.
+        service = self.eng.exploration
+        event = {
+            "key": "test_event", "title": "Thử thách", "weight": 1,
+            "text": "Một cánh cửa cổ xuất hiện.",
+            "choices": [{"id": "open", "label": "Mở", "effect": {"cultivation": [10, 10], "discover": "test_discovery", "text": "Cửa mở."}}]
+        }
+        service._save_pending("u1", event, "hoangnguyen")
+        pending = service.explore("u1")
+        self.assertTrue(pending["choice"])
+        result = service.choose("u1", "open")
+        self.assertEqual(result["cultivation"], 10)
+        self.assertIsNone(service.pending("u1"))
+        self.assertTrue(self.eng._players.has_discovery("u1", "test_discovery"))
+
+
 if __name__ == "__main__":
     unittest.main()

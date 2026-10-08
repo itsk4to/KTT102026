@@ -22,11 +22,11 @@ class ShopCategorySelect(discord.ui.Select):
         cat = next(c for c in self.catalog["categories"] if c["name"] == cat_name)
         view = discord.ui.View(timeout=120)
         view.add_item(ShopItemSelect(self.engine, cat["items"]))
-        embed = discord.Embed(title=f"{EMOJI['shop']} {cat_name}")
+        embed = discord.Embed(title=f"{EMOJI['shop']} Tiên Phường · {cat_name}")
         for it in cat["items"]:
             embed.add_field(
-                name=f"{it['name']} ({it['rarity']})",
-                value=f"{fmt_amount(it['price'])} {EMOJI['spirit_stone']}\n{it['description'][:80]}",
+                name=f"{it['name']} · {it['rarity']} phẩm",
+                value=f"Giá: {fmt_amount(it['price'])} {EMOJI['spirit_stone']}\n{it['description'][:80]}",
                 inline=False,
             )
         await interaction.response.edit_message(embed=embed, view=view)
@@ -40,7 +40,7 @@ class ShopItemSelect(discord.ui.Select):
             discord.SelectOption(label=f"{it['name']} — {it['price']}", value=it["id"])
             for it in items[:25]
         ]
-        super().__init__(placeholder="Mua vật phẩm…", options=options)
+        super().__init__(placeholder="Chọn vật phẩm để mua…", options=options)
 
     async def callback(self, interaction: discord.Interaction):
         item_id = self.values[0]

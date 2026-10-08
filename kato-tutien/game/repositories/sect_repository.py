@@ -29,18 +29,18 @@ class SectRepository:
 
     def create(self, sect: Sect) -> None:
         self.db.execute(
-            """INSERT INTO sects(sect_id, name, description, owner_id, level, exp, treasury, linh_mach_level, created_at)
-               VALUES(?,?,?,?,?,?,?,?,?)""",
+            """INSERT INTO sects(sect_id, name, description, owner_id, level, exp, treasury, linh_mach_level, created_at, tower_floor, mission_day, mission_key, mission_progress)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (sect.sect_id, sect.name, sect.description, sect.owner_id, sect.level,
-             sect.exp, sect.treasury, sect.linh_mach_level, sect.created_at),
+             sect.exp, sect.treasury, sect.linh_mach_level, sect.created_at, sect.tower_floor, sect.mission_day, sect.mission_key, sect.mission_progress),
         )
 
     def save(self, sect: Sect) -> None:
         self.db.execute(
             """UPDATE sects SET name=?, description=?, owner_id=?, level=?, exp=?,
-               treasury=?, linh_mach_level=? WHERE sect_id=?""",
+               treasury=?, linh_mach_level=?, tower_floor=?, mission_day=?, mission_key=?, mission_progress=? WHERE sect_id=?""",
             (sect.name, sect.description, sect.owner_id, sect.level, sect.exp,
-             sect.treasury, sect.linh_mach_level, sect.sect_id),
+             sect.treasury, sect.linh_mach_level, sect.tower_floor, sect.mission_day, sect.mission_key, sect.mission_progress, sect.sect_id),
         )
 
     def delete(self, sect_id: str) -> None:

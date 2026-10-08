@@ -1,6 +1,6 @@
 [project]
 name = "kato-tutien"
-version = "3.0.1"
+version = "3.3.8"
 description = "Kato Tu Tiên — Discord cultivation MMORPG (v3 clean architecture)"
 requires-python = ">=3.11"
 

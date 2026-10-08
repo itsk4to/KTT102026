@@ -24,7 +24,7 @@ class CultivationService:
     def _require(self, user_id: str):
         p = self.players.get(user_id)
         if not p:
-            raise GameError("Ngươi chưa khai đạo.")
+            raise GameError("Ngươi chưa bước lên con đường tu hành.")
         return p
 
     def cultivate(self, user_id: str) -> dict:
@@ -50,12 +50,12 @@ class CultivationService:
             "player": p,
         }
 
-    def breakthrough_preview(self, user_id: str) -> dict:
+    def breakthrough_preview(self, user_id: str, foundation_bonus: float = 0.0) -> dict:
         p = self._require(user_id)
         req = cultivation_requirement(p.realm_index, p.realm_layer)
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage,
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus,
         )
         return {
             "ready": p.cultivation >= req and not is_max_realm(p.realm_index, p.realm_layer),
@@ -69,7 +69,7 @@ class CultivationService:
             ),
         }
 
-    def breakthrough(self, user_id: str) -> dict:
+    def breakthrough(self, user_id: str, foundation_bonus: float = 0.0) -> dict:
         p = self._require(user_id)
         if is_max_realm(p.realm_index, p.realm_layer):
             raise GameError("Đã đạt cảnh giới tối thượng.")
@@ -82,7 +82,7 @@ class CultivationService:
             raise GameError("Cần **Ứng Thiên Kiếp** để vượt Độ Kiếp.")
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage,
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus,
         )
         success = self.rng.random() < chance
         if success:
@@ -108,12 +108,25 @@ class CultivationService:
             "player": p,
         }
 
+    def use_breakthrough_item(self, user_id: str, item_id: str) -> dict:
+        from game.content.items import ITEMS
+        p = self._require(user_id)
+        item = ITEMS.get(item_id) or {}
+        bonus = float(item.get("breakthrough_bonus", 0.0))
+        if item.get("type") != "consumable" or bonus <= 0:
+            raise GameError("Đạo cụ này không hỗ trợ đột phá.")
+        from game.repositories.inventory_repository import InventoryRepository
+        inventory = InventoryRepository(self.players.db)
+        if not inventory.remove(user_id, item_id, 1):
+            raise GameError("Không có đạo cụ này trong túi.")
+        return {"bonus": bonus, "item_id": item_id, "item": item}
+
     def claim_daily(self, user_id: str) -> dict:
         p = self._require(user_id)
         now = int(time.time())
         if now - p.last_daily < DAILY_COOLDOWN:
             remain = DAILY_COOLDOWN - (now - p.last_daily)
-            raise GameError(f"Đã nhận daily. Còn **{remain // 3600}h**.")
+            raise GameError(f"Đã nhận thưởng hôm nay. Còn **{remain // 3600} giờ**.")
         # streak
         if now - p.last_daily < DAILY_COOLDOWN * 2:
             p.daily_streak += 1

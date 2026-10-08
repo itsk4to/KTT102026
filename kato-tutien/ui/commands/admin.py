@@ -11,11 +11,11 @@ async def cmd_admin(ctx, message: discord.Message, args: list[str] | None = None
     actor_id = str(message.author.id)
     if is_owner(actor_id) or ctx.engine.admin_auth.has_session(actor_id):
         await message.reply(
-            embed=base_embed("👑 Kato Admin", "Bảng điều khiển quản trị."),
+            embed=base_embed("👑 Quản trị Kato", "Bảng điều khiển quản trị."),
             view=AdminView(ctx.engine, actor_id),
         )
         return
     await message.reply(
-        embed=base_embed("🔐 Kato Admin", "Bấm nút bên dưới để đăng nhập an toàn."),
+        embed=base_embed("🔐 Quản trị Kato", "Bấm nút bên dưới để đăng nhập an toàn."),
         view=AdminLoginView(ctx.engine),
     )

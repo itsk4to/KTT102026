@@ -15,7 +15,7 @@ class DaoService:
             raise GameError("Đạo không hợp lệ. Chọn: " + ", ".join(DAO_PATHS))
         p = self.players.get(user_id)
         if not p:
-            raise GameError("Ngươi chưa khai đạo.")
+            raise GameError("Ngươi chưa bước lên con đường tu hành.")
         if p.dao_type and p.dao_type != dao_type:
             raise GameError(f"Đã chọn **{DAO_PATHS[p.dao_type]['name']}**. Không đổi được.")
         p.dao_type = dao_type

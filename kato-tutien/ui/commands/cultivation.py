@@ -3,16 +3,13 @@ from __future__ import annotations
 import discord
 from game.services.errors import GameError
 from ui.emoji import EMOJI
-from ui.embeds import error_embed, success_embed
+from ui.embeds import error_embed, success_embed, cultivation_embed, cultivation_preview_embed
 from game.utils import fmt_amount
 
 async def cmd_cultivate(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:
         r = ctx.engine.cultivation.cultivate(str(message.author.id))
-        await message.reply(embed=success_embed(
-            f"{EMOJI['cultivate']} Tu luyện",
-            f"+**{r['gain']}** tu vi\n{r['cultivation']}/{r['requirement']} · {r['realm']}",
-        ))
+        await message.reply(embed=cultivation_embed(r))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 
@@ -20,20 +17,10 @@ async def cmd_breakthrough(ctx, message: discord.Message, args: list[str] | None
     try:
         preview = ctx.engine.cultivation.breakthrough_preview(str(message.author.id))
         if not preview["ready"]:
-            await message.reply(embed=error_embed(
-                f"Chưa sẵn sàng. Tu vi {preview['cultivation']}/{preview['requirement']}"
-            ))
+            await message.reply(embed=cultivation_preview_embed(preview))
             return
-        r = ctx.engine.cultivation.breakthrough(str(message.author.id))
-        if r["success"]:
-            await message.reply(embed=success_embed(
-                f"{EMOJI['breakthrough']} Đột phá thành công!",
-                f"Cảnh giới: **{r['realm']}** (tỷ lệ {r['chance']:.0%})",
-            ))
-        else:
-            await message.reply(embed=error_embed(
-                f"Đột phá thất bại (tỷ lệ {r['chance']:.0%}). Tu vi bị tổn thất."
-            ))
+        from ui.views.breakthrough_view import BreakthroughView
+        await message.reply(embed=cultivation_preview_embed(preview), view=BreakthroughView(ctx.engine, str(message.author.id)))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 
