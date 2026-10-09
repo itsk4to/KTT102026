@@ -69,8 +69,8 @@ class ShopItemSelect(discord.ui.Select):
             discord.SelectOption(
                 label=it["name"][:100],
                 value=it["id"],
-                emoji=_CATEGORY_ICONS.get(it.get("category"), EMOJI["item"]),
-                description=f"{it['rarity']} phẩm · {fmt_amount(it['price'])} {EMOJI['spirit_stone']}",
+                emoji=it.get("emoji", _CATEGORY_ICONS.get(it.get("category"), EMOJI["item"])),
+                description=f"{it.get('rarity_emoji', '⚪')} {it['rarity']} · {fmt_amount(it['price'])} linh thạch",
             )
             for it in items[:25]
         ]
@@ -120,8 +120,11 @@ class ShopView(discord.ui.View):
         if not item:
             return base_embed(f"{EMOJI['shop']} Tiên Phường · {self.category}", "Chọn vật phẩm trong menu phía dưới.")
         return base_embed(
-            f"{_CATEGORY_ICONS.get(self.category, EMOJI['item'])} {item['name']}",
-            f"Phẩm chất: **{item['rarity']}**\nGiá: **{fmt_amount(item['price'])}** {EMOJI['spirit_stone']}\n\n{item['description']}",
+            f"{item.get('emoji', _CATEGORY_ICONS.get(self.category, EMOJI['item']))} {item['name']}",
+            f"Phẩm cấp: {item.get('rarity_emoji', '⚪')} **{item['rarity']} phẩm**\n"
+            f"Giá: **{fmt_amount(item['price'])}** {EMOJI['spirit_stone']}\n"
+            f"\n**✨ Tác dụng**\n" + "\n".join(f"• {effect}" for effect in item.get("effects", [])) +
+            f"\n\n📖 {item['description']}",
         )
 
     def _build_controls(self):

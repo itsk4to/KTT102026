@@ -20,3 +20,18 @@ class CodeService:
         self.repo.create(code, stones, item_id or None, qty, max_uses)
         self.audit.log(actor_id, "create_redeem_code", code, f"stones={stones};item={item_id};qty={qty};max={max_uses}")
         return {"code": code, "stones": stones, "item": item_id, "qty": qty, "max_uses": max_uses}
+
+    def disable(self, actor_id: str, code: str) -> dict:
+        code = (code or "").strip().upper()
+        if not code or len(code) > 32:
+            raise GameError("Mã mật lệnh không hợp lệ.")
+        row = self.repo.get(code)
+        if not row:
+            raise GameError("Không tìm thấy Mật Lệnh.")
+        if int(row.get("enabled", 1)) == 0:
+            raise GameError("Mật Lệnh này đã bị vô hiệu hóa.")
+        with self.players.transaction():
+            if not self.repo.disable(code):
+                raise GameError("Không thể vô hiệu hóa Mật Lệnh.")
+            self.audit.log(actor_id, "disable_redeem_code", code)
+        return {"code": code}

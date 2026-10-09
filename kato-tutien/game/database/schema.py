@@ -1,7 +1,7 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 13
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS players (
     last_explore INTEGER NOT NULL DEFAULT 0,
     last_hunt INTEGER NOT NULL DEFAULT 0,
     last_daily INTEGER NOT NULL DEFAULT 0,
+    breakthrough_recovery_until INTEGER NOT NULL DEFAULT 0,
     daily_streak INTEGER NOT NULL DEFAULT 0,
     be_quan_active INTEGER NOT NULL DEFAULT 0,
     be_quan_last_tick INTEGER NOT NULL DEFAULT 0,
@@ -168,7 +169,8 @@ CREATE TABLE IF NOT EXISTS redeem_codes (
     reward_item TEXT,
     reward_qty INTEGER NOT NULL DEFAULT 0,
     max_uses INTEGER NOT NULL DEFAULT 1,
-    used_count INTEGER NOT NULL DEFAULT 0
+    used_count INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS heavenly_rules (
@@ -299,6 +301,7 @@ _REQUIRED_COLUMNS = {
         "last_explore": "INTEGER NOT NULL DEFAULT 0",
         "last_hunt": "INTEGER NOT NULL DEFAULT 0",
         "last_daily": "INTEGER NOT NULL DEFAULT 0",
+        "breakthrough_recovery_until": "INTEGER NOT NULL DEFAULT 0",
         "daily_streak": "INTEGER NOT NULL DEFAULT 0",
         "be_quan_active": "INTEGER NOT NULL DEFAULT 0",
         "be_quan_last_tick": "INTEGER NOT NULL DEFAULT 0",

@@ -24,7 +24,8 @@ class MigrationSafetyTests(unittest.TestCase):
             self.assertIn("spirit_stones", columns)
             self.assertIn("realm_index", columns)
             version = db.fetchone("SELECT value FROM schema_meta WHERE key='version'")
-            self.assertEqual(version["value"], "10")
+            from game.database.schema import SCHEMA_VERSION
+            self.assertEqual(version["value"], str(SCHEMA_VERSION))
             db.close()
         finally:
             os.unlink(path)

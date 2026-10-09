@@ -142,6 +142,17 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
 
 async def render_section(interaction: discord.Interaction, engine, user_id: str, action: str) -> None:
     try:
+        if action != "leaderboard" and not engine.players.exists(user_id):
+            from ui.views.start_path_view import PathChoiceView
+            await interaction.response.edit_message(
+                embed=base_embed(
+                    "🌱 Hãy Khai Đạo Trước",
+                    "Ngươi chưa tạo nhân vật. Chọn phe bằng nút bên dưới, hoặc nhập `.tutien` / `.tamuontutien`."
+                ),
+                view=PathChoiceView(engine, user_id, "Đạo hữu"),
+            )
+            return
+
         if action == "player":
             view = PlayerMenuView(engine, user_id)
             await interaction.response.edit_message(embed=build_player_dashboard(engine, user_id), view=view)
@@ -199,10 +210,16 @@ async def render_section(interaction: discord.Interaction, engine, user_id: str,
             return
 
         if action == "leaderboard":
-            rows = engine.players.leaderboard(10, None)
-            lines = [f"**{i}.** {p.display_name} — {realm_text(p.realm_index, p.realm_layer)}" for i, p in enumerate(rows, 1)]
-            back = BackToMainView(engine, user_id)
-            await interaction.response.edit_message(embed=base_embed("🏆 Bảng Xếp Hạng", "\n".join(lines) or "Chưa có dữ liệu."), view=back)
+            def ranking(path: str) -> str:
+                rows = engine.players.leaderboard(10, path)
+                return "\n".join(
+                    f"**{i}.** {p.display_name} — {realm_text(p.realm_index, p.realm_layer)}"
+                    for i, p in enumerate(rows, 1)
+                ) or "Chưa có người chơi."
+            embed = base_embed("🏆 Bảng Xếp Hạng Hai Phe", "Dùng `.bxh tien` hoặc `.bxh ma` để xem riêng từng phe.")
+            embed.add_field(name="🧘 Tu Tiên", value=ranking("tien"), inline=True)
+            embed.add_field(name="👹 Tu Ma", value=ranking("ma"), inline=True)
+            await interaction.response.edit_message(embed=embed, view=BackToMainView(engine, user_id))
             return
 
         raise GameError("Giao diện không tồn tại.")

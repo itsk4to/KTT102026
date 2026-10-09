@@ -111,6 +111,29 @@ def migrate_9_to_10(db) -> None:
     db.execute("UPDATE market_listings SET unit_price = CASE WHEN quantity > 0 THEN MAX(1, price / quantity) ELSE MAX(1, price) END WHERE unit_price <= 0")
     _set_version(db, 10)
 
+
+def migrate_10_to_11(db) -> None:
+    cols = {r["name"] for r in db.fetchall("PRAGMA table_info(players)")}
+    if "breakthrough_recovery_until" not in cols:
+        db.execute("ALTER TABLE players ADD COLUMN breakthrough_recovery_until INTEGER NOT NULL DEFAULT 0")
+    _set_version(db, 11)
+
+
+def migrate_11_to_12(db) -> None:
+    cols = {r["name"] for r in db.fetchall("PRAGMA table_info(redeem_codes)")}
+    if "enabled" not in cols:
+        db.execute("ALTER TABLE redeem_codes ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+    _set_version(db, 12)
+
+def migrate_12_to_13(db) -> None:
+    db.execute("""CREATE TABLE IF NOT EXISTS pvp_matches (
+        match_id TEXT PRIMARY KEY,
+        payload TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at INTEGER NOT NULL
+    )""")
+    _set_version(db, 13)
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
@@ -122,6 +145,9 @@ _MIGRATIONS = {
     7: migrate_7_to_8,
     8: migrate_8_to_9,
     9: migrate_9_to_10,
+    10: migrate_10_to_11,
+    11: migrate_11_to_12,
+    12: migrate_12_to_13,
 }
 
 

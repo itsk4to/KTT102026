@@ -29,6 +29,11 @@ ITEMS: dict[str, dict] = {
         "price": 50_000, "marketable": True, "cultivation": 5_000, "insight": 2, "breakthrough_bonus": 0.12,
         "description": "Đại dược hỗ trợ kết đan và tăng tỷ lệ đột phá.",
     },
+    "loi_kiep_dan": {
+        "category": "Đan dược", "name": "Lôi Kiếp Đan", "rarity": "Địa", "type": "consumable",
+        "price": 42_000, "marketable": True, "thunder_resistance": 0.18,
+        "description": "Uống trước khi đột phá, giảm 18% sát thương Cửu Lôi Kiếp trong lần hộ kiếp kế tiếp.",
+    },
     # --- Bùa chú ---
     "liet_hoa_phu": {
         "category": "Bùa chú", "name": "Liệt Hỏa Phù", "rarity": "Huyền", "type": "consumable",
@@ -40,6 +45,11 @@ ITEMS: dict[str, dict] = {
         "price": 18_000, "marketable": True, "cultivation": 1_600, "mind": 2,
         "description": "Giữ tâm tĩnh, tăng đạo tâm.",
     },
+    "cuu_loi_ho_than_phu": {
+        "category": "Bùa chú", "name": "Cửu Lôi Hộ Thân Phù", "rarity": "Địa", "type": "consumable",
+        "price": 32_000, "marketable": True, "thunder_resistance": 0.15,
+        "description": "Linh phù che chở thân thể, giảm 15% sát thương Cửu Lôi Kiếp trong lần hộ kiếp kế tiếp.",
+    },
     # --- Pháp bảo / trang bị ---
     "thanh_tam_ngoc_boi": {
         "category": "Pháp bảo", "name": "Thanh Tâm Ngọc Bội", "rarity": "Hoàng", "type": "equipment",
@@ -48,8 +58,13 @@ ITEMS: dict[str, dict] = {
     },
     "huyen_thiet_linh_kinh": {
         "category": "Pháp bảo", "name": "Huyền Thiết Linh Kính", "rarity": "Huyền", "type": "equipment",
-        "slot": "artifact", "attack": 55, "defense": 120, "price": 25_000, "marketable": True,
-        "description": "Linh kính phản chiếu linh lực.",
+        "slot": "artifact", "attack": 55, "defense": 120, "thunder_resistance": 0.08, "price": 25_000, "marketable": True,
+        "description": "Linh kính phản chiếu linh lực, giảm 8% sát thương Cửu Lôi Kiếp khi trang bị.",
+    },
+    "thien_loi_chau": {
+        "category": "Pháp bảo", "name": "Thiên Lôi Châu", "rarity": "Địa", "type": "equipment",
+        "slot": "artifact", "attack": 20, "defense": 85, "thunder_resistance": 0.14, "price": 88_000, "marketable": True,
+        "description": "Pháp bảo dẫn lôi nhập châu, giảm 14% sát thương Cửu Lôi Kiếp khi trang bị.",
     },
     "thien_kiem": {
         "category": "Binh khí", "name": "Thiên Kiếm", "rarity": "Huyền", "type": "equipment",

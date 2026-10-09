@@ -76,6 +76,18 @@ async def on_message(message: discord.Message) -> None:
 
     args = parts[1:]
     try:
+        # Let new players learn/create their character and view the public leaderboard.
+        # All other gameplay commands receive a consistent, actionable onboarding hint.
+        public_commands = {"tutien", "help", "menu", "bxh", "admin"}
+        if spec.name not in public_commands and not engine.players.exists(str(message.author.id)):
+            await message.reply(embed=base_embed(
+                "🌱 Hãy Khai Đạo Trước",
+                "Ngươi chưa tạo nhân vật.\n\n"
+                "🧘 Muốn **Tu Tiên**, hãy nhập `.tutien` hoặc `.tamuontutien`.\n"
+                "👹 Muốn **Tu Ma**, cũng nhập `.tutien` rồi chọn nút **Tu Ma**.\n"
+                "Sau khi tạo nhân vật, dùng `.help` để xem hướng dẫn và menu tổng."
+            ))
+            return
         if spec.takes_args:
             await spec.handler(ctx, message, args)
         else:

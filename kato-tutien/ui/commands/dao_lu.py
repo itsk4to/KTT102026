@@ -31,3 +31,15 @@ async def cmd_dao_lu(ctx, message: discord.Message, args: list[str] | None = Non
         await message.reply(embed=view.build_embed(), view=view)
     except GameError as exc:
         await message.reply(embed=error_embed(str(exc)))
+
+
+async def cmd_song_tu(ctx, message: discord.Message, args: list[str] | None = None) -> None:
+    """Quick command for the existing Dao Lữ song-cultivation action."""
+    try:
+        result = ctx.engine.dao_lu.song_tu(str(message.author.id))
+        await message.reply(embed=success_embed(
+            "💞 Song Tu Thành Công",
+            f"Duyên phận tăng lên **{result['intimacy']}**. Dùng `.daolu` để xem quan hệ và lời cầu duyên.",
+        ))
+    except GameError as exc:
+        await message.reply(embed=error_embed(str(exc)))

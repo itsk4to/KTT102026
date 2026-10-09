@@ -22,3 +22,10 @@ class CodeRepository:
 
     def increment_used(self, code: str) -> None:
         self.db.execute("UPDATE redeem_codes SET used_count=used_count+1 WHERE code=?", (code,))
+
+    def disable(self, code: str) -> bool:
+        cur = self.db.execute(
+            "UPDATE redeem_codes SET enabled=0 WHERE code=? AND enabled=1",
+            (code,),
+        )
+        return cur.rowcount > 0

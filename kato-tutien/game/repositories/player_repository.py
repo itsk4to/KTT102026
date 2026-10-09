@@ -48,7 +48,7 @@ class PlayerRepository:
                 destiny=?, talent=?, hp=?, max_hp=?, attack=?, defense=?,
                 injury=?, lifespan=?, dao_type=?, dao_stage=?, dao_insight=?,
                 sect_id=?, explore_zone=?, loadout=?, equipped=?,
-                last_cultivate=?, last_explore=?, last_hunt=?, last_daily=?,
+                last_cultivate=?, last_explore=?, last_hunt=?, last_daily=?, breakthrough_recovery_until=?,
                 daily_streak=?, be_quan_active=?, be_quan_last_tick=?, be_quan_prepaid=?,
                 trial_floor=?, trial_attempts=?, trial_day=?, ascension_floor=?
             WHERE user_id=?""",
@@ -59,7 +59,7 @@ class PlayerRepository:
                 player.hp, player.max_hp, player.attack, player.defense, player.injury,
                 player.lifespan, player.dao_type, player.dao_stage, player.dao_insight,
                 player.sect_id, player.explore_zone, player.loadout_json(), player.equipped,
-                player.last_cultivate, player.last_explore, player.last_hunt, player.last_daily,
+                player.last_cultivate, player.last_explore, player.last_hunt, player.last_daily, player.breakthrough_recovery_until,
                 player.daily_streak, player.be_quan_active, player.be_quan_last_tick,
                 player.be_quan_prepaid, player.trial_floor, player.trial_attempts,
                 player.trial_day, player.ascension_floor, player.user_id,

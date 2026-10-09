@@ -94,7 +94,7 @@ async def cmd_market_list(ctx, message: discord.Message, args: list[str]) -> Non
         return
     try:
         r = ctx.engine.economy.market_list(str(message.author.id), args[0], int(args[1]), int(args[2]))
-        await message.reply(embed=success_embed("✅ Đăng bán", f"#{r['listing_id']} **{r['item']['name']}** ×{r['qty']} · {fmt_amount(r['price'])}/cái · {fmt_amount(r['total'])} tổng"))
+        await message.reply(embed=success_embed("✅ Đăng bán", f"#{r['listing_id']} **{r['item']['name']}** ×{r['qty']} · {fmt_amount(r['price_each'])}/cái · {fmt_amount(r['total'])} tổng"))
     except (GameError, ValueError) as e:
         await message.reply(embed=error_embed(str(e)))
 
@@ -147,3 +147,43 @@ async def cmd_gacha(ctx, message: discord.Message, args: list[str] | None = None
         await message.reply(embed=success_embed("🔮 Thiên Cơ", f"Nhận **{name}**"))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
+
+
+async def cmd_pvp(ctx, message: discord.Message, args: list[str] | None = None) -> None:
+    from ui.views.pvp_view import PvpChallengeView, challenge_embed
+    args = [arg for arg in (args or []) if not arg.startswith("<@")]
+    if not message.mentions:
+        await message.reply(embed=error_embed(
+            "Cách dùng PvP cược:\n"
+            "• `.pvp @người_chơi linhthach <số_lượng> [50|45|55]`\n"
+            "• `.pvp @người_chơi vatpham <mã_vật_phẩm> <số_lượng> [50|45|55]`\n"
+            "50 = cược ngang nhau; 45/55 = bên thách đấu góp 45% hoặc 55% tổng giá trị cược."
+        ))
+        return
+    target = message.mentions[0]
+    if target.bot:
+        await message.reply(embed=error_embed("Không thể thách đấu bot hoặc tài khoản bot."))
+        return
+    try:
+        if not args:
+            raise ValueError("Thiếu loại cược.")
+        kind = args[0].lower()
+        if kind in ("linhthach", "lt", "stones"):
+            if len(args) < 2 or not args[1].isdigit():
+                raise ValueError("Thiếu số linh thạch cược.")
+            amount = int(args[1])
+            share = int(args[2]) if len(args) > 2 else 50
+            challenge = ctx.engine.pvp.challenge(str(message.author.id), str(target.id), "stones", amount, challenger_share=share)
+        elif kind in ("vatpham", "item"):
+            if len(args) < 3 or not args[2].isdigit():
+                raise ValueError("Cần mã vật phẩm và số lượng.")
+            amount = int(args[2])
+            share = int(args[3]) if len(args) > 3 else 50
+            challenge = ctx.engine.pvp.challenge(str(message.author.id), str(target.id), "item", amount, item_id=args[1], challenger_share=share)
+        else:
+            raise ValueError("Loại cược chỉ nhận `linhthach` hoặc `vatpham`.")
+        view = PvpChallengeView(ctx.engine, challenge)
+        sent = await message.reply(embed=challenge_embed(challenge), view=view)
+        view.message = sent
+    except (GameError, ValueError) as exc:
+        await message.reply(embed=error_embed(str(exc)))

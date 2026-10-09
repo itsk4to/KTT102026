@@ -32,12 +32,28 @@ def cultivation_embed(result: dict, *, action: str = "Tu luyện") -> discord.Em
 def cultivation_preview_embed(preview: dict) -> discord.Embed:
     current = int(preview["cultivation"])
     maximum = int(preview["requirement"])
-    status = "✅ Đủ tu vi" if preview["ready"] else "⏳ Chưa đủ tu vi"
+    if preview.get("recovery_remaining", 0) > 0:
+        status = f"🩹 Đang hồi phục · còn **{preview['recovery_remaining']}s**"
+    else:
+        status = "✅ Đủ tu vi" if preview["ready"] else "⏳ Chưa đủ tu vi"
     e = base_embed(f"{EMOJI['breakthrough']} Đột phá", f"**{preview['realm']}**\n{status}")
     e.add_field(name="Tu vi", value=f"{progress_bar(current, maximum)}\n{fmt_amount(current)} / {fmt_amount(maximum)}", inline=False)
     e.add_field(name="Tỷ lệ", value=f"{preview['chance']:.0%}", inline=True)
     if preview.get("needs_tribulation"):
         e.add_field(name="Thiên kiếp", value="Cần Ứng Thiên Kiếp", inline=True)
+    if preview.get("needs_thunder_tribulation"):
+        e.add_field(
+            name="⚡ Cửu Lôi Kiếp",
+            value=(
+                "Đột phá đại cảnh giới từ Kim Đan trở đi sẽ chịu **9 tia sét**. "
+                "Mỗi tia mạnh hơn tia trước; hãy chuẩn bị **Lôi Kiếp Đan**, "
+                "**Cửu Lôi Hộ Thân Phù** hoặc pháp bảo có kháng lôi."
+            ),
+            inline=False,
+        )
+        e.add_field(name="Khí huyết trước kiếp", value=f"{preview.get('current_hp', 0)}/{preview.get('max_hp', 0)} HP", inline=True)
+        resistance = float(preview.get("thunder_equipment_resistance", 0.0))
+        e.add_field(name="Kháng lôi từ pháp bảo", value=f"{resistance:.0%}", inline=True)
     return e
 
 
@@ -68,10 +84,14 @@ def success_embed(title: str, msg: str) -> discord.Embed:
 
 def shop_embed(catalog: dict) -> discord.Embed:
     e = base_embed(f"{EMOJI['shop']} Tiên Phường", "Chọn danh mục bên dưới để xem và mua.")
+    category_icons = {"Đan dược": "💊", "Bùa chú": "🔮", "Pháp bảo": "💠", "Binh khí": "⚔️", "Công pháp": "📜"}
     for cat in catalog.get("categories", []):
-        lines = [f"• **{it['name']}** — {fmt_amount(it['price'])} {EMOJI['spirit_stone']}" for it in cat["items"][:8]]
+        lines = []
+        for it in cat["items"][:8]:
+            effect = (it.get("effects") or [it.get("description", "")])[0]
+            lines.append(f"{it.get('emoji', category_icons.get(cat['name'], '📦'))} **{it['name']}** · {it.get('rarity_emoji', '⚪')} {it.get('rarity', 'Phàm')} phẩm\n　{fmt_amount(it['price'])} {EMOJI['spirit_stone']} · {effect}")
         if lines:
-            e.add_field(name=cat["name"], value="\n".join(lines), inline=False)
+            e.add_field(name=f"{category_icons.get(cat['name'], '📦')} {cat['name']}", value="\n".join(lines), inline=False)
     return e
 
 

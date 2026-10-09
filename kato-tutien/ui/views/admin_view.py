@@ -98,6 +98,32 @@ class CreateCodeModal(discord.ui.Modal, title="🎟️ Tạo Mật Lệnh"):
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
+class DisableCodeModal(discord.ui.Modal, title="🚫 Vô hiệu hóa Mật Lệnh"):
+    code = discord.ui.TextInput(
+        label="Mã Mật Lệnh",
+        placeholder="Nhập mã cần vô hiệu hóa",
+        required=True,
+        max_length=32,
+    )
+
+    def __init__(self, owner):
+        super().__init__()
+        self.owner = owner
+
+    async def on_submit(self, interaction):
+        try:
+            r = self.owner.engine.codes.disable(self.owner.actor_id, str(self.code.value))
+            await interaction.response.send_message(
+                embed=success_embed(
+                    "🚫 Đã vô hiệu hóa Mật Lệnh",
+                    f"Mã **`{r['code']}`** không thể được sử dụng nữa.",
+                ),
+                ephemeral=True,
+            )
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+
+
 class HeavenlyRuleModal(discord.ui.Modal, title="☯️ Nhập Quy Tắc Đại Đạo"):
     key = discord.ui.TextInput(label="Mã quy tắc", placeholder="vd: no_free_breakthrough", required=True, max_length=64)
     rule = discord.ui.TextInput(label="Nội dung quy tắc", placeholder="Nhập luật Đại Đạo…", required=True, max_length=1000, style=discord.TextStyle.paragraph)
@@ -202,7 +228,14 @@ class AdminView(discord.ui.View):
     async def codes(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         try:
             self._check(interaction)
-            await interaction.response.send_modal(CreateCodeModal(self))
+            await interaction.response.send_message(
+                embed=base_embed(
+                    "🎟️ Kho Mật Lệnh",
+                    "Quản lý Mật Lệnh phát thưởng.",
+                ),
+                view=CodeAdminView(self.engine, self.actor_id),
+                ephemeral=True,
+            )
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
@@ -212,6 +245,42 @@ class AdminView(discord.ui.View):
             self._check(interaction)
             self.engine.admin_auth.clear(self.actor_id)
             await interaction.response.edit_message(embed=base_embed("👑 Quản trị", "Đã đóng phiên."), view=None)
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+
+
+class CodeAdminView(discord.ui.View):
+    def __init__(self, engine, actor_id):
+        super().__init__(timeout=180)
+        self.engine = engine
+        self.actor_id = actor_id
+
+    def _check(self, interaction: discord.Interaction) -> None:
+        if str(interaction.user.id) != self.actor_id:
+            raise GameError("Đây không phải phiên Admin của ngươi.")
+        self.engine.admin.ensure_access(self.actor_id)
+
+    @discord.ui.button(label="Tạo Mật Lệnh", emoji="🎟️", style=discord.ButtonStyle.success)
+    async def create_code(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
+        try:
+            self._check(interaction)
+            await interaction.response.send_modal(CreateCodeModal(self))
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+
+    @discord.ui.button(label="Vô hiệu hóa", emoji="🚫", style=discord.ButtonStyle.danger)
+    async def disable_code(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
+        try:
+            self._check(interaction)
+            await interaction.response.send_modal(DisableCodeModal(self))
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+
+    @discord.ui.button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.secondary, row=1)
+    async def close_codes(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
+        try:
+            self._check(interaction)
+            await interaction.response.edit_message(view=None)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 

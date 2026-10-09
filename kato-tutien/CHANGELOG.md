@@ -1,4 +1,60 @@
+## v3.4.8 — Shop Details & PvP Wager Arena
+
+- Tiên Phường hiển thị emoji theo loại vật phẩm, biểu tượng phẩm cấp, giá và tác dụng cụ thể ngay ở danh sách lẫn màn hình chọn vật phẩm.
+- Thêm `.pvp @người_chơi linhthach <số> [50|45|55]` và `.pvp @người_chơi vatpham <mã> <số> [50|45|55]`.
+- Cược 50/50 yêu cầu giá trị ngang nhau; tỷ lệ 45/55 xác định phần đóng góp của người thách đấu và tự tính phần bên nhận lời.
+- Trận đấu theo lượt có Tấn công/Hộ thể; cược được giữ trong escrow khi hai bên nhận lời, người thắng nhận toàn bộ.
+- Migration schema 12 → 13 lưu trạng thái cược; nếu bot khởi động lại khi trận đang diễn ra, hệ thống hoàn cược để tránh mất tài sản.
+
+## v3.4.7 — Cửu Lôi Kiếp & Hộ Kiếp
+
+- Đột phá đại cảnh giới từ Kim Đan → Nguyên Anh và các mốc lớn tiếp theo (cùng một cây cảnh giới cho Tu Tiên/Tu Ma) phải vượt 9 tia Cửu Lôi Kiếp.
+- Mỗi tia lôi tăng sát thương nhẹ so với tia trước; phòng ngự trang bị và kháng lôi làm giảm sát thương.
+- Thêm Lôi Kiếp Đan, Cửu Lôi Hộ Thân Phù và Thiên Lôi Châu; người chơi có thể chọn tối đa hai loại đan/bùa (1–3 liều mỗi loại) trước khi xác nhận đột phá. Liều bổ sung có hiệu lực giảm dần.
+- Vật phẩm hộ kiếp chỉ bị tiêu hao khi lần đột phá thành công và Cửu Lôi Kiếp thực sự bắt đầu.
+- Thất bại lôi kiếp giữ nguyên cảnh giới, gây tổn thất tu vi/thương thế, còn 1 HP và hồi phục lâu hơn. Vượt kiếp không tự hồi đầy HP.
+- Không thay đổi schema database; giữ riêng luồng Ứng Thiên Kiếp cuối Độ Kiếp.
+
+## v3.4.6 — Onboarding, Split Leaderboards & Dao Lữ Commands
+
+- `.bxh` now displays separate Tu Tiên and Tu Ma leaderboards; `.bxh tien` and `.bxh ma` show one faction.
+- Added a global new-player onboarding hint before gameplay commands, with `.tutien` / `.tamuontutien` instructions.
+- Main-menu buttons now guide players without an account to character creation instead of letting feature views fail.
+- Added `.songtu` / `.st` quick command while keeping `.daolu` GUI and `.ketduyen @user` request flow.
+- Existing account IDs, database schema, and saved player data are unchanged.
+
+## v3.4.5 — Unified Help & Main Menu
+- `.help` now combines beginner onboarding, categorized commands, and the interactive main menu.
+- `.menu` remains compatible and opens the same combined interface.
+
+# v3.4.4 — Sect Player Display
+
+- Tông môn: danh sách quản trị thành viên hiển thị `display_name` thay vì raw Discord user ID.
+- Tông môn: danh sách đơn xin gia nhập hiển thị tên người chơi.
+- Backend vẫn giữ Discord ID làm định danh nội bộ để không ảnh hưởng dữ liệu.
+
 # Changelog
+
+
+## v3.4.3 — Admin Redeem Code Disable
+- Thêm nút **Vô hiệu hóa** trong Kho Mật Lệnh Admin.
+- Mật Lệnh bị vô hiệu hóa không thể đổi thưởng nữa.
+- Thêm migration schema 11 → 12 với trạng thái `enabled`.
+- Ghi audit khi Admin vô hiệu hóa Mật Lệnh.
+
+
+## v3.4.2 — Exploration & Player Market Hotfix
+- Fixed `.khampha` GUI crash caused by missing `EMOJI` import in `exploration_view.py`.
+- Restored all exploration view dependencies (`realm_text`, item registry, combat embed and combat view) so the GUI can build and transition into events/combat.
+- Fixed `.dangban` crash caused by reading `r["price"]`; market service returns `price_each` for the unit price.
+
+
+## v3.4.1 — Breakthrough Recovery
+- Thất bại đột phá áp dụng thời gian hồi phục theo cảnh giới.
+- Trong thời gian hồi phục không thể tu luyện/đột phá/ứng kiếp.
+- Thời gian tăng theo đại cảnh giới; tầng cuối và Độ Kiếp có hệ số nặng hơn.
+- Thêm migration schema 10 → 11 với `breakthrough_recovery_until`.
+
 
 ## v3.4.0 — Gameplay Integrity & Canonical Tree
 - Schema 10: explicit reputation, mission claim state and market unit price.

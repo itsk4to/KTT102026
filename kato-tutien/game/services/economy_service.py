@@ -49,13 +49,37 @@ class EconomyService:
             items = []
             for iid in SHOP_CATEGORIES.get(cat, []):
                 it = ITEMS[iid]
+                rarity = it.get("rarity", "Phàm")
+                category_emoji = {
+                    "Đan dược": "💊", "Bùa chú": "🔮", "Pháp bảo": "💠",
+                    "Binh khí": "⚔️", "Công pháp": "📜",
+                }.get(cat, "📦")
+                rarity_emoji = {"Phàm": "⚪", "Hoàng": "🟢", "Huyền": "🔵", "Địa": "🟣", "Thiên": "🟠", "Tiên": "🔴"}.get(rarity, "⚪")
+                effects = []
+                for key, label in (("cultivation", "Tu vi"), ("heal", "Hồi HP"), ("root", "Căn cơ"), ("insight", "Ngộ tính"), ("luck", "May mắn"), ("fate", "Mệnh số"), ("mind", "Đạo tâm"), ("attack", "Công"), ("defense", "Thủ"), ("all_stats", "Toàn bộ thuộc tính")):
+                    if it.get(key):
+                        effects.append(f"{label} +{it[key]}")
+                if it.get("breakthrough_bonus"):
+                    effects.append(f"Tỷ lệ đột phá +{it['breakthrough_bonus']:.0%}")
+                if it.get("thunder_resistance"):
+                    effects.append(f"Kháng lôi +{it['thunder_resistance']:.0%}")
+                if it.get("technique_stat") and it.get("technique_bonus"):
+                    effects.append(f"Công pháp: +{it['technique_bonus']} {it['technique_stat']}")
+                if it.get("skill_power"):
+                    effects.append(f"Sức mạnh kỹ năng ×{it['skill_power']:.2f}")
+                if not effects:
+                    effects.append(it.get("description", "Chưa có mô tả tác dụng."))
                 items.append({
                     "id": iid,
                     "name": it["name"],
-                    "rarity": it.get("rarity", ""),
+                    "rarity": rarity,
+                    "rarity_emoji": rarity_emoji,
+                    "emoji": category_emoji,
                     "price": int(it["price"]),
                     "description": it.get("description", ""),
+                    "effects": effects,
                     "type": it.get("type", ""),
+                    "category": cat,
                 })
             if items:
                 categories.append({"name": cat, "items": items})
@@ -86,6 +110,8 @@ class EconomyService:
                 raise GameError("Không thể dùng vật phẩm này.")
             if item.get("breakthrough_bonus"):
                 raise GameError("Đây là đạo cụ đột phá. Hãy mở `.dotpha` và chọn đạo cụ trong giao diện đột phá để dùng đúng công dụng.")
+            if item.get("thunder_resistance"):
+                raise GameError("Đây là vật phẩm hộ kiếp. Hãy mở `.dotpha` và chọn liều dùng trong giao diện Cửu Lôi Kiếp; đừng dùng trực tiếp trong túi.")
             p = self._require(user_id)
             if not self._inventory.remove(user_id, item_id, qty):
                 raise GameError("Không đủ số lượng.")
@@ -270,6 +296,8 @@ class EconomyService:
             if not meta:
                 row = self.codes.get(code)
                 if row:
+                    if int(row.get("enabled", 1)) == 0:
+                        raise GameError("Mật Lệnh này đã bị vô hiệu hóa.")
                     dynamic = True
                     meta = {"stones": int(row["reward_stones"]), "item": row["reward_item"], "qty": int(row["reward_qty"]), "max_uses": int(row["max_uses"]), "used_count": int(row["used_count"])}
             if not meta:

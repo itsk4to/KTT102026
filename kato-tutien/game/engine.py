@@ -26,6 +26,7 @@ from game.repositories.dao_lu_repository import DaoLuRepository
 from game.repositories.code_repository import CodeRepository
 from game.repositories.heavenly_dao_repository import HeavenlyDaoRepository
 from game.repositories.mission_repository import MissionRepository
+from game.repositories.pvp_repository import PvpRepository
 from game.services.player_service import PlayerService
 from game.services.cultivation_service import CultivationService
 from game.services.breakthrough_service import BreakthroughService
@@ -44,6 +45,7 @@ from game.services.world_service import WorldService
 from game.services.dao_lu_service import DaoLuService
 from game.services.sect_tower_service import SectTowerService
 from game.services.heavenly_dao_service import HeavenlyDaoService
+from game.services.pvp_service import PvpService
 from game.services.code_service import CodeService
 from game.security.admin_auth import AdminAuth
 from game.services.errors import GameError
@@ -71,12 +73,14 @@ class GameEngine:
         self._codes = CodeRepository(db)
         self._heavenly = HeavenlyDaoRepository(db)
         self._missions = MissionRepository(db)
+        self._pvp_repo = PvpRepository(db)
 
         # services
         self.players = PlayerService(self._players, self.rng)
         self.cultivation = CultivationService(self._players, self.rng, self._inventory)
         self.breakthrough = BreakthroughService(self.cultivation, self._players, self._inventory)
         self.combat = CombatService(self._players, self._inventory, self.rng)
+        self.pvp = PvpService(self._players, self._inventory, self.combat, self._pvp_repo, self.rng)
         self.economy = EconomyService(self._players, self._inventory, self._market, self.rng, self._codes)
         self.quests = QuestService(self._players, self._quests, self._inventory)
         self.world = WorldService(self._players, self._world, self.rng)

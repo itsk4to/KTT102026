@@ -128,9 +128,10 @@ class PlayerMenuView(discord.ui.View):
                     notice = "Đột phá thành công."
                 else:
                     embed = error_embed(
-                        f"Đột phá thất bại (tỷ lệ {result['chance']:.0%}). Tu vi bị tổn thất."
+                        f"Đột phá thất bại (tỷ lệ {result['chance']:.0%}). Tu vi bị tổn thất.\n"
+                        f"🩹 Hồi phục {result.get('recovery_seconds', 0)}s trước khi tiếp tục tu luyện."
                     )
-                    notice = "Đột phá thất bại."
+                    notice = "Đột phá thất bại — đang hồi phục."
                 await interaction.response.edit_message(
                     embed=embed,
                     view=PlayerResultView(self.engine, self.user_id, notice),

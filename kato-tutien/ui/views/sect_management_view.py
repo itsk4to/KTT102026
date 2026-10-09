@@ -48,7 +48,12 @@ class SectManagementView(discord.ui.View):
     def build(self):
         self.clear_items(); ov=self.engine.sect.overview(self.user_id); apps=ov.get("applications",[]); invs=ov.get("invitations",[])
         if apps:
-            x=discord.ui.Select(placeholder="Chọn đơn…",options=[discord.SelectOption(label=f"#{a['id']} · {a['user_id']}",value=str(a['id'])) for a in apps[:25]],row=0); x.callback=self.sel_app; self.add_item(x)
+            app_options = []
+            for a in apps[:25]:
+                player = self.engine.players.get(str(a["user_id"]))
+                name = (player.display_name if player and player.display_name else f"Người chơi {str(a['user_id'])[-4:]}").strip()
+                app_options.append(discord.SelectOption(label=f"{name}"[:100], description=f"Đơn #{a['id']}", value=str(a['id'])))
+            x=discord.ui.Select(placeholder="Chọn người xin gia nhập…",options=app_options,row=0); x.callback=self.sel_app; self.add_item(x)
             ok=discord.ui.Button(label="Duyệt",emoji=EMOJI['ok'],style=discord.ButtonStyle.success,row=1); no=discord.ui.Button(label="Từ chối",emoji=EMOJI['no'],style=discord.ButtonStyle.danger,row=1); ok.callback=self.accept_app; no.callback=self.reject_app; self.add_item(ok); self.add_item(no)
         if invs:
             x=discord.ui.Select(placeholder="Chọn lời mời…",options=[discord.SelectOption(label=f"#{a['id']} · {a['sect_id']}",value=str(a['id'])) for a in invs[:25]],row=2); x.callback=self.sel_inv; self.add_item(x)

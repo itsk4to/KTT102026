@@ -13,7 +13,7 @@ def make_engine(tmp_path):
 
 def test_schema_and_dao_lu(tmp_path):
     engine = make_engine(tmp_path)
-    assert SCHEMA_VERSION == 10
+    assert SCHEMA_VERSION == 13
     a = engine.players.create("a", "A", "tien")
     engine.players.create("b", "B", "tien")
     engine.dao_lu.request("a", "b")
@@ -47,6 +47,18 @@ def test_dynamic_redeem_code(tmp_path):
     result = engine.economy.redeem_code("a", "TEST-V338")
     assert result["stones"] == 123
     assert result["qty"] == 2
+
+
+def test_dynamic_redeem_code_can_be_disabled(tmp_path):
+    engine = make_engine(tmp_path)
+    engine.players.create("a", "A", "tien")
+    engine.players.create("b", "B", "tien")
+    engine.codes.create("admin", "DISABLE-ME", 123, None, 0, 5)
+    assert engine.codes.disable("admin", "DISABLE-ME")["code"] == "DISABLE-ME"
+    with pytest.raises(GameError, match="vô hiệu hóa"):
+        engine.economy.redeem_code("a", "DISABLE-ME")
+    with pytest.raises(GameError, match="vô hiệu hóa"):
+        engine.codes.disable("admin", "DISABLE-ME")
 
 
 def test_dao_choice_and_dao_lu_reject(tmp_path):

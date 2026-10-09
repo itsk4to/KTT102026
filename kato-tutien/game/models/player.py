@@ -39,6 +39,7 @@ class Player:
     last_explore: int = 0
     last_hunt: int = 0
     last_daily: int = 0
+    breakthrough_recovery_until: int = 0
     daily_streak: int = 0
     be_quan_active: int = 0
     be_quan_last_tick: int = 0

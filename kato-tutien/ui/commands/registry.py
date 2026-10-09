@@ -8,12 +8,12 @@ from ui.commands.exploration import cmd_explore, cmd_zone, cmd_hunt
 from ui.commands.economy import (
     cmd_shop, cmd_buy, cmd_inventory, cmd_use, cmd_learn, cmd_equip,
     cmd_unequip, cmd_market, cmd_market_list, cmd_market_buy,
-    cmd_market_cancel, cmd_transfer, cmd_code, cmd_gacha,
+    cmd_market_cancel, cmd_transfer, cmd_code, cmd_gacha, cmd_pvp,
 )
 from ui.commands.dao import cmd_dao
 from ui.commands.sect import cmd_sect, cmd_sect_create, cmd_sect_apply, cmd_sect_contribute, cmd_sect_leave
 from ui.commands.admin import cmd_admin
-from ui.commands.dao_lu import cmd_dao_lu
+from ui.commands.dao_lu import cmd_dao_lu, cmd_song_tu
 from ui.commands.quest import cmd_npc, cmd_quest, cmd_world
 
 
@@ -30,8 +30,8 @@ class CommandSpec:
 
 COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("tutien", ("tt", "tamuontutien", "tao"), "start", ".tutien tien|ma", "Khai đạo tạo nhân vật.", cmd_create, True),
-    CommandSpec("help", ("h",), "start", ".help", "Sổ tay lệnh và phân loại thao tác.", cmd_help),
-    CommandSpec("menu", ("mn",), "system", ".menu", "Mở Trung Tâm giao diện.", cmd_menu),
+    CommandSpec("help", ("h",), "start", ".help", "Hướng dẫn người mới và mở menu tổng.", cmd_help),
+    CommandSpec("menu", ("mn",), "system", ".menu", "Mở Help + menu tổng (tương thích lệnh cũ).", cmd_menu),
     CommandSpec("info", ("i", "xem"), "start", ".info", "Xem nhân vật.", cmd_info),
     CommandSpec("tu", ("tl", "tuluyen"), "cultivation", ".tu", "Tu luyện.", cmd_cultivate),
     CommandSpec("dotpha", ("dp",), "cultivation", ".dotpha", "Đột phá cảnh giới.", cmd_breakthrough),
@@ -58,9 +58,11 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("chuyen", ("cv", "transfer"), "trade", ".chuyen @người_chơi <số_linh_thạch>", "Chuyển linh thạch.", cmd_transfer, True),
     CommandSpec("code", (), "trade", ".code <mã>", "Nhập mã thưởng.", cmd_code, True),
     CommandSpec("gacha", ("gc", "thienco"), "trade", ".gacha", "Thiên Cơ gacha.", cmd_gacha),
+    CommandSpec("pvp", ("dau", "khieuchien"), "combat", ".pvp @người_chơi linhthach <số> [50|45|55] hoặc vatpham <mã> <số> [50|45|55]", "Khiêu chiến PvP có cược linh thạch hoặc vật phẩm.", cmd_pvp, True),
     CommandSpec("dao", (), "dao", ".dao [kiem|dao|phap|the|ma]", "Mở giao diện Đạo; mã vẫn hỗ trợ chọn nhanh.", cmd_dao, True),
     CommandSpec("daolu", ("dlp",), "social", ".daolu", "Mở giao diện Đạo Lữ.", cmd_dao_lu),
     CommandSpec("ketduyen", ("kd",), "social", ".ketduyen @người_chơi", "Gửi lời cầu duyên tới một đạo hữu.", cmd_dao_lu, True),
+    CommandSpec("songtu", ("st",), "social", ".songtu", "Song tu với đạo lữ để tăng duyên phận (giới hạn thời gian).", cmd_song_tu),
     CommandSpec("tongmon", ("tm",), "sect", ".tongmon", "Mở giao diện tông môn.", cmd_sect),
     CommandSpec("taotong", (), "sect", ".taotong <tên>", "Sáng lập tông môn.", cmd_sect_create, True),
     CommandSpec("xintong", (), "sect", ".xintong <sect_id>", "Xin gia nhập.", cmd_sect_apply, True),

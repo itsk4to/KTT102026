@@ -20,7 +20,8 @@ async def cmd_breakthrough(ctx, message: discord.Message, args: list[str] | None
             await message.reply(embed=cultivation_preview_embed(preview))
             return
         from ui.views.breakthrough_view import BreakthroughView
-        await message.reply(embed=cultivation_preview_embed(preview), view=BreakthroughView(ctx.engine, str(message.author.id)))
+        view = BreakthroughView(ctx.engine, str(message.author.id))
+        await message.reply(embed=view.render_embed(), view=view)
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 
@@ -30,7 +31,9 @@ async def cmd_tribulation(ctx, message: discord.Message, args: list[str] | None 
         if r["success"]:
             await message.reply(embed=success_embed("⚡ Vượt kiếp thành công!", f"Cảnh giới: **{r['realm']}**"))
         else:
-            await message.reply(embed=error_embed(f"Kiếp nạn thất bại. {r['realm']}"))
+            await message.reply(embed=error_embed(
+                f"Kiếp nạn thất bại. {r['realm']}\n🩹 Hồi phục {r.get('recovery_seconds', 0)}s trước khi tiếp tục tu luyện."
+            ))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 

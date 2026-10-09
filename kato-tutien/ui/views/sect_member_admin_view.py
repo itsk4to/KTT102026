@@ -27,14 +27,16 @@ class SectMemberAdminView(discord.ui.View):
         self.clear_items()
         members = [m for m in self._members() if m.user_id != self.user_id]
         if members:
-            options = [
-                discord.SelectOption(
-                    label=f"{m.user_id} · {m.role}"[:100],
+            options = []
+            for m in members[:25]:
+                player = self.engine.players.get(m.user_id)
+                name = (player.display_name if player and player.display_name else f"Người chơi {m.user_id[-4:]}").strip()
+                options.append(discord.SelectOption(
+                    label=f"{name} · {m.role}"[:100],
                     value=str(m.user_id),
                     description=f"Cống hiến {m.contribution:,}",
                     emoji=EMOJI["cultivator"],
-                ) for m in members[:25]
-            ]
+                ))
             select = discord.ui.Select(placeholder="Chọn thành viên…", options=options, row=0)
             select.callback = self._select
             self.add_item(select)
@@ -60,7 +62,11 @@ class SectMemberAdminView(discord.ui.View):
 
     def build_embed(self):
         members = self._members()
-        lines = [f"**{m.user_id}** — {m.role} · {m.contribution:,} cống hiến" for m in members[:15]]
+        lines = []
+        for m in members[:15]:
+            player = self.engine.players.get(m.user_id)
+            name = (player.display_name if player and player.display_name else f"Người chơi {m.user_id[-4:]}").strip()
+            lines.append(f"**{name}** — {m.role} · {m.contribution:,} cống hiến")
         return base_embed("🏯 Quản trị thành viên", "\n".join(lines) or "Tông môn chưa có thành viên khác.")
 
     async def _select(self, interaction: discord.Interaction):
