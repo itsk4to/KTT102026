@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 dist/
 *.egg-info/
+
+# SQLite runtime files
+*.db-shm
+*.db-wal

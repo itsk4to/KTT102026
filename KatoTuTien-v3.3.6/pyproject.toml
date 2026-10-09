@@ -1,9 +1,0 @@
-[project]
-name = "kato-tutien"
-version = "3.3.7"
-description = "Kato Tu Tiên — Discord cultivation MMORPG (v3 clean architecture)"
-requires-python = ">=3.11"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
