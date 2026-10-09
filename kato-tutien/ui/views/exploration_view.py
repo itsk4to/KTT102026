@@ -1,3 +1,4 @@
+from ui.emoji import EMOJI
 from __future__ import annotations
 
 import discord
