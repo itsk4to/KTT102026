@@ -1,7 +1,7 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -263,6 +263,13 @@ CREATE TABLE IF NOT EXISTS npc_relationships (
     interactions INTEGER NOT NULL DEFAULT 0,
     last_interaction INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (user_id, npc_key)
+);
+
+CREATE TABLE IF NOT EXISTS secret_realm_sessions (
+    user_id TEXT PRIMARY KEY,
+    realm_key TEXT NOT NULL,
+    cycle_started_at INTEGER NOT NULL,
+    claims INTEGER NOT NULL DEFAULT 0
 );
 """
 

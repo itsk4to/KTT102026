@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.engine import GameEngine, GameError
 from game.database.schema import SCHEMA_VERSION
 from game.version import version_status
@@ -44,7 +45,7 @@ class AdminLoginModal(discord.ui.Modal, title="🔐 Đăng nhập quản trị")
         )
 
 
-class AdminLoginView(discord.ui.View):
+class AdminLoginView(ThemedView):
     def __init__(self, engine: GameEngine):
         super().__init__(timeout=180)
         self.engine = engine
@@ -140,7 +141,7 @@ class HeavenlyRuleModal(discord.ui.Modal, title="☯️ Nhập Quy Tắc Đại 
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
-class AdminView(discord.ui.View):
+class AdminView(ThemedView):
     def __init__(self, engine: GameEngine, actor_id: str):
         super().__init__(timeout=300)
         self.engine = engine
@@ -249,7 +250,7 @@ class AdminView(discord.ui.View):
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
-class CodeAdminView(discord.ui.View):
+class CodeAdminView(ThemedView):
     def __init__(self, engine, actor_id):
         super().__init__(timeout=180)
         self.engine = engine
@@ -285,7 +286,7 @@ class CodeAdminView(discord.ui.View):
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
-class HeavenlyAdminView(discord.ui.View):
+class HeavenlyAdminView(ThemedView):
     def __init__(self, engine, actor_id):
         super().__init__(timeout=180)
         self.engine = engine

@@ -72,14 +72,36 @@ async def cmd_equip(ctx, message: discord.Message, args: list[str]) -> None:
         return
     try:
         r = ctx.engine.economy.equip(str(message.author.id), args[0])
-        await message.reply(embed=success_embed("✅ Trang bị", f"**{r['item']['name']}** → ô `{r['slot']}`"))
+        stats = r["power"]
+        text = (
+            f"**{r['item']['name']}** đã được trang bị vào ô `{r['slot']}`.\\n"
+            "Vật phẩm đã chuyển khỏi túi và đang được tính vào chỉ số chiến đấu.\\n"
+            f"⚔️ Công: **{stats['attack']}** · 🛡️ Thủ: **{stats['defense']}** · "
+            f"❤️ HP tối đa: **{stats['max_hp']}**\\n"
+            f"💥 Chiến lực: **{stats['power']}**"
+        )
+        if r.get("replaced_item_id"):
+            previous = ITEMS.get(r["replaced_item_id"], {}).get("name", r["replaced_item_id"])
+            text += f"\\nTrang bị cũ **{previous}** đã được trả về túi."
+        await message.reply(embed=success_embed("✅ Trang bị thành công", text))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 
 async def cmd_unequip(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:
-        ctx.engine.economy.unequip(str(message.author.id))
-        await message.reply(embed=success_embed("✅ Đã tháo trang bị", "Toàn bộ trang bị đã được tháo."))
+        slot = args[0].lower() if args and args[0].lower() not in ("all", "tatca", "tất-cả") else None
+        r = ctx.engine.economy.unequip(str(message.author.id), slot)
+        stats = r["power"]
+        if slot:
+            names = [ITEMS.get(i, {}).get("name", i) for i in r["removed"]]
+            message_text = f"Đã tháo **{names[0]}** và trả vật phẩm về túi."
+        else:
+            message_text = f"Đã tháo **{len(r['removed'])}** trang bị và trả tất cả về túi."
+        message_text += (
+            f"\\n⚔️ Công: **{stats['attack']}** · 🛡️ Thủ: **{stats['defense']}** · "
+            f"❤️ HP tối đa: **{stats['max_hp']}** · 💥 Chiến lực: **{stats['power']}**"
+        )
+        await message.reply(embed=success_embed("✅ Đã tháo trang bị", message_text))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 

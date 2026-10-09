@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import discord
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, player_embed
 
 
-class PathChoiceView(discord.ui.View):
+class PathChoiceView(ThemedView):
     def __init__(self, engine, user_id: str, display_name: str, timeout: float = 180):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -19,15 +20,15 @@ class PathChoiceView(discord.ui.View):
             return
         try:
             p = self.engine.players.create(self.user_id, self.display_name, path)
-            await interaction.response.edit_message(embed=player_embed(self.engine.players.info_text(self.user_id)), view=None)
+            await interaction.response.edit_message(embed=player_embed(self.engine.players.info_text(self.user_id), combat_stats=self.engine.combat.battle_stats(p)), view=None)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
-    @discord.ui.button(label="Tu Tiên", style=discord.ButtonStyle.success, emoji=EMOJI["cultivator"], row=0)
+    @discord.ui.button(label="Tu Tiên", style=discord.ButtonStyle.success, emoji=EMOJI["faction_tien"], row=0)
     async def choose_tien(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await self._choose(interaction, "tien")
 
-    @discord.ui.button(label="Tu Ma", style=discord.ButtonStyle.danger, emoji=EMOJI["demon"], row=0)
+    @discord.ui.button(label="Tu Ma", style=discord.ButtonStyle.danger, emoji=EMOJI["faction_ma"], row=0)
     async def choose_ma(self, interaction: discord.Interaction, _button: discord.ui.Button):
         await self._choose(interaction, "ma")
 

@@ -11,7 +11,7 @@ from game.repositories.code_repository import CodeRepository
 from game.repositories.market_repository import MarketRepository
 from game.repositories.player_repository import PlayerRepository
 from game.rules.combat_rules import mastery_stage
-from game.rules.cultivation_rules import soft_cap_stat
+from game.rules.cultivation_rules import soft_cap_stat, bounded_cultivation_delta
 from game.rules.economy_rules import can_afford, seller_gain, tax_amount
 from game.services.errors import GameError
 from game.utils import weighted_pick
@@ -56,7 +56,7 @@ class EconomyService:
                 }.get(cat, "📦")
                 rarity_emoji = {"Phàm": "⚪", "Hoàng": "🟢", "Huyền": "🔵", "Địa": "🟣", "Thiên": "🟠", "Tiên": "🔴"}.get(rarity, "⚪")
                 effects = []
-                for key, label in (("cultivation", "Tu vi"), ("heal", "Hồi HP"), ("root", "Căn cơ"), ("insight", "Ngộ tính"), ("luck", "May mắn"), ("fate", "Mệnh số"), ("mind", "Đạo tâm"), ("attack", "Công"), ("defense", "Thủ"), ("all_stats", "Toàn bộ thuộc tính")):
+                for key, label in (("cultivation", "Tu vi"), ("heal", "Hồi HP"), ("max_hp", "HP tối đa"), ("root", "Căn cơ"), ("insight", "Ngộ tính"), ("luck", "May mắn"), ("fate", "Mệnh số"), ("mind", "Đạo tâm"), ("attack", "Công"), ("defense", "Thủ"), ("all_stats", "Toàn bộ thuộc tính")):
                     if it.get(key):
                         effects.append(f"{label} +{it[key]}")
                 if it.get("breakthrough_bonus"):
@@ -101,6 +101,12 @@ class EconomyService:
             self.players.save(p)
             return {"item": item, "qty": qty, "total": total, "player": p}
 
+    def _effective_max_hp(self, player) -> int:
+        combat = getattr(self, "combat", None)
+        if combat is not None:
+            return max(1, int(combat.battle_stats(player)["max_hp"]))
+        return max(1, int(self.equipment_power(player)["max_hp"]))
+
     def use_item(self, user_id: str, item_id: str, qty: int = 1) -> dict:
         with self.players.transaction():
             if qty < 1 or qty > 100:
@@ -113,31 +119,56 @@ class EconomyService:
             if item.get("thunder_resistance"):
                 raise GameError("Đây là vật phẩm hộ kiếp. Hãy mở `.dotpha` và chọn liều dùng trong giao diện Cửu Lôi Kiếp; đừng dùng trực tiếp trong túi.")
             p = self._require(user_id)
+            stat_keys = ("root", "insight", "luck", "fate", "mind", "all_stats")
+            has_permanent_stat = any(int(item.get(key, 0)) > 0 for key in stat_keys)
+            if has_permanent_stat and qty > 1:
+                raise GameError("Vật phẩm tăng chỉ số vĩnh viễn chỉ dùng từng món để tránh lãng phí.")
+            stat_marker = f"item_stat_bonus:{item_id}"
+            stat_already_claimed = has_permanent_stat and self.players.has_discovery(user_id, stat_marker)
+            has_repeatable_effect = bool(item.get("cultivation") or item.get("heal"))
+            if stat_already_claimed and not has_repeatable_effect:
+                raise GameError("Ngươi đã nhận phần tăng chỉ số vĩnh viễn từ vật phẩm này rồi.")
             if not self._inventory.remove(user_id, item_id, qty):
                 raise GameError("Không đủ số lượng.")
-            cult = int(item.get("cultivation", 0)) * qty
+            requested_cult = int(item.get("cultivation", 0)) * qty
+            cult = bounded_cultivation_delta(p.cultivation, requested_cult, p.realm_index, p.realm_layer)
             heal = int(item.get("heal", 0)) * qty
             notes = []
-            if cult:
+            if requested_cult:
                 p.cultivation += cult
-                notes.append(f"+{cult} tu vi")
+                notes.append(f"+{cult} tu vi" if cult else "Tu vi tầng hiện tại đã đầy; không nhận thêm tu vi")
+                if cult < requested_cult:
+                    notes.append(f"Đã giới hạn tu vi ở ngưỡng tầng hiện tại ({p.cultivation})")
             if heal:
-                p.hp = min(p.max_hp, p.hp + heal)
-                notes.append(f"+{heal} HP")
-            for stat in ("root", "insight", "luck", "fate", "mind"):
-                bonus = int(item.get(stat, 0)) * qty
-                if bonus:
-                    actual = soft_cap_stat(getattr(p, stat), bonus)
-                    setattr(p, stat, getattr(p, stat) + actual)
-                    if actual:
-                        notes.append(f"+{actual} {stat}")
-            all_stats = int(item.get("all_stats", 0)) * qty
-            if all_stats:
+                # Normalize legacy HP values that may exceed the current loadout cap.
+                # The cap includes gear, Dao and talent bonuses via CombatService.
+                effective_max_hp = self._effective_max_hp(p)
+                p.hp = min(max(0, int(p.hp)), effective_max_hp)
+                before_hp = p.hp
+                p.hp = min(effective_max_hp, p.hp + heal)
+                healed = p.hp - before_hp
+                notes.append(f"+{healed} HP" if healed else "Khí huyết đã đầy")
+            if has_permanent_stat and not stat_already_claimed:
                 for stat in ("root", "insight", "luck", "fate", "mind"):
-                    actual = soft_cap_stat(getattr(p, stat), all_stats)
-                    setattr(p, stat, getattr(p, stat) + actual)
+                    bonus = int(item.get(stat, 0))
+                    if bonus:
+                        actual = soft_cap_stat(getattr(p, stat), bonus)
+                        setattr(p, stat, getattr(p, stat) + actual)
+                        if actual:
+                            notes.append(f"+{actual} {stat}")
+                all_stats = int(item.get("all_stats", 0))
+                if all_stats:
+                    for stat in ("root", "insight", "luck", "fate", "mind"):
+                        actual = soft_cap_stat(getattr(p, stat), all_stats)
+                        setattr(p, stat, getattr(p, stat) + actual)
+                        if actual:
+                            notes.append(f"+{actual} {stat}")
+                self.players.add_discovery(user_id, stat_marker)
+            elif stat_already_claimed:
+                notes.append("Chỉ số vĩnh viễn của vật phẩm này đã nhận trước đó")
             self.players.save(p)
-            return {"item": item, "qty": qty, "notes": notes, "player": p}
+            return {"item": item, "qty": qty, "notes": notes, "player": p,
+                    "cultivation_requested": requested_cult, "cultivation_gained": cult}
 
     def learn_technique(self, user_id: str, item_id: str) -> dict:
         with self.players.transaction():
@@ -166,37 +197,81 @@ class EconomyService:
             self.players.save(p)
             return {"item": item, "mastery": mastery, "stage": stage, "stat": stat, "bonus": actual, "player": p}
 
+    def equipment_power(self, player) -> dict:
+        """Aggregate visible combat stats including currently equipped gear."""
+        attack = int(player.attack)
+        defense = int(player.defense)
+        max_hp = int(player.max_hp)
+        for item_id in (player.loadout or {}).values():
+            if not item_id:
+                continue
+            item = ITEMS.get(item_id, {})
+            attack += int(item.get("attack", 0))
+            defense += int(item.get("defense", 0))
+            max_hp += int(item.get("max_hp", 0))
+        return {"attack": attack, "defense": defense, "max_hp": max_hp,
+                "power": attack * 2 + defense * 2 + max_hp // 10}
+
     def equip(self, user_id: str, item_id: str) -> dict:
-        item = ITEMS.get(item_id)
-        if not item or item.get("type") != "equipment":
-            raise GameError("Không phải trang bị.")
-        p = self._require(user_id)
-        if self._inventory.get_count(user_id, item_id) < 1:
-            raise GameError("Không có trang bị này.")
-        slot = item_slot(item_id) or item.get("slot") or "artifact"
-        if slot not in EQUIP_SLOTS:
-            slot = "artifact"
-        loadout = dict(p.loadout or {})
-        for s, v in list(loadout.items()):
-            if v == item_id:
-                loadout[s] = None
-        loadout[slot] = item_id
-        p.loadout = loadout
-        p.equipped = item_id  # legacy dual-write
-        self.players.save(p)
-        return {"item": item, "slot": slot, "loadout": loadout, "player": p}
+        with self.players.transaction():
+            item = ITEMS.get(item_id)
+            if not item or item.get("type") != "equipment":
+                raise GameError("Không phải trang bị.")
+            p = self._require(user_id)
+            if self._inventory.get_count(user_id, item_id) < 1:
+                raise GameError("Không có trang bị này trong túi.")
+            slot = item_slot(item_id) or item.get("slot") or "artifact"
+            if slot not in EQUIP_SLOTS:
+                slot = "artifact"
+            loadout = dict(p.loadout or {})
+            previous_id = loadout.get(slot)
+            # Consume the newly equipped item from inventory.
+            if not self._inventory.remove(user_id, item_id, 1):
+                raise GameError("Không có trang bị này trong túi.")
+            # The previous item in this slot returns to the bag.
+            if previous_id and previous_id != item_id:
+                self._inventory.add(user_id, previous_id, 1)
+            # If the same item is already equipped in this slot, don't duplicate or consume it.
+            if previous_id == item_id:
+                self._inventory.add(user_id, item_id, 1)
+                raise GameError("Vật phẩm này đã được trang bị ở ô đó.")
+            for other_slot, equipped_id in list(loadout.items()):
+                if equipped_id == item_id:
+                    loadout[other_slot] = None
+            loadout[slot] = item_id
+            p.loadout = loadout
+            p.equipped = item_id
+            p.hp = min(max(0, int(p.hp)), self._effective_max_hp(p))
+            self.players.save(p)
+            return {"item": item, "slot": slot, "loadout": loadout, "player": p,
+                    "replaced_item_id": previous_id, "power": self.equipment_power(p)}
 
     def unequip(self, user_id: str, slot: str | None = None) -> dict:
-        p = self._require(user_id)
-        loadout = dict(p.loadout or {})
-        if slot:
-            loadout[slot] = None
-        else:
-            loadout = {s: None for s in EQUIP_SLOTS}
-        p.loadout = loadout
-        p.equipped = ""
-        self.players.save(p)
-        return {"loadout": loadout, "player": p}
+        with self.players.transaction():
+            p = self._require(user_id)
+            loadout = dict(p.loadout or {})
+            if slot:
+                if slot not in EQUIP_SLOTS:
+                    raise GameError("Ô trang bị không hợp lệ. Dùng `.thao` để xem hướng dẫn.")
+                item_id = loadout.get(slot)
+                if not item_id:
+                    raise GameError(f"Ô `{slot}` hiện không có trang bị.")
+                self._inventory.add(user_id, item_id, 1)
+                loadout[slot] = None
+                removed = [item_id]
+            else:
+                removed = []
+                for current_slot, item_id in list(loadout.items()):
+                    if item_id:
+                        self._inventory.add(user_id, item_id, 1)
+                        removed.append(item_id)
+                    loadout[current_slot] = None
+            p.loadout = loadout
+            p.equipped = next((v for v in loadout.values() if v), "")
+            p.hp = min(max(0, int(p.hp)), self._effective_max_hp(p))
+            self.players.save(p)
+            return {"loadout": loadout, "player": p, "removed": removed,
+                    "power": self.equipment_power(p)}
 
     def inventory(self, user_id: str) -> list[dict]:
         stacks = self._inventory.list_items(user_id)

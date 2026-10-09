@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import discord
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from game.rules.cultivation_rules import realm_text
 from game.content.items import ITEMS
+from game.content.monsters import MONSTERS, BOSS_MONSTERS
 from ui.emoji import EMOJI
 from ui.embeds import combat_embed
 from ui.views.combat_view import CombatView
 from ui.embeds import base_embed, error_embed
 
 
-class ExplorationChoiceView(discord.ui.View):
+class ExplorationChoiceView(ThemedView):
     def __init__(self, engine, user_id: str, event: dict, zone: dict, timeout: float = 180):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -43,7 +45,7 @@ class ExplorationChoiceView(discord.ui.View):
                 await interaction.response.send_message(embed=error_embed(str(e)), ephemeral=True)
         return callback
 
-class ExplorationMenuView(discord.ui.View):
+class ExplorationMenuView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -61,14 +63,23 @@ class ExplorationMenuView(discord.ui.View):
         if not zone:
             return base_embed("🗺️ Khám Phá", "Chưa có khu vực khả dụng.")
         path_label = {"tien": "Tiên đạo", "ma": "Ma đạo", "both": "Tiên / Ma"}.get(zone.get("path", "both"), "Tiên / Ma")
+        player = self.engine.players.get(self.user_id)
         lines = [
             f"**{zone['name']}**",
             zone["description"],
             f"{EMOJI['cultivator']} Tu vi tối thiểu: **{realm_text(zone['min_realm'], 1)}**",
             f"Con đường: **{path_label}**",
-            "",
-            "Chọn khu bằng menu, sau đó bấm **Khám phá** để bắt đầu.",
         ]
+        realm_index = getattr(player, "realm_index", 0)
+        local_mobs = [m for m in MONSTERS if zone["key"] in m.get("zones", []) and abs(m["min_realm"] - realm_index) <= 1]
+        general_mobs = [m for m in MONSTERS if not m.get("zones") and abs(m["min_realm"] - realm_index) <= 1]
+        shown_mobs = (local_mobs or general_mobs)[:3]
+        local_bosses = [b for b in BOSS_MONSTERS if zone["key"] in b.get("zones", []) and abs(b["min_realm"] - realm_index) <= 1]
+        if shown_mobs:
+            lines.extend(["", "**Dấu vết yêu thú**", " · ".join(m["name"] for m in shown_mobs)])
+        if local_bosses:
+            lines.extend(["", "**⚠️ Boss có thể xuất hiện**", " · ".join(b["name"] for b in local_bosses[:2])])
+        lines.extend(["", "Chọn khu bằng menu, sau đó bấm **Khám phá** để bắt đầu.", "*Khu vực càng cao, quái và boss càng nguy hiểm.*"])
         return base_embed(f"{EMOJI['explore']} Khám Phá", "\n".join(lines))
 
     def _rebuild(self):

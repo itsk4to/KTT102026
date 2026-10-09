@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from game.utils import fmt_amount
 from ui.embeds import base_embed, error_embed, success_embed
@@ -87,7 +88,7 @@ class ShopItemSelect(discord.ui.Select):
         await interaction.response.edit_message(embed=self.owner.build_embed(), view=self.owner)
 
 
-class ShopView(discord.ui.View):
+class ShopView(ThemedView):
     def __init__(self, engine, catalog: dict, user_id: str | None = None, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine

@@ -12,7 +12,7 @@ async def cmd_create(ctx, message: discord.Message, args: list[str] | None = Non
     if args and args[0].lower() in ("tien", "ma"):
         try:
             p = ctx.engine.players.create(str(message.author.id), message.author.display_name, args[0].lower())
-            await message.reply(embed=player_embed(ctx.engine.players.info_text(p.user_id)))
+            await message.reply(embed=player_embed(ctx.engine.players.info_text(p.user_id), combat_stats=ctx.engine.combat.battle_stats(p)))
         except GameError as e:
             await message.reply(embed=error_embed(str(e)))
         return
@@ -28,56 +28,59 @@ async def cmd_menu(ctx, message: discord.Message, args: list[str] | None = None)
 
 
 async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None) -> None:
-    quick_names = {
-        "info", "bxh", "tu", "dotpha", "thienkiep", "daily", "chuyen", "code",
-    }
-    gui_names = {
-        "tui", "shop", "khampha", "nhiemvu", "npc", "thegioi", "dao", "tongmon", "daolu",
-    }
-    advanced_names = {
-        "mua", "dung", "hoc", "trangbi", "thao", "cho", "dangban", "muacho", "huyban", "pvp",
-        "khu", "san", "taotong", "xintong", "congtong", "roitong", "gacha", "tutien", "songtu",
-    }
+    # Help is intentionally grouped by player journey, with concise examples first.
+    categories = [
+        ("🌱 BẮT ĐẦU", {"tutien", "info", "help", "menu"}),
+        ("🧘 TU LUYỆN & ĐỘT PHÁ", {"tu", "dotpha", "thienkiep", "daily", "bxh"}),
+        ("🗺️ KHÁM PHÁ & NHIỆM VỤ", {"khampha", "khu", "san", "bicanh", "npc", "nhiemvu", "thegioi"}),
+        ("🎒 VẬT PHẨM & GIAO DỊCH", {"shop", "mua", "tui", "dung", "hoc", "trangbi", "thao", "cho", "dangban", "muacho", "huyban", "chuyen", "code", "gacha"}),
+        ("⚔️ CHIẾN ĐẤU", {"pvp"}),
+        ("🏯 TÔNG MÔN", {"tongmon", "taotong", "xintong", "congtong", "roitong"}),
+        ("☯️ ĐẠO & ĐẠO LỮ", {"dao", "daolu", "ketduyen", "songtu"}),
+        ("🛠️ QUẢN TRỊ", {"admin"}),
+    ]
+
+    specs_by_name = {spec.name: spec for spec in ctx.command_specs}
 
     def render(names: set[str]) -> list[str]:
-        specs = [s for s in ctx.command_specs if s.name in names]
         lines = []
-        for s in specs:
-            aliases = ", ".join(f"`.{a}`" for a in s.aliases if a != s.name)
-            alias_text = f" · {aliases}" if aliases else ""
-            lines.append(f"`{s.usage}` — {s.description}{alias_text}")
+        for spec in ctx.command_specs:
+            if spec.name not in names:
+                continue
+            aliases = [f".{a}" for a in spec.aliases if a != spec.name]
+            alias_text = f" · Bí danh: `{', '.join(aliases)}`" if aliases else ""
+            lines.append(f"**`{spec.usage}`**\n{spec.description}{alias_text}")
         return lines
 
     lines = [
         "**Chào mừng đến với Kato Tu Tiên!**",
-        "Người mới chỉ cần đi theo các bước dưới đây. Có thể bấm nút ở giao diện bên dưới để mở hệ thống, không cần nhớ hết lệnh.",
+        "Dùng các lệnh bên dưới hoặc nhấn nút ở menu. Lệnh có dấu `<...>` cần thay bằng giá trị thật.",
         "",
-        "**🌱 BẮT ĐẦU TRONG 1 PHÚT**",
-        "**1.** `.tutien` — tạo nhân vật, chọn **Tu Tiên** hoặc **Tu Ma**.",
-        "**2.** `.info` — xem cảnh giới, linh thạch và thông tin nhân vật.",
-        "**3.** `.tu` — tu luyện để tích lũy tu vi.",
-        "**4.** `.khampha` — khám phá khu vực, gặp cơ duyên và thử thách.",
-        "**5.** `.nhiemvu` — xem nhiệm vụ; `.shop` và `.tui` để mua/quản lý vật phẩm.",
-        "**6.** Khi đủ điều kiện, dùng `.dotpha`; `.daily` để nhận thưởng hằng ngày.",
+        "**🚀 LỘ TRÌNH NHANH CHO NGƯỜI MỚI**",
+        "① `.tutien` → chọn Tiên hoặc Ma.",
+        "② `.info` → xem nhân vật và cảnh giới.",
+        "③ `.tu` → tích lũy tu vi; đủ tu vi thì dùng `.dotpha`.",
+        "④ `.khampha` → kiếm tài nguyên; `.bicanh` → nhận linh thạch và tu vi theo chu kỳ 3 giờ; `.nhiemvu` → theo dõi mục tiêu.",
+        "⑤ `.shop` → mua đồ; `.tui` → xem túi; `.trangbi <mã>` → mặc trang bị.",
+        "⑥ `.help` → quay lại hướng dẫn này bất cứ lúc nào.",
         "",
-        "**🧭 CHỌN HỆ THỐNG BẰNG NÚT**",
-        "Dùng menu bên dưới để mở Nhân vật, Túi, Tiên Phường, Khám phá, Nhiệm vụ, Tông môn và các hệ thống khác.",
-        "",
-        "**⚡ LỆNH NHANH**",
-        *render(quick_names),
-        "",
-        "**🖱️ GIAO DIỆN**",
-        *render(gui_names),
-        "",
-        "**🧰 THAO TÁC NÂNG CAO**",
-        *render(advanced_names),
-        "",
-        "**⚔️ PvP cược:** `.pvp @người_chơi linhthach <số> [50|45|55]` hoặc `.pvp @người_chơi vatpham <mã> <số> [50|45|55]`. Vật cược chỉ bị trừ khi đối thủ nhận lời; người thắng nhận toàn bộ cược.\n",
-        "**💞 Đạo lữ:** `.ketduyen @người_chơi` gửi cầu duyên; `.daolu` xem quan hệ/lời mời; `.songtu` tăng duyên phận theo thời gian hồi phục.",
-        "**💡 Mẹo:** `.help` là nơi hướng dẫn và mở menu tổng. `.menu` vẫn hoạt động như lệnh cũ.",
     ]
+    for title, names in categories:
+        rendered = render(names)
+        if rendered:
+            lines.extend([f"**{title}**", *rendered, ""])
+
+    lines.extend([
+        "**💞 ĐẠO LỮ & SONG TU**",
+        "`.ketduyen @người_chơi` gửi lời cầu duyên; người nhận phải đồng ý. `.daolu` mở giao diện quan hệ; `.songtu` để cả hai cùng nhận thêm tu vi và tăng duyên phận. Mỗi cặp có thời gian hồi phục 60 phút.",
+        "",
+        "**🧰 MẸO DÙNG LỆNH**",
+        "• `.thao` tháo tất cả trang bị; `.thao <ô_trang_bị>` tháo riêng một ô.",
+        "• `.bxh tien` và `.bxh ma` xem bảng xếp hạng từng phe.",
+        "• `.menu` vẫn hoạt động như lệnh mở menu tổng.",
+    ])
     await message.reply(
-        embed=base_embed("📖 Hướng Dẫn & Menu Kato Tu Tiên", "\n".join(lines)),
+        embed=base_embed("📖 Cẩm Nang Tu Tiên · Help", "\\n".join(lines)),
         view=MainMenuView(ctx.engine, str(message.author.id)),
     )
 
@@ -85,7 +88,7 @@ async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None)
 async def cmd_info(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:
         info = ctx.engine.players.info_text(str(message.author.id))
-        await message.reply(embed=player_embed(info))
+        await message.reply(embed=player_embed(info, combat_stats=ctx.engine.combat.battle_stats(info["player"])))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
 
@@ -94,12 +97,12 @@ async def cmd_leaderboard(ctx, message: discord.Message, args: list[str] | None 
 
     def format_rows(rows) -> str:
         return "\n".join(
-            f"**{i}.** {p.display_name} — {realm_text(p.realm_index, p.realm_layer)}"
+            f"**{i}.** {p.display_name} — {realm_text(p.realm_index, p.realm_layer, p.path)}"
             for i, p in enumerate(rows, 1)
         ) or "Chưa có người chơi trong bảng này."
 
     if path in ("tien", "ma"):
-        title = "🏆 BXH Tu Tiên" if path == "tien" else "🏆 BXH Tu Ma"
+        title = f"🏆 {EMOJI['faction_tien']} BXH Tu Tiên" if path == "tien" else f"🏆 {EMOJI['faction_ma']} BXH Tu Ma"
         rows = ctx.engine.players.leaderboard(10, path)
         await message.reply(embed=base_embed(title, format_rows(rows)))
         return
@@ -107,6 +110,6 @@ async def cmd_leaderboard(ctx, message: discord.Message, args: list[str] | None 
     tien = ctx.engine.players.leaderboard(10, "tien")
     ma = ctx.engine.players.leaderboard(10, "ma")
     embed = base_embed("🏆 Bảng Xếp Hạng Hai Phe", "Dùng `.bxh tien` hoặc `.bxh ma` để xem riêng từng phe.")
-    embed.add_field(name="🧘 Tu Tiên", value=format_rows(tien), inline=True)
-    embed.add_field(name="👹 Tu Ma", value=format_rows(ma), inline=True)
+    embed.add_field(name=f"{EMOJI['faction_tien']} Tu Tiên", value=format_rows(tien), inline=True)
+    embed.add_field(name=f"{EMOJI['faction_ma']} Tu Ma", value=format_rows(ma), inline=True)
     await message.reply(embed=embed)

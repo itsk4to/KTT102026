@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import error_embed, inventory_embed, inventory_item_icon
@@ -150,7 +151,7 @@ class InventoryQuantityModal(discord.ui.Modal, title="Chọn số lượng"):
         await self.owner.perform_action(interaction, "use", quantity, from_modal=True)
 
 
-class InventoryView(discord.ui.View):
+class InventoryView(ThemedView):
     def __init__(
         self,
         engine,

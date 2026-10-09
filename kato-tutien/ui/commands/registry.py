@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from ui.commands.core import cmd_create, cmd_help, cmd_info, cmd_leaderboard, cmd_menu
 from ui.commands.cultivation import cmd_cultivate, cmd_breakthrough, cmd_tribulation, cmd_daily
 from ui.commands.exploration import cmd_explore, cmd_zone, cmd_hunt
+from ui.commands.secret_realm import cmd_secret_realm
 from ui.commands.economy import (
     cmd_shop, cmd_buy, cmd_inventory, cmd_use, cmd_learn, cmd_equip,
     cmd_unequip, cmd_market, cmd_market_list, cmd_market_buy,
@@ -41,6 +42,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("khampha", ("kp", "phieuluu"), "explore", ".khampha", "Mở giao diện khám phá.", cmd_explore, True),
     CommandSpec("khu", ("kh",), "explore", ".khu <mã>", "Chọn khu khám phá.", cmd_zone, True),
     CommandSpec("san", ("s", "hunt"), "explore", ".san", "Săn yêu thú.", cmd_hunt),
+    CommandSpec("bicanh", ("bc",), "explore", ".bicanh", "Chọn bí cảnh và nhận linh thạch/tu vi theo chu kỳ 3 giờ.", cmd_secret_realm),
     CommandSpec("npc", ("n", "nhanvat"), "world", ".npc [mã]", "Mở giao diện NPC; có thể dùng mã cho thao tác nhanh.", cmd_npc, True),
     CommandSpec("nhiemvu", ("q", "quest", "nv"), "world", ".nhiemvu [mã|nhan <mã>]", "Mở giao diện nhiệm vụ; mã vẫn hỗ trợ thao tác nâng cao.", cmd_quest, True),
     CommandSpec("thegioi", ("tg", "world"), "world", ".thegioi [thamgia <mã>]", "Mở giao diện biến động thế giới.", cmd_world, True),
@@ -50,7 +52,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("dung", ("use",), "trade", ".dung <vật_phẩm> [số_lượng]", "Dùng vật phẩm.", cmd_use, True),
     CommandSpec("hoc", ("learn",), "trade", ".hoc <công_pháp>", "Học công pháp.", cmd_learn, True),
     CommandSpec("trangbi", ("tb", "equip"), "trade", ".trangbi <vật_phẩm>", "Trang bị.", cmd_equip, True),
-    CommandSpec("thao", ("unequip",), "trade", ".thao", "Tháo trang bị.", cmd_unequip),
+    CommandSpec("thao", ("unequip",), "trade", ".thao [ô_trang_bị|all]", "Tháo trang bị về túi; có thể chọn một ô hoặc tháo tất cả.", cmd_unequip, True),
     CommandSpec("cho", ("ch", "market"), "trade", ".cho", "Xem chợ.", cmd_market),
     CommandSpec("dangban", ("db",), "trade", ".dangban <vật_phẩm> <số_lượng> <giá>", "Đăng bán.", cmd_market_list, True),
     CommandSpec("muacho", ("mc",), "trade", ".muacho <mã_tin>", "Mua tin chợ.", cmd_market_buy, True),
@@ -62,7 +64,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("dao", (), "dao", ".dao [kiem|dao|phap|the|ma]", "Mở giao diện Đạo; mã vẫn hỗ trợ chọn nhanh.", cmd_dao, True),
     CommandSpec("daolu", ("dlp",), "social", ".daolu", "Mở giao diện Đạo Lữ.", cmd_dao_lu),
     CommandSpec("ketduyen", ("kd",), "social", ".ketduyen @người_chơi", "Gửi lời cầu duyên tới một đạo hữu.", cmd_dao_lu, True),
-    CommandSpec("songtu", ("st",), "social", ".songtu", "Song tu với đạo lữ để tăng duyên phận (giới hạn thời gian).", cmd_song_tu),
+    CommandSpec("songtu", ("st",), "social", ".songtu", "Song tu để cả hai cùng nhận tu vi và tăng duyên phận; hồi phục 60 phút mỗi cặp.", cmd_song_tu),
     CommandSpec("tongmon", ("tm",), "sect", ".tongmon", "Mở giao diện tông môn.", cmd_sect),
     CommandSpec("taotong", (), "sect", ".taotong <tên>", "Sáng lập tông môn.", cmd_sect_create, True),
     CommandSpec("xintong", (), "sect", ".xintong <sect_id>", "Xin gia nhập.", cmd_sect_apply, True),

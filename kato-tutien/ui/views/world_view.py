@@ -3,12 +3,13 @@ from __future__ import annotations
 import time
 import discord
 
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.embeds import base_embed, error_embed
 from ui.emoji import EMOJI
 
 
-class WorldMenuView(discord.ui.View):
+class WorldMenuView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -58,7 +59,9 @@ class WorldMenuView(discord.ui.View):
             return
         try:
             r = self.engine.world.contribute(self.user_id, self.selected_key)
-            text = f"Đã góp sức cho **{r['event']['name']}**.\n\nTiến độ: **{r['progress']}/{r['target']}**\n+{r['event']['reward']['stones']} {EMOJI['spirit_stone']} · +{r['event']['reward']['cultivation']} tu vi."
+            text = f"Đã góp sức cho **{r['event']['name']}**.\n\nTiến độ: **{r['progress']}/{r['target']}**\n+{r['stones']} {EMOJI['spirit_stone']} · +{r['cultivation']} tu vi."
+            if r.get("cultivation") != r.get("cultivation_requested"):
+                text += "\nTu vi thưởng đã được giới hạn ở ngưỡng tầng hiện tại."
             if r["finished"]:
                 text += "\n\n🌟 **Sự kiện thế giới đã kết thúc!**"
             self._build()

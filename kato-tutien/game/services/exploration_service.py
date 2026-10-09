@@ -10,7 +10,8 @@ from game.content.zones import EXPLORE_ZONES
 from game.repositories.inventory_repository import InventoryRepository
 from game.repositories.player_repository import PlayerRepository
 from game.repositories.exploration_repository import ExplorationRepository
-from game.rules.cultivation_rules import realm_text
+from game.rules.cultivation_rules import realm_text, bounded_cultivation_delta
+from game.rules.economy_rules import stone_loot_multiplier
 from game.services.combat_service import CombatService
 from game.services.quest_service import QuestService
 from game.services.world_service import WorldService
@@ -108,7 +109,11 @@ class ExplorationService:
         # 37% chance to enter a multi-choice narrative event.
         choice_chance = min(0.70, 0.37 + float(talent_mod(p.talent, "rare_event", 0.0)) + float(destiny_mod(p.destiny, "luck", 0.0)) * 0.20 + p.fate * 0.001)
         if CHOICE_EVENTS and self.rng.random() < choice_chance:
-            candidates = [e for e in CHOICE_EVENTS if not e.get("zones") or key in e["zones"]]
+            candidates = [
+                e for e in CHOICE_EVENTS
+                if (not e.get("zones") or key in e["zones"])
+                and p.realm_index >= int(e.get("min_realm", 0))
+            ]
             if candidates:
                 event = weighted_pick(self.rng, [(e, e["weight"]) for e in candidates])
                 self._save_pending(user_id, event, key)
@@ -122,7 +127,14 @@ class ExplorationService:
                     self.sect_tower.record_activity(user_id, "explore", 1)
                 return result
 
-        event = weighted_pick(self.rng, [(e, e["weight"]) for e in EXPLORATION_EVENTS])
+        event_pool = [
+            e for e in EXPLORATION_EVENTS
+            if (not e.get("zones") or key in e["zones"])
+            and p.realm_index >= int(e.get("min_realm", 0))
+        ]
+        if not event_pool:
+            event_pool = EXPLORATION_EVENTS
+        event = weighted_pick(self.rng, [(e, e["weight"]) for e in event_pool])
         result: dict = {"event": event, "zone": z, "text": event.get("text", ""), "combat": False}
         self.players.add_history(user_id, "explore", event["key"])
         if self.quests:
@@ -130,7 +142,12 @@ class ExplorationService:
         else:
             result_quest = []
         if event.get("combat"):
-            enc = self.combat.start_encounter(user_id, boss=False)
+            enc = self.combat.start_encounter(
+                user_id,
+                boss=bool(event.get("boss", False)),
+                zone_key=key,
+                elite=bool(event.get("elite", False)),
+            )
             result["combat"] = True
             result["encounter"] = enc
             result["quest_progress"] = result_quest
@@ -180,12 +197,15 @@ class ExplorationService:
             value = effect[key]
             amount = self.rng.randint(*value) if isinstance(value, list) else int(value)
             if key == "stones":
-                amount = int(amount * (1 + p.luck / 200)) if amount > 0 else amount
+                amount = int(amount * stone_loot_multiplier(p.luck)) if amount > 0 else amount
                 p.spirit_stones = max(0, p.spirit_stones + amount)
                 result["stones"] = amount
             elif key == "cultivation":
-                p.cultivation = max(0, p.cultivation + amount)
-                result["cultivation"] = amount
+                actual = bounded_cultivation_delta(p.cultivation, amount, p.realm_index, p.realm_layer)
+                p.cultivation += actual
+                result["cultivation"] = actual
+                if actual != amount:
+                    result["cultivation_clamped"] = True
             else:
                 p.injury = max(0, min(100, p.injury + amount))
                 result["injury"] = amount
@@ -216,7 +236,12 @@ class ExplorationService:
         p.last_hunt = now
         self.players.save(p)
         from game.content.monsters import BOSS_MONSTERS
-        eligible_bosses=[b for b in BOSS_MONSTERS if p.realm_index >= b["min_realm"]]
-        boss=bool(eligible_bosses) and self.rng.random() < min(0.15,0.05+p.fate*0.001)
-        enc=self.combat.start_encounter(user_id,boss=boss)
-        return {"encounter": enc, "player": p, "realm": realm_text(p.realm_index, p.realm_layer)}
+        zone_key = p.explore_zone
+        eligible_bosses = [
+            b for b in BOSS_MONSTERS
+            if p.realm_index >= b["min_realm"]
+            and (not b.get("zones") or zone_key in b["zones"])
+        ]
+        boss = bool(eligible_bosses) and self.rng.random() < min(0.15, 0.05 + p.fate * 0.001)
+        enc = self.combat.start_encounter(user_id, boss=boss, zone_key=zone_key)
+        return {"encounter": enc, "player": p, "realm": realm_text(p.realm_index, p.realm_layer, p.path)}

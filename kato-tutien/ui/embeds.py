@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import discord
 from ui.colors import COLOR_MAIN, COLOR_SUCCESS, COLOR_ERROR, COLOR_INFO, COLOR_WARN
+from ui.theme.embeds import create_embed
 from ui.emoji import EMOJI
 from game.utils import fmt_amount
 
 
 def base_embed(title: str, description: str = "", color: int = COLOR_MAIN) -> discord.Embed:
-    return discord.Embed(title=title, description=description, color=color)
+    """Compatibility facade used throughout commands and views.
+
+    All screens inherit the same branded footer and accent palette from ui/theme.
+    """
+    return create_embed(title, description, color)
 
 
 def progress_bar(current: int, maximum: int, size: int = 10) -> str:
@@ -57,18 +62,22 @@ def cultivation_preview_embed(preview: dict) -> discord.Embed:
     return e
 
 
-def player_embed(info: dict) -> discord.Embed:
+def player_embed(info: dict, *, combat_stats: dict | None = None) -> discord.Embed:
     p = info["player"]
     e = base_embed(f"👤 {p.display_name}", color=COLOR_INFO)
     e.add_field(name="Cảnh giới", value=info["realm"], inline=True)
-    e.add_field(name="Con đường", value="Tiên" if p.path == "tien" else "Ma", inline=True)
+    path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
+    e.add_field(name="Con đường", value=path_name, inline=True)
     e.add_field(name="Tu vi", value=fmt_amount(p.cultivation), inline=True)
     e.add_field(name=f"{EMOJI['spirit_stone']} Linh thạch", value=fmt_amount(p.spirit_stones), inline=True)
     e.add_field(name="Căn cơ", value=str(p.root), inline=True)
     e.add_field(name="Ngộ tính", value=str(p.insight), inline=True)
-    e.add_field(name=f"{EMOJI['hp']} HP", value=f"{p.hp}/{p.max_hp}", inline=True)
-    e.add_field(name=f"{EMOJI['att']} Công", value=str(p.attack), inline=True)
-    e.add_field(name=f"{EMOJI['def']} Thủ", value=str(p.defense), inline=True)
+    stats = combat_stats or {"max_hp": p.max_hp, "attack": p.attack, "defense": p.defense}
+    effective_max_hp = max(1, int(stats.get("max_hp", p.max_hp)))
+    displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
+    e.add_field(name=f"{EMOJI['hp']} HP thực chiến", value=f"{displayed_hp}/{effective_max_hp}", inline=True)
+    e.add_field(name=f"{EMOJI['att']} Công thực chiến", value=str(int(stats.get("attack", p.attack))), inline=True)
+    e.add_field(name=f"{EMOJI['def']} Thủ thực chiến", value=str(int(stats.get("defense", p.defense))), inline=True)
     if p.dao_type:
         e.add_field(name="Đạo", value=p.dao_type, inline=True)
     return e
@@ -83,21 +92,28 @@ def success_embed(title: str, msg: str) -> discord.Embed:
 
 
 def shop_embed(catalog: dict) -> discord.Embed:
-    e = base_embed(f"{EMOJI['shop']} Tiên Phường", "Chọn danh mục bên dưới để xem và mua.")
+    """Opening screen for the category-first shop GUI."""
     category_icons = {"Đan dược": "💊", "Bùa chú": "🔮", "Pháp bảo": "💠", "Binh khí": "⚔️", "Công pháp": "📜"}
-    for cat in catalog.get("categories", []):
-        lines = []
-        for it in cat["items"][:8]:
-            effect = (it.get("effects") or [it.get("description", "")])[0]
-            lines.append(f"{it.get('emoji', category_icons.get(cat['name'], '📦'))} **{it['name']}** · {it.get('rarity_emoji', '⚪')} {it.get('rarity', 'Phàm')} phẩm\n　{fmt_amount(it['price'])} {EMOJI['spirit_stone']} · {effect}")
-        if lines:
-            e.add_field(name=f"{category_icons.get(cat['name'], '📦')} {cat['name']}", value="\n".join(lines), inline=False)
-    return e
+    categories = catalog.get("categories", [])
+    lines = [
+        "Một mùi linh dược thoang thoảng trong không khí, các kệ bảo vật trải dài trước mắt.",
+        "Chủ tiệm vuốt râu, cười nói:",
+        '*"Đạo hữu ghé Tiên Phường rồi! Muốn mua thứ gì? Cứ chọn loại vật phẩm bên dưới, ta sẽ lấy hàng cho ngươi xem."*',
+        "",
+        "**📦 Các quầy hàng**",
+    ]
+    lines.extend(
+        f"{category_icons.get(cat['name'], '📦')} **{cat['name']}** · {len(cat.get('items', []))} vật phẩm"
+        for cat in categories
+    )
+    lines.extend(["", f"{EMOJI['spirit_stone']} Mọi giao dịch dùng linh thạch. Hãy chọn danh mục ở menu bên dưới."])
+    return base_embed(f"{EMOJI['shop']} Tiên Phường · Chưởng quầy đón khách", "\n".join(lines))
 
 
 def combat_embed(enc, player=None) -> discord.Embed:
     color = COLOR_WARN if not enc.finished else (COLOR_SUCCESS if enc.victory else COLOR_ERROR)
-    e = base_embed(f"{EMOJI['attack']} {enc.enemy_name}", color=color)
+    threat_label = "👑 BOSS · " if getattr(enc, "is_boss", False) else ""
+    e = base_embed(f"{EMOJI['attack']} {threat_label}{enc.enemy_name}", color=color)
     player_attack = getattr(player, "attack", 0)
     player_defense = getattr(player, "defense", 0)
     enemy_stats = (
@@ -130,7 +146,8 @@ _SLOT_NAMES = {
 }
 _STAT_NAMES = {
     "cultivation": "Tu vi",
-    "heal": "HP",
+    "heal": "HP hồi phục",
+    "max_hp": "HP tối đa",
     "root": "Căn cơ",
     "insight": "Ngộ tính",
     "luck": "May mắn",
@@ -142,7 +159,7 @@ _STAT_NAMES = {
 
 def _item_effect_lines(item: dict) -> list[str]:
     lines: list[str] = []
-    for key in ("cultivation", "heal", "root", "insight", "luck", "fate", "mind", "all_stats"):
+    for key in ("cultivation", "heal", "max_hp", "root", "insight", "luck", "fate", "mind", "all_stats"):
         value = item.get(key)
         if value:
             sign = "+" if value > 0 else ""
@@ -151,6 +168,10 @@ def _item_effect_lines(item: dict) -> list[str]:
         lines.append(f"Công: +{item['attack']}")
     if item.get("defense"):
         lines.append(f"Thủ: +{item['defense']}")
+    if item.get("thunder_resistance"):
+        lines.append(f"Kháng lôi: +{item['thunder_resistance']:.0%}")
+    if item.get("breakthrough_bonus"):
+        lines.append(f"Tỷ lệ đột phá: +{item['breakthrough_bonus']:.0%}")
     if item.get("technique_stat") and item.get("technique_bonus"):
         stat_name = _STAT_NAMES.get(item["technique_stat"], item["technique_stat"])
         lines.append(f"Học được: +{item['technique_bonus']} {stat_name}")

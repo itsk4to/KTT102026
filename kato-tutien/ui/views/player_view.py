@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from game.utils import fmt_amount
 from ui.emoji import EMOJI
@@ -15,7 +16,7 @@ from ui.embeds import (
 )
 
 
-class PlayerMenuView(discord.ui.View):
+class PlayerMenuView(ThemedView):
     """Player dashboard with high-frequency quick actions."""
 
     def __init__(self, engine, user_id: str, timeout: float = 300):
@@ -169,7 +170,7 @@ class PlayerMenuView(discord.ui.View):
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
-class PlayerResultView(discord.ui.View):
+class PlayerResultView(ThemedView):
     def __init__(self, engine, user_id: str, notice: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -222,7 +223,8 @@ class PlayerResultView(discord.ui.View):
 def build_player_dashboard(engine, user_id: str, notice: str | None = None) -> discord.Embed:
     info = engine.players.info_text(user_id)
     player = info["player"]
-    embed = player_embed(info)
+    combat_stats = engine.combat.battle_stats(player)
+    embed = player_embed(info, combat_stats=combat_stats)
 
     try:
         preview = engine.cultivation.breakthrough_preview(user_id)
@@ -233,7 +235,7 @@ def build_player_dashboard(engine, user_id: str, notice: str | None = None) -> d
         "Chọn **Tu luyện / Đột phá / Thiên kiếp / Daily** để thao tác ngay.",
         "",
         f"{EMOJI['spirit_stone']} **{fmt_amount(player.spirit_stones)}** linh thạch",
-        f"{EMOJI['hp']} **{player.hp}/{player.max_hp} HP**",
+        f"{EMOJI['hp']} **{min(max(0, int(player.hp)), int(combat_stats.get('max_hp', player.max_hp)))}/{int(combat_stats.get('max_hp', player.max_hp))} HP thực chiến**",
     ]
     if player.dao_type:
         status.append(f"Đạo: **{player.dao_type}**")

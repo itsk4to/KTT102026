@@ -84,5 +84,31 @@ class DaoLuService:
         a, b = self._pair(user_id, partner["user_id"])
         if now - self.repo.last_song_tu(a, b) < 3600:
             raise GameError("Song tu cần nghỉ ngơi. Hãy quay lại sau.")
-        self.repo.increment_intimacy(a, b, now)
-        return {"intimacy": partner["intimacy"] + 1, "partner_id": partner["user_id"]}
+        # Completing song-cultivation grants a modest cultivation bonus to both partners.
+        # Apply the bonus atomically so one user's success cannot leave the pair desynchronized.
+        p_self = self._require(user_id)
+        p_partner = self._require(partner["user_id"])
+        from game.rules.cultivation_rules import cultivation_requirement, headroom, realm_text
+        bonus_a = self._song_tu_bonus(p_self)
+        bonus_b = self._song_tu_bonus(p_partner)
+        gain_a = min(headroom(p_self.cultivation, p_self.realm_index, p_self.realm_layer), bonus_a)
+        gain_b = min(headroom(p_partner.cultivation, p_partner.realm_index, p_partner.realm_layer), bonus_b)
+        with self.players.transaction():
+            p_self.cultivation += max(0, gain_a)
+            p_partner.cultivation += max(0, gain_b)
+            self.players.save(p_self)
+            self.players.save(p_partner)
+            self.repo.increment_intimacy(a, b, now)
+        return {
+            "intimacy": partner["intimacy"] + 1,
+            "partner_id": partner["user_id"],
+            "gain_self": max(0, gain_a),
+            "gain_partner": max(0, gain_b),
+            "realm_self": realm_text(p_self.realm_index, p_self.realm_layer, p_self.path),
+            "realm_partner": realm_text(p_partner.realm_index, p_partner.realm_layer, p_partner.path),
+        }
+
+    @staticmethod
+    def _song_tu_bonus(player) -> int:
+        # Base bonus scales gently with realm while remaining capped.
+        return min(500, 100 + max(0, int(player.realm_index)) * 20 + max(0, int(player.realm_layer)) * 5)

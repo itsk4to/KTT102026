@@ -12,7 +12,7 @@ TOKEN = env("DISCORD_TOKEN")
 DB_PATH = env("KATO_DB_PATH", "kato_tutien.db")
 OWNER_IDS = {x.strip() for x in env("KATO_OWNER_IDS").split(",") if x.strip()}
 ADMIN_PASSWORD = env("KATO_ADMIN_PASSWORD")
-CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "1") not in {"0", "false", "False", "no", "off"}
+CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "0").lower() in {"1", "true", "yes", "on"}
 
 # Gameplay constants
 CULTIVATE_COOLDOWN = 25

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from game.utils import fmt_amount
 from ui.embeds import base_embed, error_embed, success_embed
@@ -92,7 +93,7 @@ class SectRecruitModal(discord.ui.Modal, title="🏯 Tuyển Thành Viên"):
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
-class SectMenuView(discord.ui.View):
+class SectMenuView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -227,13 +228,55 @@ class SectMenuView(discord.ui.View):
             await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
             return
         try:
-            r = self.engine.sect_tower.claim_mission(self.user_id)
-            m = r['mission']
-            title = "📜 Nhiệm Vụ Tông Môn"
-            text = f"{m['name']} · **{r['progress']}/{m['target']}**"
-            if r['complete']:
-                text += f"\nHoàn thành · +{m['reward_contrib']} cống hiến"
-            await interaction.response.edit_message(embed=success_embed(title, text) if r['complete'] else base_embed(title, text), view=self)
+            state = self.engine.sect_tower.mission_state(self.user_id)
+            mission = state["mission"]
+            progress = int(state["progress"])
+            target = int(mission["target"])
+            reward = int(mission["reward_contrib"])
+            title = "📜 Nhiệm Vụ Tông Môn Hằng Ngày"
+
+            if state["claimed"]:
+                text = (
+                    f"**Nhiệm vụ:** {mission['name']}\\n"
+                    f"**Tiến độ:** {progress}/{target}\\n"
+                    "**Trạng thái:** Đã nhận thưởng hôm nay.\\n"
+                    f"**Phần thưởng:** {reward} điểm cống hiến và {reward * 2} kinh nghiệm tông môn.\\n"
+                    f"**Ngày:** {state['day']}"
+                )
+                embed = success_embed(title, text)
+            elif progress >= target:
+                result = self.engine.sect_tower.claim_mission(self.user_id)
+                mission = result["mission"]
+                text = (
+                    f"**Nhiệm vụ:** {mission['name']}\\n"
+                    f"**Tiến độ:** {result['progress']}/{mission['target']}\\n"
+                    "**Trạng thái:** Hoàn thành và đã nhận thưởng.\\n"
+                    f"**Phần thưởng:** +{mission['reward_contrib']} điểm cống hiến, "
+                    f"+{mission['reward_contrib'] * 2} kinh nghiệm tông môn.\\n"
+                    f"**Ngày:** {state['day']}"
+                )
+                embed = success_embed(title, text)
+            else:
+                remaining = target - progress
+                if mission.get("name") == "Cúng linh thạch":
+                    instruction = f"Cống hiến thêm **{remaining:,} linh thạch** bằng nút **Cống hiến**."
+                elif mission.get("name") == "Khám phá 3 lần":
+                    instruction = f"Thực hiện thêm **{remaining} lượt khám phá**."
+                elif mission.get("name") == "Tu luyện 10 lần":
+                    instruction = f"Tu luyện thêm **{remaining} lần**."
+                else:
+                    instruction = f"Hoàn thành thêm **{remaining}** lượt hoạt động."
+                text = (
+                    f"**Nhiệm vụ hôm nay:** {mission['name']}\\n"
+                    f"**Tiến độ:** `{progress}/{target}`\\n"
+                    f"**Cần làm:** {instruction}\\n"
+                    f"**Phần thưởng:** {reward} điểm cống hiến và {reward * 2} kinh nghiệm tông môn.\\n"
+                    f"**Ngày làm mới:** {state['day']} (theo ngày máy chủ)\\n\\n"
+                    "Tiến độ được ghi nhận tự động khi hệ thống xác nhận hoạt động tương ứng."
+                )
+                embed = base_embed(title, text)
+
+            await interaction.response.edit_message(embed=embed, view=self)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 

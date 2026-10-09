@@ -39,7 +39,10 @@ async def cmd_song_tu(ctx, message: discord.Message, args: list[str] | None = No
         result = ctx.engine.dao_lu.song_tu(str(message.author.id))
         await message.reply(embed=success_embed(
             "💞 Song Tu Thành Công",
-            f"Duyên phận tăng lên **{result['intimacy']}**. Dùng `.daolu` để xem quan hệ và lời cầu duyên.",
+            f"Duyên phận tăng lên **{result['intimacy']}**.\\n"
+            f"Tu vi của ngươi tăng **+{result['gain_self']:,}**; đạo lữ tăng **+{result['gain_partner']:,}**.\\n"
+            f"Tu vi hiện tại: **{result['realm_self']}** · Đạo lữ: **{result['realm_partner']}**.\\n"
+            "Mỗi cặp có thời gian hồi phục 60 phút.",
         ))
     except GameError as exc:
         await message.reply(embed=error_embed(str(exc)))

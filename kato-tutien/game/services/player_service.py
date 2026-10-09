@@ -35,11 +35,11 @@ class PlayerService:
             user_id=user_id,
             display_name=display_name or user_id,
             path=path,
-            root=self.rng.randint(35, 92),
-            insight=self.rng.randint(35, 92),
-            luck=self.rng.randint(35, 92),
-            fate=self.rng.randint(35, 92),
-            mind=self.rng.randint(35, 92),
+            root=self.rng.randint(35, 75),
+            insight=self.rng.randint(35, 75),
+            luck=self.rng.randint(35, 75),
+            fate=self.rng.randint(35, 75),
+            mind=self.rng.randint(35, 75),
             destiny=self.rng.choice(DESTINIES),
             talent=self.rng.choice(talents),
             spirit_stones=STARTING_STONES,
@@ -57,7 +57,7 @@ class PlayerService:
         p = self.get(user_id)
         return {
             "player": p,
-            "realm": realm_text(p.realm_index, p.realm_layer),
+            "realm": realm_text(p.realm_index, p.realm_layer, p.path),
         }
 
     def leaderboard(self, limit: int = 10, path: str | None = None) -> list[Player]:

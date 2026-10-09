@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.embeds import base_embed, error_embed
 from ui.views.quest_view import QuestOfferView
 
 
-class NPCMenuView(discord.ui.View):
+class NPCMenuView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine

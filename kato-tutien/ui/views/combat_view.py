@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.content.items import ITEMS
 from game.services.errors import GameError
 from ui.emoji import EMOJI
@@ -64,7 +65,7 @@ class CombatItemSelect(discord.ui.Select):
         await self.owner.perform(interaction, "item", self.values[0])
 
 
-class CombatView(discord.ui.View):
+class CombatView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 180):
         super().__init__(timeout=timeout)
         self.engine = engine

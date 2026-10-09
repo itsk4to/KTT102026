@@ -21,6 +21,7 @@ class Encounter:
     player_hp: int
     player_max_hp: int
     is_boss: bool = False
+    is_elite: bool = False
     player_statuses: list[StatusEffect] = field(default_factory=list)
     enemy_statuses: list[StatusEffect] = field(default_factory=list)
     log: list[str] = field(default_factory=list)
@@ -38,6 +39,7 @@ class Encounter:
             "player_hp": self.player_hp,
             "player_max_hp": self.player_max_hp,
             "is_boss": self.is_boss,
+            "is_elite": self.is_elite,
             "player_statuses": [s.__dict__ for s in self.player_statuses],
             "enemy_statuses": [s.__dict__ for s in self.enemy_statuses],
             "log": list(self.log),
@@ -59,6 +61,7 @@ class Encounter:
             player_hp=int(data["player_hp"]),
             player_max_hp=int(data["player_max_hp"]),
             is_boss=bool(data.get("is_boss")),
+            is_elite=bool(data.get("is_elite")),
             player_statuses=ps,
             enemy_statuses=es,
             log=list(data.get("log", [])),

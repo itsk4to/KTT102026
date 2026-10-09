@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.content.items import ITEMS
 from game.services.errors import GameError
 from game.utils import fmt_amount
@@ -49,7 +50,7 @@ def match_embed(match: dict) -> discord.Embed:
     return e
 
 
-class PvpChallengeView(discord.ui.View):
+class PvpChallengeView(ThemedView):
     def __init__(self, engine, challenge: dict, timeout: float = 180):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -89,7 +90,7 @@ class PvpChallengeView(discord.ui.View):
                 pass
 
 
-class PvpMatchView(discord.ui.View):
+class PvpMatchView(ThemedView):
     def __init__(self, engine, match: dict, timeout: float = 900):
         super().__init__(timeout=timeout)
         self.engine = engine

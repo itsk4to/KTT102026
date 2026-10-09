@@ -1,6 +1,6 @@
-Kato Tu Tiên v3.4.7 — Cửu Lôi Kiếp & Hộ Kiếp
+Kato Tu Tiên v3.5.6 — Economy & Stat Audit
 
-# Kato Tu Tiên v3.4.7
+# Kato Tu Tiên v3.5.6
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
@@ -51,7 +51,8 @@ Models  = domain data
 |-------|------|----------------|
 | Discord entry | `bot.py` | Client startup, prefix routing, slash wiring |
 | Commands | `ui/commands/` | Command handlers grouped by domain |
-| UI | `ui/` | Embeds, Views, emoji |
+| UI | `ui/` | Embeds, Views, emoji và điều hướng |
+| UI Theme | `ui/theme/` | Design tokens, embed factory, component builders; chỉ phụ trách trình bày |
 | Services | `game/services/` | Business logic |
 | Rules | `game/rules/` | Pure formulas / permissions |
 | Repositories | `game/repositories/` | Persistence access |
@@ -64,7 +65,7 @@ Models  = domain data
 
 ### 1. Database migration thật
 
-- Schema version hiện tại: `12`.
+- Schema version hiện tại: `14`.
 - Migration chạy từng bước, idempotent, có đường nâng cấp 0 → 12.
 - DB cũ thiếu known columns được tự sửa bằng `ALTER TABLE` an toàn; migration 9 → 10 bổ sung giá / cái cho chợ.
 - Không còn kiểu chỉ đổi số version rồi giả vờ migration đã xong.
@@ -180,14 +181,42 @@ python bot.py
 Các hệ thống nhiều lựa chọn ưu tiên GUI; các hành động lặp lại giữ lệnh tắt như `.tu`, `.dp`, `.tk`, `.dl`.
 
 
-## Cửu Lôi Kiếp (v3.4.7)
+## Cửu Lôi Kiếp · Thông số hiện tại
 
 Từ mốc **Kim Đan tầng 9 → Nguyên Anh tầng 1**, mỗi lần đột phá qua đại cảnh giới đến trước cửa Ứng Thiên Kiếp đều phải chịu 9 tia sét. Quy tắc dùng cùng chỉ số cảnh giới cho cả Tu Tiên và Tu Ma. Mỗi tia tăng sát thương dần; phòng ngự và kháng lôi từ pháp bảo làm giảm sát thương.
 
-- **Lôi Kiếp Đan**: giảm 18% sát thương cho lần hộ kiếp.
-- **Cửu Lôi Hộ Thân Phù**: giảm 15% sát thương cho lần hộ kiếp.
-- **Thiên Lôi Châu**: pháp bảo kháng lôi 14% khi trang bị; Huyền Thiết Linh Kính cũng có kháng lôi 8%.
-- Chọn đan/bùa trong giao diện `.dotpha`. Có thể phối hợp tối đa hai loại; mỗi loại chọn 1–3 liều. Liều thứ hai và ba có hiệu lực cộng thêm giảm dần, nhưng vẫn bị tiêu hao đủ số đã chọn.
+- **Lôi Kiếp Đan**: giảm 12% sát thương cơ bản cho lần hộ kiếp.
+- **Cửu Lôi Hộ Thân Phù**: giảm 10%; **Tĩnh Lôi Phù**: giảm 8% cho lần hộ kiếp.
+- **Thiên Lôi Châu**: kháng lôi 8% khi trang bị; **Huyền Thiết Linh Kính**: 5%.
+- Chọn đan/bùa trong giao diện `.dotpha`. Có thể phối hợp tối đa hai loại; mỗi loại chọn 1–3 liều. Liều thứ hai và ba tăng hiệu lực theo mức giảm dần; vật phẩm chỉ bị tiêu hao khi Cửu Lôi Kiếp thực sự bắt đầu.
+- Kháng lôi cộng dồn và phòng ngự đều có giới hạn; tổng giảm sát thương sau phòng ngự bị chặn ở 65%.
 - Đan/bùa không bị mất nếu lần đột phá thông thường thất bại trước khi lôi kiếp bắt đầu. Khi lôi kiếp bắt đầu, vật phẩm đã chọn bị tiêu hao dù sống sót hay thất bại.
 - Nếu thất bại, cảnh giới không tăng, tu vi và tuổi thọ bị tổn thất, thương thế nặng, HP còn 1 và phải hồi phục. Nếu thành công, HP còn lại sau chín tia được giữ nguyên.
 
+
+
+## UI Theme (v3.5.2)
+
+Toàn bộ giao diện Discord dùng cây thiết kế riêng `ui/theme/`: `tokens.py` quản lý màu sắc/role,
+`embeds.py` tạo embed có thương hiệu, `components.py` tạo component dùng chung, và `views.py`
+chuẩn hóa kiểu nút cho tất cả màn hình. Các view tính năng kế thừa `ThemedView`, còn callback và
+logic gameplay vẫn ở module tính năng hiện tại. Trung tâm có thanh HP và tiến độ tu vi để dễ đọc
+trạng thái nhân vật ngay khi mở menu.
+
+## Bí Cảnh Tu Luyện (v3.5.3)
+
+Dùng `.bicanh` hoặc `.bc` để mở GUI bí cảnh. Chọn một nơi phù hợp với cảnh giới; mỗi chu kỳ kéo dài 3 giờ. Khi đủ thời gian, nhận linh thạch và tu vi, sau đó chu kỳ mới tự bắt đầu tại cùng bí cảnh. Dùng nút **Rời bí cảnh** để đổi nơi; rời trước khi đủ thời gian sẽ hủy tiến độ chưa nhận. Trạng thái được lưu trong SQLite nên còn sau khi bot khởi động lại; sau restart, dùng lại `.bicanh` để mở giao diện mới. Mỗi lần chỉ tích lũy một phần thưởng, không cộng dồn nhiều chu kỳ bỏ quên.
+
+
+## Khám Phá mở rộng (v3.5.5)
+
+- Tăng bestiary lên 27 quái thường và 13 boss, phần lớn được gắn vùng xuất hiện để mỗi khu có bản sắc riêng.
+- Thêm Vạn Cốt Lăng (cảnh giới 8, Ma đạo) và Hư Không Cổ Giới (cảnh giới 10, cả hai con đường).
+- Bổ sung nhiều tình huống tức thời và sự kiện lựa chọn, bao gồm yêu thú tinh anh, tàn tích, linh tuyền, thương đội, âm binh, lôi văn và những lần chạm trán boss theo khu vực.
+- Khu vực được ưu tiên chọn quái/boss bản địa; sự kiện cuối game bị khóa theo cảnh giới, tránh xuất hiện sớm ở khu thấp.
+- GUI Khám Phá hiển thị dấu vết quái và boss có thể gặp. Encounter giữ nguyên cooldown, kết quả chiến đấu và cơ chế thưởng hiện có; không đổi schema database.
+
+
+## Audit tiền tệ & chỉ số (v3.5.6)
+
+Các thông số cân bằng hiện tại được ghi chi tiết tại [`docs/ECONOMY_AND_BALANCE.md`](docs/ECONOMY_AND_BALANCE.md). Bản audit giới hạn thưởng tu vi theo tầng hiện tại, phần thưởng điểm danh theo streak 30 ngày, mức tăng linh thạch từ May Mắn ở +25%, và tỷ lệ đột phá trong 5%–90%. Chỉ số chiến đấu/HP trên menu dùng giá trị thực chiến sau trang bị, thiên phú và Đạo; bỏ trang bị HP sẽ kẹp HP theo giới hạn mới. Thất bại chiến đấu áp dụng các hình phạt đã khai báo: thương thế, mất tu vi nhỏ và 1% linh thạch (không vượt quá số đang sở hữu).

@@ -21,6 +21,7 @@ from ui.commands import CommandContext, COMMAND_LOOKUP, COMMAND_SPECS
 from ui.embeds import base_embed, error_embed
 from ui.views.admin_view import AdminLoginView, AdminView
 from game.security.permissions import is_owner
+from game.version import VERSION
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("kato")
@@ -53,7 +54,7 @@ async def admin_slash(interaction: discord.Interaction) -> None:
 
 @client.event
 async def on_ready() -> None:
-    logger.info("Logged in as %s (v3.0)", client.user)
+    logger.info("Logged in as %s (v%s)", client.user, VERSION)
     try:
         await tree.sync()
     except Exception:

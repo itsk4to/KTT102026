@@ -141,15 +141,16 @@ def test_multiple_pill_doses_have_diminishing_returns_and_consume_selected_quant
     eng._inventory.add("u", "loi_kiep_dan", 3)
     eng.cultivation.rng = FixedRng(0.0)
 
-    one_dose = eng.breakthrough.stacked_thunder_resistance(0.18, 1)
-    three_doses = eng.breakthrough.stacked_thunder_resistance(0.18, 3)
-    assert one_dose == 0.18
-    assert three_doses == 0.36
+    base_resistance = 0.12  # Current balanced Lôi Kiếp Đan value.
+    one_dose = eng.breakthrough.stacked_thunder_resistance(base_resistance, 1)
+    three_doses = eng.breakthrough.stacked_thunder_resistance(base_resistance, 3)
+    assert one_dose == 0.12
+    assert three_doses == 0.24
 
     result = eng.breakthrough.breakthrough("u", thunder_items=["loi_kiep_dan::3"])
 
     assert result["success"] is True
-    assert result["thunder_tribulation"]["resistance"] == 0.36
+    assert result["thunder_tribulation"]["resistance"] == 0.24
     assert eng._inventory.get_count("u", "loi_kiep_dan") == 0
     assert result["consumed_thunder_items"] == ["Lôi Kiếp Đan ×3"]
 

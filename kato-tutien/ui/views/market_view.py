@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.content.items import ITEMS
 from game.services.errors import GameError
 from game.utils import fmt_amount
@@ -9,7 +10,7 @@ from ui.embeds import base_embed, error_embed, success_embed
 from ui.emoji import EMOJI
 
 
-class MarketView(discord.ui.View):
+class MarketView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine

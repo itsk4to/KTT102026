@@ -134,6 +134,17 @@ def migrate_12_to_13(db) -> None:
     )""")
     _set_version(db, 13)
 
+def migrate_13_to_14(db) -> None:
+    # Persist one active timed Secret Realm session per player.
+    db.execute("""CREATE TABLE IF NOT EXISTS secret_realm_sessions (
+        user_id TEXT PRIMARY KEY,
+        realm_key TEXT NOT NULL,
+        cycle_started_at INTEGER NOT NULL,
+        claims INTEGER NOT NULL DEFAULT 0
+    )""")
+    _set_version(db, 14)
+
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
@@ -148,6 +159,7 @@ _MIGRATIONS = {
     10: migrate_10_to_11,
     11: migrate_11_to_12,
     12: migrate_12_to_13,
+    13: migrate_13_to_14,
 }
 
 

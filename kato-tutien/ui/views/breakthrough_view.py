@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import discord
 
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import error_embed, success_embed, cultivation_preview_embed
@@ -93,7 +94,7 @@ class ThunderProtectionSelect(discord.ui.Select):
         await interaction.response.edit_message(embed=self.owner.render_embed(), view=self.owner)
 
 
-class BreakthroughView(discord.ui.View):
+class BreakthroughView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 180):
         super().__init__(timeout=timeout)
         self.engine = engine

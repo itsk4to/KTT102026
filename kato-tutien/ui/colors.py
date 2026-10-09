@@ -1,5 +1,4 @@
-COLOR_MAIN = 0x5865F2
-COLOR_SUCCESS = 0x57F287
-COLOR_INFO = 0x5DADE2
-COLOR_WARN = 0xFEE75C
-COLOR_ERROR = 0xED4245
+"""Compatibility exports for the shared design tokens."""
+from ui.theme.tokens import COLOR_MAIN, COLOR_SUCCESS, COLOR_INFO, COLOR_WARN, COLOR_ERROR
+
+__all__ = ["COLOR_MAIN", "COLOR_SUCCESS", "COLOR_INFO", "COLOR_WARN", "COLOR_ERROR"]

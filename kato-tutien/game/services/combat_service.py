@@ -19,6 +19,7 @@ from game.rules.combat_rules import (
     tick_dot,
 )
 from game.rules.dao_rules import dao_combat_mods
+from game.rules.cultivation_rules import bounded_cultivation_delta
 from game.rules.death_rules import defeat_penalty, apply_injury_cap
 from game.content.talents import talent_mod, destiny_mod
 from game.services.errors import GameError
@@ -47,13 +48,14 @@ class CombatService:
         atk = player.attack
         defense = player.defense
         hp = player.max_hp
-        # equipment from loadout
+        # Equipped gear contributes to combat stats; equipped items are not inventory stacks.
         for slot, item_id in (player.loadout or {}).items():
             if not item_id:
                 continue
             it = ITEMS.get(item_id, {})
             atk += int(it.get("attack", 0))
             defense += int(it.get("defense", 0))
+            hp += int(it.get("max_hp", 0))
         atk = int(atk * mods.get("atk", 1.0) * float(talent_mod(player.talent, "combat_atk", 1.0)))
         defense = int(defense * mods.get("def", 1.0))
         hp = int(hp * mods.get("hp", 1.0) * float(talent_mod(player.talent, "combat_hp", 1.0)))
@@ -63,24 +65,41 @@ class CombatService:
         spirit_mult = mods.get("spirit", 1.0) * float(talent_mod(player.talent, "skill_power", 1.0))
         return {"attack": atk, "defense": defense, "max_hp": hp, "accuracy": accuracy, "evasion": evasion, "crit": crit, "spirit_mult": spirit_mult}
 
-    def start_encounter(self, user_id: str, boss: bool = False) -> Encounter:
+    def start_encounter(self, user_id: str, boss: bool = False, zone_key: str | None = None, elite: bool = False) -> Encounter:
         p = self._require(user_id)
         pool = BOSS_MONSTERS if boss else MONSTERS
-        if boss:
-            low, high = max(0, p.realm_index - 1), p.realm_index + 1
-            eligible = [m for m in pool if low <= m["min_realm"] <= high]
-            if not eligible:
-                eligible = [min(pool, key=lambda m: abs(m["min_realm"] - p.realm_index))]
-        else:
-            low, high = max(0,p.realm_index-1), p.realm_index+1
-            eligible=[m for m in pool if low <= m["min_realm"] <= high]
-            if not eligible: eligible=[min(pool,key=lambda m: abs(m["min_realm"]-p.realm_index))]
-        mon=self.rng.choice(eligible)
+        low, high = max(0, p.realm_index - 1), p.realm_index + 1
+        realm_eligible = [m for m in pool if low <= m["min_realm"] <= high]
+        eligible = list(realm_eligible)
+        if zone_key:
+            local = [m for m in realm_eligible if zone_key in m.get("zones", [])]
+            general = [m for m in realm_eligible if not m.get("zones")]
+            zone_catalog = [m for m in pool if zone_key in m.get("zones", [])]
+            if boss:
+                # Keep bosses region-appropriate even if a high-level player outgrows
+                # the local boss's min_realm window.
+                eligible = local or general or zone_catalog or realm_eligible
+            elif local and general:
+                # Mostly show region-specific creatures, with some familiar roaming beasts.
+                eligible = local if self.rng.random() < 0.75 else general
+            elif local:
+                eligible = local
+            elif general:
+                eligible = general
+            else:
+                eligible = zone_catalog or realm_eligible
+        if not eligible:
+            eligible = [min(pool, key=lambda m: abs(m["min_realm"] - p.realm_index))]
+        mon = self.rng.choice(eligible)
         stats = self.battle_stats(p)
-        scale = 1.0 + p.realm_index * 0.08
+        # The existing realm curve stays intact; area scaling is intentionally mild.
+        zone_scale = {"hoangnguyen": 1.0, "yeuthusonmach": 1.02, "dongphu": 1.04,
+                      "haivuc": 1.06, "mavuc": 1.07, "vancotlang": 1.08, "hukhong": 1.08}.get(zone_key, 1.0)
+        scale = (1.0 + p.realm_index * 0.08) * zone_scale * (1.30 if elite else 1.0)
+        enemy_name = f"Tinh Anh · {mon['name']}" if elite else mon["name"]
         enc = Encounter(
             player_id=user_id,
-            enemy_name=mon["name"],
+            enemy_name=enemy_name,
             enemy_hp=int(mon["hp"] * scale),
             enemy_max_hp=int(mon["hp"] * scale),
             enemy_attack=int(mon["attack"] * scale),
@@ -88,6 +107,7 @@ class CombatService:
             player_hp=min(p.hp, stats["max_hp"]),
             player_max_hp=stats["max_hp"],
             is_boss=boss,
+            is_elite=elite,
         )
         self._encounters[user_id] = enc
         return enc
@@ -262,25 +282,35 @@ class CombatService:
     def _finish(self, enc: Encounter, p: Player, victory: bool, logs: list) -> dict:
         enc.finished = True
         enc.victory = victory
-        p.hp = max(1, enc.player_hp) if victory else max(1, int(p.max_hp * 0.3))
+        effective_max_hp = max(1, int(self.battle_stats(p)["max_hp"]))
+        p.hp = (max(1, min(int(enc.player_hp), effective_max_hp)) if victory
+                else max(1, int(effective_max_hp * 0.3)))
         rewards = {}
         if victory and p.dao_type:
             p.dao_insight += 3 if enc.is_boss else 1
             from game.rules.dao_rules import stage_from_insight
             p.dao_stage = stage_from_insight(p.dao_insight)
         if victory:
-            stones = self.rng.randint(20, 80) * (2 if enc.is_boss else 1)
-            cult = int(self.rng.randint(10, 40) * (2 if enc.is_boss else 1) * float(talent_mod(p.talent, "cultivation_on_victory", 1.0)))
+            reward_mult = 2.0 if enc.is_boss else (1.5 if enc.is_elite else 1.0)
+            # Higher stages cost more to sustain; scale combat rewards gently, capped at +65%.
+            realm_mult = 1.0 + min(0.65, max(0, int(p.realm_index)) * 0.05)
+            stones = int(self.rng.randint(20, 80) * reward_mult * realm_mult)
+            requested_cult = int(self.rng.randint(10, 40) * reward_mult * realm_mult * float(talent_mod(p.talent, "cultivation_on_victory", 1.0)))
+            cult = bounded_cultivation_delta(p.cultivation, requested_cult, p.realm_index, p.realm_layer)
             p.spirit_stones += stones
             p.cultivation += cult
-            rewards = {"stones": stones, "cultivation": cult}
-            logs.append(f"Chiến thắng! +{stones} linh thạch, +{cult} tu vi.")
+            rewards = {"stones": stones, "cultivation": cult, "cultivation_requested": requested_cult}
+            cult_note = f"+{cult} tu vi" if cult else "không thêm tu vi (đã đầy tầng)"
+            logs.append(f"Chiến thắng! +{stones} linh thạch, {cult_note}.")
         else:
             pen = defeat_penalty(p.realm_index)
             p.injury = apply_injury_cap(p.injury + pen["injury"])
             loss = int(p.cultivation * pen["cultivation_loss_pct"])
             p.cultivation = max(0, p.cultivation - loss)
-            logs.append(f"Thất bại. Thương thế +{pen['injury']}.")
+            stones_loss = min(p.spirit_stones, int(p.spirit_stones * pen.get("stones_loss_pct", 0.0)))
+            p.spirit_stones = max(0, p.spirit_stones - stones_loss)
+            penalty_text = f" Thất thoát {stones_loss} linh thạch." if stones_loss else ""
+            logs.append(f"Thất bại. Thương thế +{pen['injury']}.{penalty_text}")
         self.players.save(p)
         self._encounters.pop(p.user_id, None)
         enc.log.extend(logs)

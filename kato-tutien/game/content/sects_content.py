@@ -23,6 +23,7 @@ SECT_PERMISSIONS = {
     "sect.dissolve": {"Tông Chủ"},
 }
 
+# Daily missions; targets are measured by SectTowerService.record_activity.
 SECT_MISSIONS = {
     "donate": {"name": "Cúng linh thạch", "target": 500, "reward_contrib": 50},
     "explore": {"name": "Khám phá 3 lần", "target": 3, "reward_contrib": 30},

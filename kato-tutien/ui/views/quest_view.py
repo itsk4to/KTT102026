@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import discord
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.embeds import base_embed, error_embed
 
 
-class QuestOfferView(discord.ui.View):
+class QuestOfferView(ThemedView):
     def __init__(self, engine, user_id: str, quest_keys: list[str], timeout: float = 120):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -32,7 +33,7 @@ class QuestOfferView(discord.ui.View):
         return callback
 
 
-class QuestChoiceView(discord.ui.View):
+class QuestChoiceView(ThemedView):
     def __init__(self, engine, user_id: str, quest_key: str, choices: list[dict], timeout: float = 120):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -62,7 +63,7 @@ class QuestChoiceView(discord.ui.View):
                 await interaction.response.send_message(embed=error_embed(str(e)), ephemeral=True)
         return callback
 
-class QuestMenuView(discord.ui.View):
+class QuestMenuView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine

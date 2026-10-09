@@ -13,3 +13,8 @@ def tax_amount(total: int) -> int:
 
 def can_afford(balance: int, cost: int) -> bool:
     return balance >= cost and cost >= 0
+
+
+def stone_loot_multiplier(luck: int | float) -> float:
+    """Bound luck's extra stone yield to +25% to avoid runaway currency inflation."""
+    return 1.0 + min(0.25, max(0.0, float(luck)) / 400.0)

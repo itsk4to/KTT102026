@@ -5,6 +5,7 @@ from game.content.quests import QUESTS
 from game.content.items import ITEMS
 from game.repositories.player_repository import PlayerRepository
 from game.repositories.quest_repository import QuestRepository
+from game.rules.cultivation_rules import bounded_cultivation_delta
 from game.services.errors import GameError
 
 STAT_DISPLAY_NAMES = {
@@ -117,8 +118,10 @@ class QuestService:
             p.spirit_stones = max(0, p.spirit_stones + int(effect["stones"]))
             changes.append(f"{effect['stones']:+d} linh thạch")
         if effect.get("cultivation"):
-            p.cultivation = max(0, p.cultivation + int(effect["cultivation"]))
-            changes.append(f"{effect['cultivation']:+d} tu vi")
+            requested = int(effect["cultivation"])
+            actual = bounded_cultivation_delta(p.cultivation, requested, p.realm_index, p.realm_layer)
+            p.cultivation += actual
+            changes.append(f"{actual:+d} tu vi" + (" (đã chạm ngưỡng tầng)" if actual != requested else ""))
         if effect.get("fate"):
             p.fate = max(0, min(100, p.fate + int(effect["fate"])))
             changes.append(f"{effect['fate']:+d} mệnh số")
@@ -136,6 +139,8 @@ class QuestService:
             self.npc_service.remember(user_id, quest["npc"], int(effect["npc_affinity"]), effect.get("flag"))
         next_step = choice.get("next_step")
         if next_step is None:
+            # Persist the selected choice first: _complete loads the player again.
+            self.players.save(p)
             messages = self._complete(user_id, quest_key, quest)
             status = self.status(user_id, quest_key)
         else:
@@ -157,8 +162,12 @@ class QuestService:
     def _complete(self, user_id: str, quest_key: str, quest: dict) -> list[str]:
         p = self._require(user_id)
         reward = quest.get("reward", {})
-        p.spirit_stones += int(reward.get("stones", 0))
-        p.cultivation += int(reward.get("cultivation", 0))
+        p.spirit_stones += max(0, int(reward.get("stones", 0)))
+        requested_cultivation = max(0, int(reward.get("cultivation", 0)))
+        actual_cultivation = bounded_cultivation_delta(
+            p.cultivation, requested_cultivation, p.realm_index, p.realm_layer
+        )
+        p.cultivation += actual_cultivation
         p.fate = max(0, min(100, p.fate + int(reward.get("fate", 0))))
         p.insight = max(0, min(100, p.insight + int(reward.get("insight", 0))))
         p.reputation += int(reward.get("reputation", 0))
@@ -167,4 +176,5 @@ class QuestService:
         self.players.add_history(user_id, "quest_complete", quest_key)
         if self.npc_service:
             self.npc_service.remember(user_id, quest["npc"], int(reward.get("npc_affinity", 2)), "completed_" + quest_key)
-        return [f"🎁 +{reward.get('stones', 0)} linh thạch", f"✨ +{reward.get('cultivation', 0)} tu vi"]
+        return [f"🎁 +{max(0, int(reward.get('stones', 0)))} linh thạch",
+                f"✨ +{actual_cultivation} tu vi" + (" (đã chạm ngưỡng tầng)" if actual_cultivation != requested_cultivation else "")]

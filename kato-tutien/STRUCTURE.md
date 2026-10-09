@@ -95,7 +95,19 @@ KatoTuTien-v3.4.0/
 │       ├── connection.py
 │       ├── schema.py
 │       └── migrations.py
+├── assets/
+│   └── emojis/
+│       ├── README.md
+│       └── server/
+│           ├── README.md
+│           └── emojis.json
 ├── ui/
+│   ├── theme/
+│   │   ├── tokens.py
+│   │   ├── embeds.py
+│   │   ├── components.py
+│   │   ├── views.py
+│   │   └── README.md
 │   ├── emoji.py
 │   ├── colors.py
 │   ├── embeds.py
@@ -155,3 +167,27 @@ Database
 `game/content/` chỉ chứa dữ liệu tĩnh. `game/models/` chỉ mô tả state. `game/engine.py` chỉ compose/facade, không chứa Discord UI và không chứa SQL.
 
 Các file `*_gui.py` cũ (`player_gui.py`, `dao_gui.py`, `npc_gui.py`, `exploration_gui.py`, `quest_gui.py`, `sect_gui.py`, `world_gui.py`, `gui_navigation.py`) chỉ còn là compatibility shims để code cũ không vỡ; code mới phải dùng file canonical trong `ui/views/`.
+
+
+## UI Theme (v3.5.6)
+
+`ui/theme/` là cây presentation riêng, nằm cạnh `ui/commands/` và `ui/views/`. Nó sở hữu design tokens, embed factory, component builders và quy ước bố cục; không chứa business logic.
+
+
+## Bí Cảnh Tu Luyện (v3.5.6)
+
+- `game/content/secret_realms.py`: bốn bí cảnh, cảnh giới yêu cầu và dải thưởng.
+- `game/repositories/secret_realm_repository.py`: persistence cho chu kỳ bí cảnh.
+- `game/services/secret_realm_service.py`: lựa chọn, thời gian 3 giờ, nhận thưởng một lần và rời bí cảnh.
+- `ui/views/secret_realm_view.py`: GUI riêng; `.bicanh` / `.bc` và Trung Tâm cùng mở view.
+- SQLite schema 14 lưu một phiên bí cảnh cho mỗi người chơi; migration không xóa dữ liệu cũ. Sau khi bot restart, người chơi dùng lại `.bicanh` để mở view mới; tiến trình vẫn được đọc từ DB.
+
+
+## Khám Phá Mở Rộng (v3.5.6)
+
+- `game/content/events.py`: sự kiện tức thời, sự kiện lựa chọn và rào cảnh giới/vùng.
+- `game/content/monsters.py`: bestiary theo khu vực, 27 quái thường và 13 boss.
+- `game/content/zones.py`: bảy vùng khám phá, bao gồm Vạn Cốt Lăng và Hư Không Cổ Giới.
+- `game/services/exploration_service.py`: lọc sự kiện theo khu/cảnh giới và khởi tạo encounter phù hợp.
+- `game/services/combat_service.py`: ưu tiên sinh vật bản địa và hệ số tinh anh/boss.
+- `ui/views/exploration_view.py`: preview dấu vết quái/boss trước khi khám phá.

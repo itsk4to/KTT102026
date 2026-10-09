@@ -1,11 +1,12 @@
 from __future__ import annotations
 import discord
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.emoji import EMOJI
 from ui.embeds import base_embed, error_embed, success_embed
 
 
-class DaoLuView(discord.ui.View):
+class DaoLuView(ThemedView):
     def __init__(self, engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -66,7 +67,14 @@ class DaoLuView(discord.ui.View):
         if not self._guard(interaction): return await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
         try:
             r = self.engine.dao_lu.song_tu(self.user_id)
-            await interaction.response.edit_message(embed=success_embed("💞 Song tu", f"Duyên phận tăng lên **{r['intimacy']}**."), view=self)
+            text = (
+                f"Duyên phận tăng lên **{r['intimacy']}**.\\n"
+                f"Tu vi của ngươi: **+{r['gain_self']:,}**\\n"
+                f"Tu vi đạo lữ: **+{r['gain_partner']:,}**\\n"
+                f"Cảnh giới: **{r['realm_self']}** · Đạo lữ: **{r['realm_partner']}**\\n"
+                "Hai bên cùng nhận tu vi; cặp đạo lữ hồi phục sau 60 phút."
+            )
+            await interaction.response.edit_message(embed=success_embed("💞 Song Tu Thành Công", text), view=self)
         except GameError as exc: await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
     async def _accept_pending(self, interaction):
@@ -85,7 +93,7 @@ class DaoLuView(discord.ui.View):
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))
 
 
-class DaoLuRequestView(discord.ui.View):
+class DaoLuRequestView(ThemedView):
     def __init__(self, engine, target_id: str, requester_id: str, requester_name: str, timeout: float = 300):
         super().__init__(timeout=timeout)
         self.engine = engine

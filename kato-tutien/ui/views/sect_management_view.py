@@ -1,9 +1,10 @@
 from __future__ import annotations
 import discord
+from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.embeds import base_embed,error_embed,success_embed
 from ui.emoji import EMOJI
-class SectInviteNoticeView(discord.ui.View):
+class SectInviteNoticeView(ThemedView):
     def __init__(self, engine, user_id: str, invitation_id: int, timeout=300):
         super().__init__(timeout=timeout)
         self.engine = engine
@@ -41,7 +42,7 @@ class SectInviteNoticeView(discord.ui.View):
             await i.response.send_message(embed=error_embed(str(e)), ephemeral=True)
 
 
-class SectManagementView(discord.ui.View):
+class SectManagementView(ThemedView):
     def __init__(self,engine,user_id,timeout=300):
         super().__init__(timeout=timeout); self.engine=engine; self.user_id=user_id; self.app=None; self.inv=None; self.build()
     def guard(self,i): return str(i.user.id)==self.user_id

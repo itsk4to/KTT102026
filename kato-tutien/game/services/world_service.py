@@ -5,6 +5,7 @@ import time
 
 from game.content.world_events import WORLD_EVENTS
 from game.repositories.world_repository import WorldRepository
+from game.rules.cultivation_rules import bounded_cultivation_delta
 from game.services.errors import GameError
 
 
@@ -46,12 +47,17 @@ class WorldService:
         if self.world.contributed(event_key, user_id):
             raise GameError("Ngươi đã góp sức vào sự kiện này rồi.")
         self.world.contribute(event_key, user_id)
-        p.spirit_stones += int(event["reward"]["stones"])
-        p.cultivation += int(event["reward"]["cultivation"])
+        stones_gain = max(0, int(event["reward"]["stones"]))
+        requested_cultivation = max(0, int(event["reward"]["cultivation"]))
+        cultivation_gain = bounded_cultivation_delta(p.cultivation, requested_cultivation, p.realm_index, p.realm_layer)
+        p.spirit_stones += stones_gain
+        p.cultivation += cultivation_gain
         self.players.save(p)
         self.players.add_history(user_id, "world_event", event_key)
         current = row["progress"] + 1
         finished = current >= row["target"]
         if finished:
             self.world.finish(event_key)
-        return {"event": event, "progress": current, "target": row["target"], "finished": finished, "player": p}
+        return {"event": event, "progress": current, "target": row["target"], "finished": finished,
+                "stones": stones_gain, "cultivation": cultivation_gain,
+                "cultivation_requested": requested_cultivation, "player": p}

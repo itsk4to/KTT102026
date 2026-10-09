@@ -1,4 +1,67 @@
-## v3.4.8 — Shop Details & PvP Wager Arena
+## v3.5.6 — Economy & Stat Audit
+
+- Cân bằng lại tỷ lệ đột phá: chỉ số nhân vật mới không còn đẩy tỷ lệ mặc định sát trần 92%; trần mới là 90%.
+- Thu hẹp chỉ số khởi tạo cho nhân vật mới về 35–75; nhân vật đã tồn tại giữ nguyên.
+- Giới hạn thưởng điểm danh theo streak 30 ngày (streak vẫn tiếp tục hiển thị), tránh lạm phát linh thạch dài hạn.
+- Giới hạn phần thưởng tu vi từ vật phẩm, khám phá, chiến đấu, nhiệm vụ và sự kiện thế giới ở ngưỡng tầng hiện tại.
+- Thưởng chiến đấu tăng nhẹ theo cảnh giới (tối đa +65%), còn boss/tinh anh giữ hệ số riêng.
+- Giới hạn hiệu suất linh thạch từ May mắn ở mức +25%.
+- Mỗi loại vật phẩm chỉ cấp phần tăng chỉ số vĩnh viễn một lần cho mỗi nhân vật; tu vi/hồi HP dùng lặp lại vẫn hoạt động.
+- Sửa metadata/mô tả của vật phẩm chỉ dùng khi đột phá và kháng lôi trang bị.
+- Sửa lỗi lựa chọn cuối nhiệm vụ không được lưu trước khi cộng thưởng hoàn thành.
+- Thống nhất HP tối đa thực chiến giữa giao diện, hồi phục, thay trang bị và Cửu Lôi Kiếp; tháo trang bị tăng HP sẽ giới hạn HP theo mức mới.
+- Kết quả thua trận áp dụng đầy đủ mức mất 1% linh thạch đã khai báo trong quy tắc, song song thương thế và mất tu vi nhỏ.
+- Cập nhật tài liệu Cửu Lôi Kiếp để khớp với giá trị kháng lôi hiện hành.
+- Thêm test hồi quy cho economy, stats và phần thưởng tu vi.
+
+## v3.5.5 — Khám Phá Mở Rộng, Quái & Boss
+
+- Mở rộng bestiary lên 27 quái thường và 13 boss với vùng xuất hiện riêng; boss có HP, công và thủ cao hơn theo cấp.
+- Thêm hai khu endgame: Vạn Cốt Lăng (Ma đạo, cảnh giới 8) và Hư Không Cổ Giới (cảnh giới 10).
+- Thêm nhiều sự kiện khám phá tức thời và sự kiện lựa chọn theo vùng/cảnh giới; có yêu thú tinh anh, bảo tàng, linh tuyền, thương đội, âm binh, lôi văn và cơ hội chạm trán boss.
+- Đảm bảo sự kiện/boss cấp cao không lọt vào khu hoặc cảnh giới thấp.
+- Combat chọn quái bản địa theo vùng; tinh anh mạnh hơn quái thường, GUI hiển thị gợi ý quái/boss có thể gặp.
+- Không thay đổi schema database; giữ nguyên các lệnh khám phá hiện tại.
+
+## v3.5.4 — Cân bằng vật phẩm & buff
+
+- Cân bằng lại tu vi, hồi HP, chỉ số trang bị, kháng lôi, tỷ lệ đột phá và hệ số công pháp để tránh vật phẩm đơn lẻ quá mạnh.
+- Chuẩn hóa 5 mục Tiên Phường: Đan dược, Bùa chú, Pháp bảo, Binh khí và Công pháp; mỗi mục có đúng 10 vật phẩm.
+- Bổ sung vật phẩm mới theo vai trò riêng: hồi phục, bồi bổ, hộ kiếp, công kích, phòng thủ và công pháp.
+- Hiển thị rõ HP tối đa, kháng lôi và tỷ lệ đột phá trong chi tiết vật phẩm; hiển thị HP tối đa trong catalog cửa hàng.
+- Không thay đổi schema database; giữ nguyên ID các vật phẩm cũ để tương thích kho đồ, chợ, mã quà và dữ liệu người chơi hiện tại.
+- Thêm test cân bằng số lượng theo mục và giới hạn các chỉ số vật phẩm.
+
+## v3.5.3 — Bí Cảnh Tu Luyện (3 giờ)
+
+- Thêm bốn bí cảnh theo cảnh giới, mỗi nơi có dải thưởng linh thạch/tu vi khác nhau.
+- Người chơi chọn một bí cảnh; sau đủ 3 giờ nhận thưởng, chu kỳ kế tiếp tự khởi động ở cùng bí cảnh.
+- Tiến trình được lưu trong SQLite, có migration schema 13 → 14; chỉ một chu kỳ hoạt động cho mỗi người chơi.
+- Chặn nhận thưởng sớm/trùng bằng cập nhật có điều kiện trong transaction; tu vi thưởng bị giới hạn theo phần còn lại của tầng để không bỏ qua đột phá.
+- Thêm `.bicanh` / `.bc`, GUI mới và đường dẫn từ Trung Tâm; rời sớm sẽ hủy tiến độ đang tích lũy.
+
+## v3.5.2 — System-wide Premium GUI Polish
+
+- Chuẩn hóa toàn bộ view trong `ui/views/` qua `ui/theme/views.py` (`ThemedView`): màu nút nguy hiểm, xác nhận, hành động chính và điều hướng thống nhất.
+- Hoàn thiện theme tree riêng `ui/theme/` với quy tắc mở rộng, semantic button tokens và base view dùng chung.
+- Chuẩn hóa nhận diện nhãn nút theo ý nghĩa tiếng Việt (kể cả chữ có dấu), để đóng/xóa/từ chối đỏ và xác nhận xanh nhất quán.
+- Nâng dashboard trung tâm bằng thanh HP và tiến độ tu vi; phần xem trước được bảo vệ để không làm hỏng điều hướng khi dữ liệu tiến độ lỗi.
+- Chỉ thay đổi tầng presentation/UX; không chỉnh service, rules, repository hoặc schema database.
+
+## v3.5.1 — Unified Premium UI Theme
+
+- Tạo cây giao diện độc lập `ui/theme/` gồm design tokens, embed factory, component builders và hướng dẫn mở rộng.
+- Đồng bộ bảng màu tím huyền ảo / lam thiên giới / ngọc bích / vàng linh lực / đỏ cảnh báo.
+- Gắn chân trang thương hiệu cho embed dùng `base_embed`, giúp các màn hình cũ nhất quán mà không đổi logic gameplay.
+- Làm lại Trung Tâm theo bố cục dashboard: cảnh giới, linh thạch, thể trạng, công/thủ, thiên phú, Đạo tâm và lối tắt.
+- Sắp xếp lại nút điều hướng thành nhóm gameplay, nhiệm vụ/cộng đồng/kinh tế và hệ thống tu hành nâng cao; chuẩn hóa qua component factory.
+- Giữ tương thích các đường import cũ (`ui.colors`, `ui.embeds`) và không thay đổi schema database.
+
+## v3.5.0 — Shop Details & PvP Wager Arena
+
+- Mặc định hiển thị emoji Unicode thông thường cho Linh thạch, phe Tiên, phe Ma và các nút/giao diện, tránh phụ thuộc emoji custom Discord.
+- Tách mapping emoji custom vào `assets/emojis/server/emojis.json`; chỉ dùng khi đặt `KATO_CUSTOM_EMOJI=1`.
+- Tạo tài liệu cấu trúc ở `assets/emojis/README.md` và `assets/emojis/server/README.md`.
 
 - Tiên Phường hiển thị emoji theo loại vật phẩm, biểu tượng phẩm cấp, giá và tác dụng cụ thể ngay ở danh sách lẫn màn hình chọn vật phẩm.
 - Thêm `.pvp @người_chơi linhthach <số> [50|45|55]` và `.pvp @người_chơi vatpham <mã> <số> [50|45|55]`.

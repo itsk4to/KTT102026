@@ -13,7 +13,7 @@ def make_engine(tmp_path):
 
 def test_schema_and_dao_lu(tmp_path):
     engine = make_engine(tmp_path)
-    assert SCHEMA_VERSION == 13
+    assert SCHEMA_VERSION == 14
     a = engine.players.create("a", "A", "tien")
     engine.players.create("b", "B", "tien")
     engine.dao_lu.request("a", "b")

@@ -27,6 +27,7 @@ from game.repositories.code_repository import CodeRepository
 from game.repositories.heavenly_dao_repository import HeavenlyDaoRepository
 from game.repositories.mission_repository import MissionRepository
 from game.repositories.pvp_repository import PvpRepository
+from game.repositories.secret_realm_repository import SecretRealmRepository
 from game.services.player_service import PlayerService
 from game.services.cultivation_service import CultivationService
 from game.services.breakthrough_service import BreakthroughService
@@ -46,6 +47,7 @@ from game.services.dao_lu_service import DaoLuService
 from game.services.sect_tower_service import SectTowerService
 from game.services.heavenly_dao_service import HeavenlyDaoService
 from game.services.pvp_service import PvpService
+from game.services.secret_realm_service import SecretRealmService
 from game.services.code_service import CodeService
 from game.security.admin_auth import AdminAuth
 from game.services.errors import GameError
@@ -74,14 +76,19 @@ class GameEngine:
         self._heavenly = HeavenlyDaoRepository(db)
         self._missions = MissionRepository(db)
         self._pvp_repo = PvpRepository(db)
+        self._secret_realms = SecretRealmRepository(db)
 
         # services
         self.players = PlayerService(self._players, self.rng)
         self.cultivation = CultivationService(self._players, self.rng, self._inventory)
         self.breakthrough = BreakthroughService(self.cultivation, self._players, self._inventory)
         self.combat = CombatService(self._players, self._inventory, self.rng)
+        # Breakthrough tribulation uses the same equipment/talent/Dao max HP as combat.
+        self.cultivation.combat = self.combat
         self.pvp = PvpService(self._players, self._inventory, self.combat, self._pvp_repo, self.rng)
+        self.secret_realm = SecretRealmService(self._players, self._secret_realms, self.rng)
         self.economy = EconomyService(self._players, self._inventory, self._market, self.rng, self._codes)
+        self.economy.combat = self.combat
         self.quests = QuestService(self._players, self._quests, self._inventory)
         self.world = WorldService(self._players, self._world, self.rng)
         self.npc = NPCService(self._players, self.quests, self._npcs)

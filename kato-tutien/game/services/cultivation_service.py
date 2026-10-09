@@ -61,7 +61,7 @@ class CultivationService:
             "gain": gain,
             "cultivation": p.cultivation,
             "requirement": cultivation_requirement(p.realm_index, p.realm_layer),
-            "realm": realm_text(p.realm_index, p.realm_layer),
+            "realm": realm_text(p.realm_index, p.realm_layer, p.path),
             "player": p,
         }
 
@@ -75,6 +75,8 @@ class CultivationService:
         recovery = max(0, int(p.breakthrough_recovery_until) - int(time.time()))
         needs_thunder = requires_nine_thunder_tribulation(p.realm_index, p.realm_layer)
         _, equipment_resistance = self._thunder_equipment_stats(p)
+        combat = getattr(self, "combat", None)
+        effective_max_hp = int(combat.battle_stats(p)["max_hp"]) if combat is not None else int(p.max_hp)
         return {
             "ready": p.cultivation >= req and not is_max_realm(p.realm_index, p.realm_layer) and recovery <= 0,
             "chance": chance,
@@ -82,7 +84,7 @@ class CultivationService:
             "recovery_until": int(p.breakthrough_recovery_until),
             "requirement": req,
             "cultivation": p.cultivation,
-            "realm": realm_text(p.realm_index, p.realm_layer),
+            "realm": realm_text(p.realm_index, p.realm_layer, p.path),
             "needs_tribulation": (
                 p.realm_index == TRIBULATION_REALM_INDEX
                 and p.realm_layer >= REALMS[TRIBULATION_REALM_INDEX][1]
@@ -90,8 +92,8 @@ class CultivationService:
             "needs_thunder_tribulation": needs_thunder,
             "thunder_strikes": 9 if needs_thunder else 0,
             "thunder_equipment_resistance": equipment_resistance,
-            "current_hp": p.hp,
-            "max_hp": p.max_hp,
+            "current_hp": min(max(0, int(p.hp)), effective_max_hp),
+            "max_hp": effective_max_hp,
         }
 
     @staticmethod
@@ -117,9 +119,12 @@ class CultivationService:
         hits = []
         total_damage = 0
         previous_damage = 0
+        combat = getattr(self, "combat", None)
+        effective_max_hp = (int(combat.battle_stats(player)["max_hp"]) if combat is not None else int(player.max_hp))
+        player.hp = min(max(0, int(player.hp)), effective_max_hp)
         for strike in range(1, 10):
             damage = thunder_strike_damage(
-                player.max_hp, target_realm_index, strike, defense=defense,
+                effective_max_hp, target_realm_index, strike, defense=defense,
                 resistance=resistance, previous_damage=previous_damage,
             )
             hp_before = max(0, int(player.hp))
@@ -142,6 +147,7 @@ class CultivationService:
             "defense_reduction": defense_reduction,
             "total_reduction": total_reduction,
             "defense": defense,
+            "max_hp": effective_max_hp,
             "target_realm": REALMS[target_realm_index][0] if target_realm_index < len(REALMS) else "Cảnh giới kế tiếp",
         }
 
@@ -203,7 +209,7 @@ class CultivationService:
                     p.hp = min(old_hp - thunder_result["total_damage"], p.max_hp)
                     p.attack += 3 + p.insight // 20
                     p.defense += 2 + p.root // 25
-                    self.players.add_history(user_id, "breakthrough", realm_text(p.realm_index, p.realm_layer))
+                    self.players.add_history(user_id, "breakthrough", realm_text(p.realm_index, p.realm_layer, p.path))
                     self.players.add_history(user_id, "thunder_tribulation", "pass")
             else:
                 p.breakthrough_recovery_until = 0
@@ -217,7 +223,7 @@ class CultivationService:
                 p.hp = p.max_hp
                 p.attack += 3 + p.insight // 20
                 p.defense += 2 + p.root // 25
-                self.players.add_history(user_id, "breakthrough", realm_text(p.realm_index, p.realm_layer))
+                self.players.add_history(user_id, "breakthrough", realm_text(p.realm_index, p.realm_layer, p.path))
         else:
             p.cultivation = int(p.cultivation * 0.85)
             p.injury = apply_failure_injury(p.injury, 5, float(talent_mod(p.talent, "injury_mult", 1.0)))
@@ -228,7 +234,7 @@ class CultivationService:
             "success": success,
             "breakthrough_roll_success": breakthrough_roll_success,
             "chance": chance,
-            "realm": realm_text(p.realm_index, p.realm_layer),
+            "realm": realm_text(p.realm_index, p.realm_layer, p.path),
             "recovery_seconds": recovery_seconds if not success else 0,
             "thunder_tribulation": thunder_result,
             "player": p,
@@ -266,7 +272,7 @@ class CultivationService:
             p.daily_streak += 1
         else:
             p.daily_streak = 1
-        reward = 500 + p.daily_streak * 50 + p.realm_index * 100
+        reward = 500 + min(p.daily_streak, 30) * 50 + p.realm_index * 100
         p.spirit_stones += reward
         p.last_daily = now
         self.players.save(p)
@@ -308,4 +314,4 @@ class CultivationService:
             p.breakthrough_recovery_until = now + breakthrough_recovery_seconds(p.realm_index, p.realm_layer, tribulation=True)
             self.players.add_history(user_id, "tribulation", "fail")
         self.players.save(p)
-        return {"success": success, "chance": chance, "realm": realm_text(p.realm_index, p.realm_layer), "recovery_seconds": 0 if success else max(0, int(p.breakthrough_recovery_until) - now), "player": p}
+        return {"success": success, "chance": chance, "realm": realm_text(p.realm_index, p.realm_layer, p.path), "recovery_seconds": 0 if success else max(0, int(p.breakthrough_recovery_until) - now), "player": p}
