@@ -1,5 +1,6 @@
-from ui.emoji import EMOJI
 from __future__ import annotations
+
+from ui.emoji import EMOJI
 
 import discord
 from game.services.errors import GameError
