@@ -169,21 +169,21 @@ Database
 Các file `*_gui.py` cũ (`player_gui.py`, `dao_gui.py`, `npc_gui.py`, `exploration_gui.py`, `quest_gui.py`, `sect_gui.py`, `world_gui.py`, `gui_navigation.py`) chỉ còn là compatibility shims để code cũ không vỡ; code mới phải dùng file canonical trong `ui/views/`.
 
 
-## UI Theme (v3.5.6)
+## UI Theme (v3.5.8)
 
 `ui/theme/` là cây presentation riêng, nằm cạnh `ui/commands/` và `ui/views/`. Nó sở hữu design tokens, embed factory, component builders và quy ước bố cục; không chứa business logic.
 
 
-## Bí Cảnh Tu Luyện (v3.5.6)
+## Bí Cảnh Tu Luyện (v3.5.8)
 
 - `game/content/secret_realms.py`: bốn bí cảnh, cảnh giới yêu cầu và dải thưởng.
 - `game/repositories/secret_realm_repository.py`: persistence cho chu kỳ bí cảnh.
 - `game/services/secret_realm_service.py`: lựa chọn, thời gian 3 giờ, nhận thưởng một lần và rời bí cảnh.
 - `ui/views/secret_realm_view.py`: GUI riêng; `.bicanh` / `.bc` và Trung Tâm cùng mở view.
-- SQLite schema 14 lưu một phiên bí cảnh cho mỗi người chơi; migration không xóa dữ liệu cũ. Sau khi bot restart, người chơi dùng lại `.bicanh` để mở view mới; tiến trình vẫn được đọc từ DB.
+- SQLite schema 16 lưu phiên bí cảnh, phiên Admin, điểm bảo hộ đột phá và tiến độ nhiệm vụ Khởi hành/Ngày/Tuần; migration giữ nguyên dữ liệu cũ. Sau khi bot restart, tiến trình nhiệm vụ và điểm bảo hộ vẫn còn trong DB.
 
 
-## Khám Phá Mở Rộng (v3.5.6)
+## Khám Phá Mở Rộng (v3.5.8)
 
 - `game/content/events.py`: sự kiện tức thời, sự kiện lựa chọn và rào cảnh giới/vùng.
 - `game/content/monsters.py`: bestiary theo khu vực, 27 quái thường và 13 boss.
@@ -191,3 +191,11 @@ Các file `*_gui.py` cũ (`player_gui.py`, `dao_gui.py`, `npc_gui.py`, `explorat
 - `game/services/exploration_service.py`: lọc sự kiện theo khu/cảnh giới và khởi tạo encounter phù hợp.
 - `game/services/combat_service.py`: ưu tiên sinh vật bản địa và hệ số tinh anh/boss.
 - `ui/views/exploration_view.py`: preview dấu vết quái/boss trước khi khám phá.
+
+## Nhiệm vụ thưởng & Bảo hộ đột phá (v3.6.1)
+
+- `game/content/recurring_missions.py`: định nghĩa 3 nhiệm vụ Khởi hành, 3 nhiệm vụ ngày và 3 nhiệm vụ tuần; mục tiêu/phần thưởng cấu hình tách riêng.
+- `game/repositories/player_mission_repository.py`: lưu tiến độ và cờ đã nhận trong SQLite theo `user_id + mission_id + period_key`.
+- `game/services/player_mission_service.py`: tự ghi tiến độ sau hành động thành công, reset theo giờ Việt Nam và chống nhận thưởng trùng trong transaction.
+- `ui/views/mission_view.py`: GUI chọn nhiệm vụ, theo dõi tiến độ và nhận thưởng; mở bằng `.nhiemvu thuong` hoặc nút trong Nhật Ký Nhiệm Vụ.
+- `players.breakthrough_pity`: bảo hộ tăng 5 điểm phần trăm mỗi lần thất bại, tối đa 20; thành công reset về 0. Cột mới được thêm bằng migration 15 → 16.

@@ -29,10 +29,10 @@ async def cmd_tribulation(ctx, message: discord.Message, args: list[str] | None 
     try:
         r = ctx.engine.cultivation.face_tribulation(str(message.author.id))
         if r["success"]:
-            await message.reply(embed=success_embed("⚡ Vượt kiếp thành công!", f"Cảnh giới: **{r['realm']}**"))
+            await message.reply(embed=success_embed("⚡ Vượt kiếp thành công!", f"Cảnh giới: **{r['realm']}**\nBảo hộ đột phá đã đặt lại về 0."))
         else:
             await message.reply(embed=error_embed(
-                f"Kiếp nạn thất bại. {r['realm']}\n🩹 Hồi phục {r.get('recovery_seconds', 0)}s trước khi tiếp tục tu luyện."
+                f"Kiếp nạn thất bại. {r['realm']}\n🛡️ Bảo hộ tích lũy: +{r.get('pity_after', 0)} điểm phần trăm (tối đa +20).\n🩹 Hồi phục {r.get('recovery_seconds', 0)}s trước khi tiếp tục tu luyện."
             ))
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))

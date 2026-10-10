@@ -69,6 +69,7 @@ class ExplorationExpansionTests(unittest.TestCase):
 
     def test_elite_is_marked_and_has_scaled_stats(self):
         normal = self.engine.combat.start_encounter("explorer", zone_key="hukhong")
+        normal.finished = True  # test separate encounters; real gameplay cannot overwrite an active fight
         elite = self.engine.combat.start_encounter("explorer", zone_key="hukhong", elite=True)
         self.assertTrue(elite.is_elite)
         self.assertIn("Tinh Anh", elite.enemy_name)

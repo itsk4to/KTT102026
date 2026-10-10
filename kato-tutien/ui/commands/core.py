@@ -23,65 +23,77 @@ async def cmd_create(ctx, message: discord.Message, args: list[str] | None = Non
     )
 
 async def cmd_menu(ctx, message: discord.Message, args: list[str] | None = None) -> None:
-    # Compatibility alias: .menu now opens the same combined Help + main hub.
-    await cmd_help(ctx, message, args)
+    """Open the actual navigation dashboard (not the Help command list)."""
+    user_id = str(message.author.id)
+    await message.reply(
+        embed=build_main_embed(ctx.engine, user_id),
+        view=MainMenuView(ctx.engine, user_id),
+    )
 
 
 async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None) -> None:
-    # Help is intentionally grouped by player journey, with concise examples first.
-    categories = [
-        ("🌱 BẮT ĐẦU", {"tutien", "info", "help", "menu"}),
-        ("🧘 TU LUYỆN & ĐỘT PHÁ", {"tu", "dotpha", "thienkiep", "daily", "bxh"}),
-        ("🗺️ KHÁM PHÁ & NHIỆM VỤ", {"khampha", "khu", "san", "bicanh", "npc", "nhiemvu", "thegioi"}),
-        ("🎒 VẬT PHẨM & GIAO DỊCH", {"shop", "mua", "tui", "dung", "hoc", "trangbi", "thao", "cho", "dangban", "muacho", "huyban", "chuyen", "code", "gacha"}),
-        ("⚔️ CHIẾN ĐẤU", {"pvp"}),
-        ("🏯 TÔNG MÔN", {"tongmon", "taotong", "xintong", "congtong", "roitong"}),
-        ("☯️ ĐẠO & ĐẠO LỮ", {"dao", "daolu", "ketduyen", "songtu"}),
-        ("🛠️ QUẢN TRỊ", {"admin"}),
+    """Show a paginated help guide, keeping every embed under Discord limits."""
+    from ui.views.help_view import HelpView
+
+    category_pages = [
+        ("📖 Cẩm Nang · 1/3", "LÀM QUEN & TU LUYỆN", {"start", "cultivation", "explore", "world"}),
+        ("📖 Cẩm Nang · 2/3", "VẬT PHẨM, GIAO DỊCH & CHIẾN ĐẤU", {"trade", "combat"}),
+        ("📖 Cẩm Nang · 3/3", "TÔNG MÔN, ĐẠO & HỆ THỐNG", {"sect", "dao", "social", "system"}),
     ]
+    pages = []
+    rendered_names: set[str] = set()
 
-    specs_by_name = {spec.name: spec for spec in ctx.command_specs}
-
-    def render(names: set[str]) -> list[str]:
-        lines = []
+    for page_index, (title, heading, categories) in enumerate(category_pages):
+        lines: list[str] = []
+        if page_index == 0:
+            lines.extend([
+                "**Chào mừng đến với Kato Tu Tiên!**",
+                "Dùng lệnh nhanh hoặc chọn hệ thống từ `.menu` để mở giao diện.",
+                "",
+                "**🚀 LỘ TRÌNH NGƯỜI MỚI**",
+                "1. `.tutien` → chọn Tiên hoặc Ma.",
+                "2. `.info` → xem nhân vật; `.tu` → tích lũy tu vi.",
+                "3. `.dotpha` → đột phá khi đủ điều kiện; `.daily` → điểm danh.",
+                "4. `.khampha` / `.bicanh` → khám phá hoặc tu luyện bí cảnh 3 giờ.",
+                "5. `.shop` / `.tui` → mua sắm và quản lý vật phẩm.",
+                "",
+            ])
+        lines.append(f"**{heading}**")
         for spec in ctx.command_specs:
-            if spec.name not in names:
+            if spec.category not in categories or spec.name in rendered_names:
                 continue
-            aliases = [f".{a}" for a in spec.aliases if a != spec.name]
-            alias_text = f" · Bí danh: `{', '.join(aliases)}`" if aliases else ""
-            lines.append(f"**`{spec.usage}`**\n{spec.description}{alias_text}")
-        return lines
+            rendered_names.add(spec.name)
+            aliases = [f".{alias}" for alias in spec.aliases if alias != spec.name]
+            alias_text = f" · *Bí danh:* {', '.join(aliases)}" if aliases else ""
+            lines.append(f"**`{spec.usage}`** — {spec.description}{alias_text}")
 
-    lines = [
-        "**Chào mừng đến với Kato Tu Tiên!**",
-        "Dùng các lệnh bên dưới hoặc nhấn nút ở menu. Lệnh có dấu `<...>` cần thay bằng giá trị thật.",
-        "",
-        "**🚀 LỘ TRÌNH NHANH CHO NGƯỜI MỚI**",
-        "① `.tutien` → chọn Tiên hoặc Ma.",
-        "② `.info` → xem nhân vật và cảnh giới.",
-        "③ `.tu` → tích lũy tu vi; đủ tu vi thì dùng `.dotpha`.",
-        "④ `.khampha` → kiếm tài nguyên; `.bicanh` → nhận linh thạch và tu vi theo chu kỳ 3 giờ; `.nhiemvu` → theo dõi mục tiêu.",
-        "⑤ `.shop` → mua đồ; `.tui` → xem túi; `.trangbi <mã>` → mặc trang bị.",
-        "⑥ `.help` → quay lại hướng dẫn này bất cứ lúc nào.",
-        "",
-    ]
-    for title, names in categories:
-        rendered = render(names)
-        if rendered:
-            lines.extend([f"**{title}**", *rendered, ""])
+        if page_index == 2:
+            lines.extend([
+                "",
+                "**💞 ĐẠO LỮ & SONG TU**",
+                "`.ketduyen @người_chơi` gửi lời cầu duyên; người nhận phải đồng ý. `.daolu` mở giao diện quan hệ; `.songtu` giúp cả hai nhận tu vi. Hồi chiêu theo cặp: 60 phút.",
+                "",
+                "**🧰 MẸO NHANH**",
+                "• `.thao` tháo toàn bộ trang bị; `.thao <ô>` tháo riêng một ô.",
+                "• `.bxh tien` / `.bxh ma` xem bảng xếp hạng từng phe.",
+                "• `.vatpham <tên|ID>` tra ID vật phẩm, chấp nhận tên không dấu.",
+                "• `.menu` mở Trung Tâm; `.help` mở cẩm nang này.",
+            ])
+        pages.append(base_embed(title, "\n".join(lines)))
 
-    lines.extend([
-        "**💞 ĐẠO LỮ & SONG TU**",
-        "`.ketduyen @người_chơi` gửi lời cầu duyên; người nhận phải đồng ý. `.daolu` mở giao diện quan hệ; `.songtu` để cả hai cùng nhận thêm tu vi và tăng duyên phận. Mỗi cặp có thời gian hồi phục 60 phút.",
-        "",
-        "**🧰 MẸO DÙNG LỆNH**",
-        "• `.thao` tháo tất cả trang bị; `.thao <ô_trang_bị>` tháo riêng một ô.",
-        "• `.bxh tien` và `.bxh ma` xem bảng xếp hạng từng phe.",
-        "• `.menu` vẫn hoạt động như lệnh mở menu tổng.",
-    ])
+    # If future commands add a category, surface them instead of silently hiding them.
+    missing = [spec for spec in ctx.command_specs if spec.name not in rendered_names]
+    if missing:
+        lines = ["**LỆNH KHÁC**"]
+        for spec in missing:
+            aliases = [f".{alias}" for alias in spec.aliases if alias != spec.name]
+            suffix = f" · *Bí danh:* {', '.join(aliases)}" if aliases else ""
+            lines.append(f"**`{spec.usage}`** — {spec.description}{suffix}")
+        pages.append(base_embed(f"📖 Cẩm Nang · {len(pages)+1}/{len(pages)+1}", "\n".join(lines)))
+
     await message.reply(
-        embed=base_embed("📖 Cẩm Nang Tu Tiên · Help", "\\n".join(lines)),
-        view=MainMenuView(ctx.engine, str(message.author.id)),
+        embed=pages[0],
+        view=HelpView(pages, ctx.engine, str(message.author.id)),
     )
 
 

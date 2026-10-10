@@ -96,6 +96,7 @@ class ShopView(ThemedView):
         self.user_id = user_id
         self.category: str | None = None
         self.selected_id: str | None = None
+        self.last_purchase_notice: str = ""
         self._build_controls()
 
     def _guard(self, interaction: discord.Interaction) -> bool:
@@ -116,17 +117,42 @@ class ShopView(ThemedView):
     def build_embed(self):
         if not self.category:
             lines = [f"{_CATEGORY_ICONS.get(c['name'], EMOJI['item'])} **{c['name']}** · {len(c['items'])} vật phẩm" for c in self.catalog.get("categories", [])]
-            return base_embed(f"{EMOJI['shop']} Tiên Phường", "Chọn một danh mục để bắt đầu mua.\n\n" + "\n".join(lines) + f"\n\n{EMOJI['spirit_stone']} Giá tính bằng linh thạch.")
+            balance = 0
+            try:
+                player = self.engine.players.get(str(self.user_id)) if self.user_id else None
+                balance = int(player.spirit_stones) if player else 0
+            except Exception:
+                balance = 0
+            text = "Chọn danh mục trước, sau đó chọn **một vật phẩm** để xem công dụng và chỉ số đầy đủ.\n\n" + "\n".join(lines)
+            text += f"\n\n{EMOJI['spirit_stone']} Số dư: **{fmt_amount(balance)}** linh thạch."
+            if self.last_purchase_notice:
+                text = self.last_purchase_notice + "\n\n" + text
+            return base_embed(f"{EMOJI['shop']} Tiên Phường", text)
         item = self.selected_item
         if not item:
-            return base_embed(f"{EMOJI['shop']} Tiên Phường · {self.category}", "Chọn vật phẩm trong menu phía dưới.")
-        return base_embed(
-            f"{item.get('emoji', _CATEGORY_ICONS.get(self.category, EMOJI['item']))} {item['name']}",
+            balance = 0
+            try:
+                player = self.engine.players.get(str(self.user_id)) if self.user_id else None
+                balance = int(player.spirit_stones) if player else 0
+            except Exception:
+                balance = 0
+            text = (f"Danh mục **{self.category}** có **{len(self.selected_items)}** món.\n"
+                    "Chọn một món trong menu vật phẩm bên dưới để xem công dụng, giá và ID.\n\n"
+                    f"{EMOJI['spirit_stone']} Số dư hiện tại: **{fmt_amount(balance)}** linh thạch.")
+            return base_embed(f"{EMOJI['shop']} Tiên Phường · {self.category}", text)
+        player = self.engine.players.get(str(self.user_id)) if self.user_id else None
+        balance = int(player.spirit_stones) if player else 0
+        detail = (
+            f"Danh mục: **{self.category}** · ID: `{item['id']}`\n"
             f"Phẩm cấp: {item.get('rarity_emoji', '⚪')} **{item['rarity']} phẩm**\n"
             f"Giá: **{fmt_amount(item['price'])}** {EMOJI['spirit_stone']}\n"
+            f"Số dư: **{fmt_amount(balance)}** linh thạch\n"
             f"\n**✨ Tác dụng**\n" + "\n".join(f"• {effect}" for effect in item.get("effects", [])) +
-            f"\n\n📖 {item['description']}",
+            f"\n\n📖 {item['description']}"
         )
+        if self.last_purchase_notice:
+            detail += f"\n\n{self.last_purchase_notice}"
+        return base_embed(f"{item.get('emoji', _CATEGORY_ICONS.get(self.category, EMOJI['item']))} {item['name']}", detail)
 
     def _build_controls(self):
         self.clear_items()
@@ -168,10 +194,11 @@ class ShopView(ThemedView):
         try:
             result = self.engine.economy.buy(str(interaction.user.id), self.selected_item["id"], qty)
             item = result["item"]
-            await interaction.response.edit_message(
-                embed=success_embed("🛍️ Mua thành công", f"**{item['name']}** ×{qty}\nĐã trả **{fmt_amount(result['total'])}** {EMOJI['spirit_stone']}"),
-                view=self,
+            self.last_purchase_notice = (
+                f"✅ Đã mua **{item['name']} ×{qty}** với giá **{fmt_amount(result['total'])}** linh thạch."
+                f"\nSố dư còn lại: **{fmt_amount(result['player'].spirit_stones)}** linh thạch."
             )
+            await interaction.response.edit_message(embed=self.build_embed(), view=self)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 

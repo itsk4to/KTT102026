@@ -7,8 +7,7 @@ from game.rules.cultivation_rules import realm_text
 from game.content.items import ITEMS
 from game.content.monsters import MONSTERS, BOSS_MONSTERS
 from ui.emoji import EMOJI
-from ui.embeds import combat_embed
-from ui.views.combat_view import CombatView
+from ui.views.combat_view import CombatView, build_combat_embed
 from ui.embeds import base_embed, error_embed
 
 
@@ -99,6 +98,13 @@ class ExplorationMenuView(ThemedView):
         if not self._guard(interaction):
             await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
             return
+        active = self.engine.combat.get_encounter(self.user_id)
+        if active and not active.finished:
+            await interaction.response.edit_message(
+                embed=build_combat_embed(self.engine, self.user_id, active),
+                view=CombatView(self.engine, self.user_id),
+            )
+            return
         try:
             r = self.engine.exploration.explore(self.user_id, self.zone_key)
             if r.get("choice"):
@@ -109,7 +115,10 @@ class ExplorationMenuView(ThemedView):
                 )
                 return
             if r.get("combat"):
-                await interaction.response.edit_message(embed=combat_embed(r["encounter"], self.engine.players.get(self.user_id)), view=CombatView(self.engine, self.user_id))
+                await interaction.response.edit_message(
+                    embed=build_combat_embed(self.engine, self.user_id, r["encounter"]),
+                    view=CombatView(self.engine, self.user_id),
+                )
                 return
             rewards = []
             if "stones" in r:
@@ -132,9 +141,19 @@ class ExplorationMenuView(ThemedView):
         if not self._guard(interaction):
             await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
             return
+        active = self.engine.combat.get_encounter(self.user_id)
+        if active and not active.finished:
+            await interaction.response.edit_message(
+                embed=build_combat_embed(self.engine, self.user_id, active),
+                view=CombatView(self.engine, self.user_id),
+            )
+            return
         try:
             r = self.engine.exploration.hunt(self.user_id)
-            await interaction.response.edit_message(embed=combat_embed(r["encounter"], self.engine.players.get(self.user_id)), view=CombatView(self.engine, self.user_id))
+            await interaction.response.edit_message(
+                embed=build_combat_embed(self.engine, self.user_id, r["encounter"]),
+                view=CombatView(self.engine, self.user_id),
+            )
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 

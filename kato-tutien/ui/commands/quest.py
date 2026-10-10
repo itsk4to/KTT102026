@@ -43,6 +43,11 @@ async def cmd_npc(ctx, message: discord.Message, args: list[str] | None = None) 
 async def cmd_quest(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     user_id = str(message.author.id)
     try:
+        if args and args[0].lower() in ("thuong", "thưởng", "daily", "ngay", "ngày", "week", "weekly", "tuan", "tuần"):
+            from ui.views.mission_view import PlayerMissionView
+            view = PlayerMissionView(ctx.engine, user_id)
+            await message.reply(embed=view.build_embed(), view=view)
+            return
         if not args:
             view = QuestMenuView(ctx.engine, user_id)
             await message.reply(embed=view.build_embed(), view=view)

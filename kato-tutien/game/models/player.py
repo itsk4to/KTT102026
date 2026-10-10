@@ -40,6 +40,7 @@ class Player:
     last_hunt: int = 0
     last_daily: int = 0
     breakthrough_recovery_until: int = 0
+    breakthrough_pity: int = 0  # accumulated protection points: +5 per failure, max +20
     daily_streak: int = 0
     be_quan_active: int = 0
     be_quan_last_tick: int = 0

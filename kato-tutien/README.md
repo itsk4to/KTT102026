@@ -1,6 +1,6 @@
-Kato Tu Tiên v3.5.6 — Economy & Stat Audit
+Kato Tu Tiên v3.6.1 — Shop, Missions & Breakthrough Protection
 
-# Kato Tu Tiên v3.5.6
+# Kato Tu Tiên v3.6.1
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
@@ -27,6 +27,23 @@ Khi đột phá thất bại, nhân vật bị thương và bước vào trạng
 | Tiên Đế | 8 giờ |
 
 Tầng cuối của một đại cảnh giới tăng thêm 25%. Thất bại Thiên Kiếp tăng thêm 50%. Trạng thái được lưu trong database nên restart bot không làm mất thời gian hồi phục.
+
+## Shop, Nhiệm vụ & Bảo hộ đột phá (v3.6.1)
+
+- Shop mở theo luồng danh mục → chọn một vật phẩm → xem chi tiết → mua; chi tiết cho biết ID, phẩm cấp, giá, hiệu ứng và số dư linh thạch sau giao dịch.
+- `.nhiemvu thuong` mở nhiệm vụ Khởi hành, Ngày và Tuần. Tiến độ tự tăng sau hành động tu luyện/khám phá/mua sắm thành công; người chơi phải bấm nhận thưởng.
+- Nhiệm vụ ngày làm mới 00:00 và nhiệm vụ tuần làm mới vào thứ Hai theo múi giờ `Asia/Ho_Chi_Minh`. Phần thưởng linh thạch và tu vi chỉ nhận một lần mỗi chu kỳ.
+- Mỗi lần đột phá thất bại tích lũy +5 điểm phần trăm bảo hộ, tối đa +20; thành công sẽ đặt bảo hộ về 0. Điểm bảo hộ được lưu trên nhân vật và hiển thị trong preview.
+- SQLite schema 16 thêm `breakthrough_pity` và bảng `player_mission_progress` bằng migration; dữ liệu người chơi cũ được giữ nguyên.
+
+## Combat / Khám Phá reliability (v3.6.0)
+
+- View chiến đấu được tạo mới sau mỗi lượt để đồng bộ component ID của nút và menu kỹ năng.
+- Encounter giữ bộ đếm lượt; các GUI cũ hoặc mở trùng được làm mới mà không thực hiện thêm lượt.
+- Khi còn trận đang đánh, `.khampha` và `.san` mở lại trận đó; hệ thống không ghi đè encounter hay tiêu hao cooldown khám phá/săn.
+- GUI chiến đấu có timeout 10 phút. Nếu hết hạn, dùng `.khampha` hoặc `.san` để mở lại trận còn hiệu lực.
+- Chỉ công pháp đã học mới được thi triển; ID công pháp không hợp lệ trả thông báo hướng dẫn.
+- Combat embed hiển thị công/thủ thực chiến sau trang bị và các hệ số hiện hành.
 
 ## Architecture
 
@@ -65,7 +82,7 @@ Models  = domain data
 
 ### 1. Database migration thật
 
-- Schema version hiện tại: `14`.
+- Schema version hiện tại: `15`.
 - Migration chạy từng bước, idempotent, có đường nâng cấp 0 → 12.
 - DB cũ thiếu known columns được tự sửa bằng `ALTER TABLE` an toàn; migration 9 → 10 bổ sung giá / cái cho chợ.
 - Không còn kiểu chỉ đổi số version rồi giả vờ migration đã xong.
@@ -166,6 +183,13 @@ python -m pip install -r requirements.txt
 # set DISCORD_TOKEN, KATO_ADMIN_PASSWORD, KATO_OWNER_IDS
 python bot.py
 ```
+
+### Admin / Thiên Đạo session (v3.5.9)
+
+- Admin login is configured through the host secret/environment variable `KATO_ADMIN_PASSWORD`; the password is intentionally not hard-coded into the repository or ZIP. Set that variable to the new password in Railway/hosting settings before redeploying.
+- A successful login grants a **24-hour session**, stored in SQLite (`admin_sessions`) and retained across bot restarts. `.admin` can reopen the panel while that session remains valid.
+- Use **Đóng** to revoke the current user's session immediately. Expired sessions are deleted when checked. Admin GUI buttons re-check authorization on every interaction.
+- Historical note: the database schema advanced from 14 to 15 for admin sessions; v3.6.1 advances schema 15 to 16 for breakthrough protection and repeatable missions. Existing player data is preserved.
 
 ## Production safety
 

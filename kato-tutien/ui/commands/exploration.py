@@ -3,8 +3,8 @@ from __future__ import annotations
 import discord
 from game.services.errors import GameError
 from ui.emoji import EMOJI
-from ui.embeds import base_embed, error_embed, success_embed, combat_embed
-from ui.views.combat_view import CombatView
+from ui.embeds import base_embed, error_embed, success_embed
+from ui.views.combat_view import CombatView, build_combat_embed
 from ui.views.exploration_view import ExplorationChoiceView
 from ui.views.exploration_view import ExplorationMenuView
 from game.content.items import ITEMS
@@ -12,6 +12,13 @@ from game.content.items import ITEMS
 async def cmd_explore(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:
         user_id = str(message.author.id)
+        active = ctx.engine.combat.get_encounter(user_id)
+        if active and not active.finished:
+            await message.reply(
+                embed=build_combat_embed(ctx.engine, user_id, active),
+                view=CombatView(ctx.engine, user_id),
+            )
+            return
         view = ExplorationMenuView(ctx.engine, user_id)
         await message.reply(embed=view.build_embed(), view=view)
     except GameError as e:
@@ -35,7 +42,17 @@ async def cmd_zone(ctx, message: discord.Message, args: list[str]) -> None:
 async def cmd_hunt(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     try:
         user_id = str(message.author.id)
+        active = ctx.engine.combat.get_encounter(user_id)
+        if active and not active.finished:
+            await message.reply(
+                embed=build_combat_embed(ctx.engine, user_id, active),
+                view=CombatView(ctx.engine, user_id),
+            )
+            return
         r = ctx.engine.exploration.hunt(user_id)
-        await message.reply(embed=combat_embed(r["encounter"], ctx.engine.players.get(user_id)), view=CombatView(ctx.engine, user_id))
+        await message.reply(
+            embed=build_combat_embed(ctx.engine, user_id, r["encounter"]),
+            view=CombatView(ctx.engine, user_id),
+        )
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))

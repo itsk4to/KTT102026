@@ -1,3 +1,38 @@
+## v3.6.1 — Shop, Nhiệm Vụ Thưởng & Bảo Hộ Đột Phá
+
+- Làm rõ luồng Tiên Phường: chọn danh mục, chọn một vật phẩm, xem riêng giá/công dụng/ID/số dư rồi mới mua; sau mua tiếp tục hiển thị chi tiết và số dư mới.
+- Thêm nhiệm vụ Khởi hành (một lần), Ngày và Tuần; tiến độ tự ghi khi tu luyện, khám phá hoặc mua vật phẩm thành công, phần thưởng phải nhận thủ công.
+- Thưởng nhiệm vụ bị giới hạn theo ngưỡng tu vi tầng hiện tại; nhận thưởng lặp lại bị chặn bằng transaction và trạng thái claim trong SQLite.
+- Thêm bảo hộ đột phá: thất bại +5 điểm phần trăm, tối đa +20; mọi dạng đột phá thành công đặt lại về 0, bao gồm Cửu Lôi Kiếp và Ứng Thiên Kiếp.
+- Thêm migration schema 15 → 16, cột `players.breakthrough_pity` và bảng `player_mission_progress`; không reset dữ liệu cũ.
+- Thêm test cho nhiệm vụ ngày/tuần/khởi hành, chống nhận thưởng hai lần, tiến độ sau giao dịch và bảo hộ đột phá.
+
+## v3.6.0 — Combat / Exploration Skill Reliability
+
+- Sửa luồng GUI chiến đấu: sau mỗi lượt tạo view mới với component ID mới, tránh nút/menu công pháp bị cũ hoặc không phản hồi.
+- Thêm bộ đếm lượt cho encounter để đồng bộ các GUI mở trùng; click từ giao diện cũ chỉ tải lại trận, không đánh thêm lượt.
+- Tăng thời hạn GUI chiến đấu lên 10 phút; `.khampha` hoặc `.san` sẽ mở lại trận đang diễn ra thay vì ghi đè bằng trận mới.
+- Chặn bắt đầu trận mới, khám phá, săn hoặc đổi khu khi vẫn đang chiến đấu; tránh mất encounter và không đốt cooldown vì thao tác bị chặn.
+- Kiểm tra công pháp đã học và loại vật phẩm trước khi thi triển; lỗi dữ liệu ID cũ trả thông báo dễ hiểu thay vì tiếp tục với metadata rỗng.
+- Đồng bộ chỉ số công/thủ hiển thị trong combat embed với trang bị, thiên phú và Đạo thực tế.
+- Thêm test hồi quy cho thi triển công pháp, mastery, encounter cũ, lượt trùng và cooldown trong trận.
+
+## v3.5.9 — Thiên Đạo Admin Session & Security
+
+- Kéo dài phiên Admin từ 5 phút lên 24 giờ.
+- Lưu thời điểm tạo/hết hạn phiên trong SQLite để vẫn hợp lệ sau khi bot khởi động lại.
+- Thêm migration schema 14 → 15 cho `admin_sessions`; không reset dữ liệu cũ.
+- Dashboard và màn hình Thiên Đạo kiểm tra quyền ở mỗi tương tác; xác thực lại khi gửi form thêm quy tắc.
+- Không nhúng mật khẩu quản trị dạng chữ thuần vào mã nguồn hoặc ZIP; thay mật khẩu qua `KATO_ADMIN_PASSWORD` trong cấu hình bí mật của host.
+
+## v3.5.8 — Help & Menu Reliability Fix
+
+- `.help` is now a three-page guide with real line breaks and bounded Discord embed lengths.
+- `.menu` now opens the actual navigation dashboard instead of duplicating Help.
+- Added the player market to the menu select list.
+- Added guarded Help navigation (previous/next, open menu, close).
+- Main-menu rendering now catches unexpected errors, logs the traceback, and gives the player a safe response.
+
 ## v3.5.6 — Economy & Stat Audit
 
 - Cân bằng lại tỷ lệ đột phá: chỉ số nhân vật mới không còn đẩy tỷ lệ mặc định sát trần 92%; trần mới là 90%.

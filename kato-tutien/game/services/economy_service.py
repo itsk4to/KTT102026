@@ -99,6 +99,8 @@ class EconomyService:
             p.spirit_stones -= total
             self._inventory.add(user_id, item_id, qty)
             self.players.save(p)
+            if getattr(self, "missions", None) is not None:
+                self.missions.track_action(user_id, "purchase", 1)
             return {"item": item, "qty": qty, "total": total, "player": p}
 
     def _effective_max_hp(self, player) -> int:

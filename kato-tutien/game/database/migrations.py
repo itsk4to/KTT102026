@@ -145,6 +145,30 @@ def migrate_13_to_14(db) -> None:
     _set_version(db, 14)
 
 
+def migrate_14_to_15(db) -> None:
+    # Keep admin authentication valid for one day, including across bot restarts.
+    db.execute("""CREATE TABLE IF NOT EXISTS admin_sessions (
+        user_id TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+    )""")
+    _set_version(db, 15)
+
+
+def migrate_15_to_16(db) -> None:
+    # Persistent pity for failed breakthroughs and durable daily/weekly missions.
+    cols = {r["name"] for r in db.fetchall("PRAGMA table_info(players)")}
+    if "breakthrough_pity" not in cols:
+        db.execute("ALTER TABLE players ADD COLUMN breakthrough_pity INTEGER NOT NULL DEFAULT 0")
+    db.execute("""CREATE TABLE IF NOT EXISTS player_mission_progress (
+        user_id TEXT NOT NULL, mission_id TEXT NOT NULL, period_key TEXT NOT NULL,
+        progress INTEGER NOT NULL DEFAULT 0, claimed INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (user_id, mission_id, period_key)
+    )""")
+    _set_version(db, 16)
+
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
@@ -160,6 +184,8 @@ _MIGRATIONS = {
     11: migrate_11_to_12,
     12: migrate_12_to_13,
     13: migrate_13_to_14,
+    14: migrate_14_to_15,
+    15: migrate_15_to_16,
 }
 
 

@@ -66,6 +66,9 @@ class CombatService:
         return {"attack": atk, "defense": defense, "max_hp": hp, "accuracy": accuracy, "evasion": evasion, "crit": crit, "spirit_mult": spirit_mult}
 
     def start_encounter(self, user_id: str, boss: bool = False, zone_key: str | None = None, elite: bool = False) -> Encounter:
+        current = self._encounters.get(user_id)
+        if current and not current.finished:
+            raise GameError("Ngươi vẫn đang trong trận đấu hiện tại. Hãy tiếp tục chiến đấu hoặc bỏ chạy trước khi mở trận mới.")
         p = self._require(user_id)
         pool = BOSS_MONSTERS if boss else MONSTERS
         low, high = max(0, p.realm_index - 1), p.realm_index + 1
@@ -166,6 +169,7 @@ class CombatService:
         if not enc or enc.finished:
             raise GameError("Không có trận đấu.")
         p = self._require(user_id)
+        enc.turn_number += 1
         stats = self.battle_stats(p)
         logs = []
         # player status tick
@@ -198,8 +202,11 @@ class CombatService:
         p = self._require(user_id)
         key = f"technique:{technique_id}"
         if not self.players.has_discovery(user_id, key):
-            raise GameError("Chưa học công pháp này.")
-        item = ITEMS.get(technique_id, {})
+            raise GameError("Chưa học công pháp này. Hãy dùng `.hoc <ID công pháp>` trước khi chiến đấu.")
+        item = ITEMS.get(technique_id)
+        if not item or item.get("type") != "technique":
+            raise GameError("Công pháp này không còn khả dụng. Hãy mở `.vatpham` để kiểm tra ID.")
+        enc.turn_number += 1
         stats = self.battle_stats(p)
         logs = []
         plogs, stunned, _, _ = self._tick_side(enc, "player")
@@ -232,6 +239,7 @@ class CombatService:
             raise GameError("Không dùng được trong chiến đấu.")
         if not self.inventory.remove(user_id, item_id, 1):
             raise GameError("Không có vật phẩm.")
+        enc.turn_number += 1
         logs = []
         plogs, stunned, _, _ = self._tick_side(enc, "player")
         logs.extend(plogs)
@@ -248,6 +256,7 @@ class CombatService:
         enc = self._encounters.get(user_id)
         if not enc:
             raise GameError("Không có trận đấu.")
+        enc.turn_number += 1
         if self.rng.random() < 0.65:
             enc.finished = True
             enc.victory = None

@@ -55,6 +55,8 @@ class CultivationService:
             p.dao_stage = stage_from_insight(p.dao_insight)
         p.last_cultivate = now
         self.players.save(p)
+        if getattr(self, "missions", None) is not None:
+            self.missions.track_action(user_id, "cultivate", 1)
         if getattr(self, "sect_tower", None) is not None:
             self.sect_tower.record_activity(user_id, "cultivate", 1)
         return {
@@ -70,7 +72,7 @@ class CultivationService:
         req = cultivation_requirement(p.realm_index, p.realm_layer)
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)),
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)) + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
         )
         recovery = max(0, int(p.breakthrough_recovery_until) - int(time.time()))
         needs_thunder = requires_nine_thunder_tribulation(p.realm_index, p.realm_layer)
@@ -80,6 +82,8 @@ class CultivationService:
         return {
             "ready": p.cultivation >= req and not is_max_realm(p.realm_index, p.realm_layer) and recovery <= 0,
             "chance": chance,
+            "pity_points": min(20, max(0, int(p.breakthrough_pity))),
+            "pity_bonus": min(20, max(0, int(p.breakthrough_pity))) / 100.0,
             "recovery_remaining": recovery,
             "recovery_until": int(p.breakthrough_recovery_until),
             "requirement": req,
@@ -174,7 +178,7 @@ class CultivationService:
             raise GameError("Khí huyết đã cạn. Hãy hồi phục HP trước khi mở Cửu Lôi Kiếp.")
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)),
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)) + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
         )
         breakthrough_roll_success = self.rng.random() < chance
         success = breakthrough_roll_success
@@ -229,10 +233,17 @@ class CultivationService:
             p.injury = apply_failure_injury(p.injury, 5, float(talent_mod(p.talent, "injury_mult", 1.0)))
             recovery_seconds = breakthrough_recovery_seconds(p.realm_index, p.realm_layer)
             p.breakthrough_recovery_until = now + recovery_seconds
+        pity_before = min(20, max(0, int(p.breakthrough_pity)))
+        if success:
+            p.breakthrough_pity = 0
+        else:
+            p.breakthrough_pity = min(20, pity_before + 5)
         self.players.save(p)
         return {
             "success": success,
             "breakthrough_roll_success": breakthrough_roll_success,
+            "pity_before": pity_before,
+            "pity_after": p.breakthrough_pity,
             "chance": chance,
             "realm": realm_text(p.realm_index, p.realm_layer, p.path),
             "recovery_seconds": recovery_seconds if not success else 0,
@@ -294,10 +305,12 @@ class CultivationService:
             raise GameError("Tu vi chưa đủ để ứng kiếp.")
         chance = breakthrough_chance(
             root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=0.1,
+            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=0.1 + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
         )
         success = self.rng.random() < chance
+        pity_before = min(20, max(0, int(p.breakthrough_pity)))
         if success:
+            p.breakthrough_pity = 0
             p.breakthrough_recovery_until = 0
             p.realm_index += 1
             p.realm_layer = 1
@@ -308,10 +321,11 @@ class CultivationService:
             p.defense += 10
             self.players.add_history(user_id, "tribulation", "pass")
         else:
+            p.breakthrough_pity = min(20, pity_before + 5)
             p.cultivation = int(p.cultivation * 0.5)
             p.injury = min(100, p.injury + 20)
             p.lifespan = max(1, p.lifespan - 5)
             p.breakthrough_recovery_until = now + breakthrough_recovery_seconds(p.realm_index, p.realm_layer, tribulation=True)
             self.players.add_history(user_id, "tribulation", "fail")
         self.players.save(p)
-        return {"success": success, "chance": chance, "realm": realm_text(p.realm_index, p.realm_layer, p.path), "recovery_seconds": 0 if success else max(0, int(p.breakthrough_recovery_until) - now), "player": p}
+        return {"success": success, "chance": chance, "pity_before": pity_before, "pity_after": p.breakthrough_pity, "realm": realm_text(p.realm_index, p.realm_layer, p.path), "recovery_seconds": 0 if success else max(0, int(p.breakthrough_recovery_until) - now), "player": p}

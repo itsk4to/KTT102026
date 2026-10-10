@@ -106,6 +106,9 @@ class QuestMenuView(ThemedView):
         back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=1)
         back.callback = self._back
         self.add_item(back)
+        missions = discord.ui.Button(label="Nhiệm vụ ngày / tuần", style=discord.ButtonStyle.success, emoji="🎁", row=2)
+        missions.callback = self._missions
+        self.add_item(missions)
 
     def build_embed(self) -> discord.Embed:
         active = self.engine.quests.active(self.user_id)
@@ -118,7 +121,8 @@ class QuestMenuView(ThemedView):
             lines.append("\n**CÓ THỂ NHẬN**")
             lines.extend(f"📜 **{x['name']}** · {x['npc']}" for x in available[:8])
         if not lines:
-            lines.append("Chưa có nhiệm vụ. Hãy khám phá và gặp NPC.")
+            lines.append("Chưa có nhiệm vụ cốt truyện. Hãy khám phá và gặp NPC.")
+        lines.append("\n🎁 **Nhiệm vụ thưởng:** nhiệm vụ khởi hành, ngày và tuần có thể theo dõi/nhận thưởng riêng. Bấm nút bên dưới hoặc dùng `.nhiemvu thuong`.")
         return base_embed("📜 Nhật Ký Nhiệm Vụ", "\n".join(lines))
 
     async def _select_callback(self, interaction: discord.Interaction):
@@ -155,6 +159,14 @@ class QuestMenuView(ThemedView):
         amount = step.get("amount", 1)
         text += f"\nTiến độ: **{progress}/{amount}**"
         await interaction.response.edit_message(embed=base_embed(f"📜 {r['quest']['name']}", text), view=self)
+
+    async def _missions(self, interaction: discord.Interaction):
+        if not self._guard(interaction):
+            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            return
+        from ui.views.mission_view import PlayerMissionView
+        view = PlayerMissionView(self.engine, self.user_id)
+        await interaction.response.edit_message(embed=view.build_embed(), view=view)
 
     async def _back(self, interaction: discord.Interaction):
         if not self._guard(interaction):

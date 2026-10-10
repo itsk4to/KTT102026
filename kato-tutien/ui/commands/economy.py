@@ -11,7 +11,8 @@ from game.content.items import ITEMS
 
 async def cmd_shop(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     catalog = ctx.engine.economy.shop_catalog()
-    await message.reply(embed=shop_embed(catalog), view=ShopView(ctx.engine, catalog, str(message.author.id)))
+    view = ShopView(ctx.engine, catalog, str(message.author.id))
+    await message.reply(embed=view.build_embed(), view=view)
 
 async def cmd_buy(ctx, message: discord.Message, args: list[str]) -> None:
     if not args:
@@ -209,3 +210,40 @@ async def cmd_pvp(ctx, message: discord.Message, args: list[str] | None = None) 
         view.message = sent
     except (GameError, ValueError) as exc:
         await message.reply(embed=error_embed(str(exc)))
+
+
+async def cmd_item_catalog(ctx, message: discord.Message, args: list[str] | None = None) -> None:
+    """Tra cứu tên và ID vật phẩm, có hỗ trợ tìm kiếm không dấu."""
+    from game.content.item_catalog import search_items, item_effect_lines
+    from ui.views.item_catalog_view import ItemIdBrowserView
+    query = " ".join(args or []).strip()
+    if not query:
+        view = ItemIdBrowserView(str(message.author.id))
+        await message.reply(embed=view.build_embed(), view=view)
+        return
+    matches = search_items(query, limit=15)
+    if not matches:
+        await message.reply(embed=error_embed(
+            f"Không tìm thấy vật phẩm khớp với **{query}**. Hãy thử tên ngắn hơn hoặc mở `.vatpham` để duyệt danh mục."
+        ))
+        return
+    # If the query is an exact ID, show its details first; otherwise show concise results.
+    from game.content.items import ITEMS
+    exact_id = query.lower().strip()
+    if exact_id in ITEMS:
+        item = ITEMS[exact_id]
+        body = (
+            f"**Tên:** {item.get('name', exact_id)}\n**ID:** `{exact_id}`\n"
+            f"**Danh mục:** {item.get('category', 'Khác')} · **Giá:** {fmt_amount(item.get('price', 0))} linh thạch\n\n"
+            + "\n".join(item_effect_lines(item)) + f"\n\n📖 {item.get('description', 'Chưa có mô tả.')}"
+        )
+        await message.reply(embed=base_embed(f"🧾 {item.get('name', exact_id)}", body))
+        return
+    lines = []
+    for item_id, item in matches:
+        lines.append(f"• **{item.get('name', item_id)}** — `{item_id}`\n  {item.get('category', 'Khác')} · {fmt_amount(item.get('price', 0))} linh thạch")
+    body = "\n".join(lines)
+    if len(matches) == 15:
+        body += "\n\nHiển thị tối đa 15 kết quả. Thêm từ khóa cụ thể hơn để lọc tiếp."
+    body += "\n\nSao chép ID trong dấu `...` để dùng cho `.mua`, `.dung`, `.trangbi` hoặc tạo Mật Lệnh."
+    await message.reply(embed=base_embed(f"🧾 Tra cứu vật phẩm · {len(matches)} kết quả", body))

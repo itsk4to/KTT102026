@@ -9,7 +9,7 @@ from ui.commands.secret_realm import cmd_secret_realm
 from ui.commands.economy import (
     cmd_shop, cmd_buy, cmd_inventory, cmd_use, cmd_learn, cmd_equip,
     cmd_unequip, cmd_market, cmd_market_list, cmd_market_buy,
-    cmd_market_cancel, cmd_transfer, cmd_code, cmd_gacha, cmd_pvp,
+    cmd_market_cancel, cmd_transfer, cmd_code, cmd_gacha, cmd_pvp, cmd_item_catalog,
 )
 from ui.commands.dao import cmd_dao
 from ui.commands.sect import cmd_sect, cmd_sect_create, cmd_sect_apply, cmd_sect_contribute, cmd_sect_leave
@@ -44,9 +44,10 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("san", ("s", "hunt"), "explore", ".san", "Săn yêu thú.", cmd_hunt),
     CommandSpec("bicanh", ("bc",), "explore", ".bicanh", "Chọn bí cảnh và nhận linh thạch/tu vi theo chu kỳ 3 giờ.", cmd_secret_realm),
     CommandSpec("npc", ("n", "nhanvat"), "world", ".npc [mã]", "Mở giao diện NPC; có thể dùng mã cho thao tác nhanh.", cmd_npc, True),
-    CommandSpec("nhiemvu", ("q", "quest", "nv"), "world", ".nhiemvu [mã|nhan <mã>]", "Mở giao diện nhiệm vụ; mã vẫn hỗ trợ thao tác nâng cao.", cmd_quest, True),
+    CommandSpec("nhiemvu", ("q", "quest", "nv"), "world", ".nhiemvu [thuong|mã|nhan <mã>]", "Nhiệm vụ cốt truyện và nhiệm vụ khởi hành/ngày/tuần có thưởng.", cmd_quest, True),
     CommandSpec("thegioi", ("tg", "world"), "world", ".thegioi [thamgia <mã>]", "Mở giao diện biến động thế giới.", cmd_world, True),
     CommandSpec("shop", ("sp", "tiem"), "trade", ".shop", "Mở Tiên Phường bằng GUI.", cmd_shop),
+    CommandSpec("vatpham", ("vp", "itemid", "idvatpham"), "trade", ".vatpham [tên|ID]", "Tra cứu ID, giá và hiệu ứng vật phẩm; tìm tên không dấu cũng được.", cmd_item_catalog, True),
     CommandSpec("mua", ("m", "buy"), "trade", ".mua <vật_phẩm> [số_lượng]", "Mua vật phẩm.", cmd_buy, True),
     CommandSpec("tui", ("bag", "inv", "inventory"), "trade", ".tui", "Mở Túi Càn Khôn bằng GUI.", cmd_inventory),
     CommandSpec("dung", ("use",), "trade", ".dung <vật_phẩm> [số_lượng]", "Dùng vật phẩm.", cmd_use, True),

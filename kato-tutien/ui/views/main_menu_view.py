@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+import logging
 
 from ui.theme.views import ThemedView
 from game.services.errors import GameError
@@ -21,6 +22,8 @@ from ui.views.dao_lu_view import DaoLuView
 from game.rules.cultivation_rules import realm_text
 from game.utils import fmt_amount
 from ui.theme.components import themed_button
+
+logger = logging.getLogger(__name__)
 
 
 class MainMenuView(ThemedView):
@@ -112,6 +115,7 @@ class MainMenuSelect(discord.ui.Select):
             discord.SelectOption(label="Nhân vật", value="player", emoji=EMOJI["cultivator"], description="Xem thuộc tính và thao tác nhanh."),
             discord.SelectOption(label="Túi Càn Khôn", value="inventory", emoji=EMOJI["item"], description="Xem và sử dụng vật phẩm."),
             discord.SelectOption(label="Tiên Phường", value="shop", emoji=EMOJI["shop"], description="Xem và mua vật phẩm."),
+            discord.SelectOption(label="Chợ", value="market", emoji="🪙", description="Mua bán vật phẩm giữa người chơi."),
             discord.SelectOption(label="Khám phá", value="explore", emoji=EMOJI["explore"], description="Chọn khu và bắt đầu hành trình."),
             discord.SelectOption(label="Bí cảnh", value="secret_realm", emoji="🌌", description="Tu luyện nhàn rỗi, nhận thưởng sau 3 giờ."),
             discord.SelectOption(label="Nhiệm vụ", value="quest", emoji=EMOJI["technique"], description="Theo dõi và nhận nhiệm vụ."),
@@ -332,4 +336,14 @@ async def render_section(interaction: discord.Interaction, engine, user_id: str,
 
         raise GameError("Giao diện không tồn tại.")
     except GameError as exc:
-        await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=error_embed(str(exc)), ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+    except Exception:
+        logger.exception("main menu render failed: action=%s user_id=%s", action, user_id)
+        error = error_embed("Không thể mở mục này lúc này. Hãy thử lại hoặc dùng lệnh tương ứng; lỗi đã được ghi vào log bot.")
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=error, ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=error, ephemeral=True)

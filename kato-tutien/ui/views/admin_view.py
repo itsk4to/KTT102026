@@ -83,7 +83,7 @@ class GrantStonesModal(discord.ui.Modal, title="💎 Cấp Linh Thạch"):
 class CreateCodeModal(discord.ui.Modal, title="🎟️ Tạo Mật Lệnh"):
     code = discord.ui.TextInput(label="Mã (để trống = tự sinh)", required=False, max_length=32)
     stones = discord.ui.TextInput(label="Linh thạch", default="0", required=True, max_length=12)
-    item_id = discord.ui.TextInput(label="ID vật phẩm (tùy chọn)", required=False, max_length=64)
+    item_id = discord.ui.TextInput(label="ID vật phẩm (tùy chọn)", placeholder="Tra ID bằng .vatpham hoặc nút Tra ID", required=False, max_length=64)
     qty = discord.ui.TextInput(label="Số vật phẩm", default="0", required=True, max_length=8)
     max_uses = discord.ui.TextInput(label="Số lượt dùng", default="1", required=True, max_length=8)
 
@@ -135,6 +135,7 @@ class HeavenlyRuleModal(discord.ui.Modal, title="☯️ Nhập Quy Tắc Đại 
 
     async def on_submit(self, interaction):
         try:
+            self.owner._check(interaction)
             r = self.owner.engine.heavenly_dao.set_rule(self.owner.actor_id, str(self.key.value), str(self.rule.value), True)
             await interaction.response.send_message(embed=success_embed("☯️ Đã ghi Đại Đạo", f"**{r['key']}**\n{r['text']}"), ephemeral=True)
         except GameError as exc:
@@ -143,13 +144,15 @@ class HeavenlyRuleModal(discord.ui.Modal, title="☯️ Nhập Quy Tắc Đại 
 
 class AdminView(ThemedView):
     def __init__(self, engine: GameEngine, actor_id: str):
-        super().__init__(timeout=300)
+        super().__init__(timeout=24 * 60 * 60)
         self.engine = engine
         self.actor_id = actor_id
 
     def _check(self, interaction: discord.Interaction) -> None:
         if str(interaction.user.id) != self.actor_id:
             raise GameError("Đây không phải phiên Admin của ngươi.")
+        # Revalidate every interaction, not only when the dashboard was opened.
+        self.engine.admin.ensure_access(self.actor_id)
 
     @discord.ui.button(label="Tổng quan", style=discord.ButtonStyle.secondary, emoji="📊", row=0)
     async def overview(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
@@ -252,7 +255,7 @@ class AdminView(ThemedView):
 
 class CodeAdminView(ThemedView):
     def __init__(self, engine, actor_id):
-        super().__init__(timeout=180)
+        super().__init__(timeout=24 * 60 * 60)
         self.engine = engine
         self.actor_id = actor_id
 
@@ -269,6 +272,16 @@ class CodeAdminView(ThemedView):
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
+    @discord.ui.button(label="Tra ID vật phẩm", emoji="🔎", style=discord.ButtonStyle.secondary, row=1)
+    async def browse_item_ids(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
+        try:
+            self._check(interaction)
+            from ui.views.item_catalog_view import ItemIdBrowserView
+            view = ItemIdBrowserView(self.actor_id)
+            await interaction.response.send_message(embed=view.build_embed(), view=view, ephemeral=True)
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
+
     @discord.ui.button(label="Vô hiệu hóa", emoji="🚫", style=discord.ButtonStyle.danger)
     async def disable_code(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         try:
@@ -277,7 +290,7 @@ class CodeAdminView(ThemedView):
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
-    @discord.ui.button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.secondary, row=2)
     async def close_codes(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         try:
             self._check(interaction)
@@ -288,18 +301,27 @@ class CodeAdminView(ThemedView):
 
 class HeavenlyAdminView(ThemedView):
     def __init__(self, engine, actor_id):
-        super().__init__(timeout=180)
+        super().__init__(timeout=24 * 60 * 60)
         self.engine = engine
         self.actor_id = actor_id
 
+    def _check(self, interaction: discord.Interaction) -> None:
+        if str(interaction.user.id) != self.actor_id:
+            raise GameError("Đây không phải phiên Admin của ngươi.")
+        self.engine.admin.ensure_access(self.actor_id)
+
     @discord.ui.button(label="Nhập quy tắc", emoji="☯️", style=discord.ButtonStyle.primary)
     async def add_rule(self, interaction, _button):
-        if str(interaction.user.id) != self.actor_id:
-            return await interaction.response.send_message("Không phải phiên Admin của ngươi.", ephemeral=True)
-        await interaction.response.send_modal(HeavenlyRuleModal(self))
+        try:
+            self._check(interaction)
+            await interaction.response.send_modal(HeavenlyRuleModal(self))
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
     @discord.ui.button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.danger)
     async def close_rule(self, interaction, _button):
-        if str(interaction.user.id) != self.actor_id:
-            return await interaction.response.send_message("Không phải phiên Admin của ngươi.", ephemeral=True)
-        await interaction.response.edit_message(view=None)
+        try:
+            self._check(interaction)
+            await interaction.response.edit_message(view=None)
+        except GameError as exc:
+            await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)

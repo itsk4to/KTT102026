@@ -2,6 +2,7 @@ from __future__ import annotations
 import secrets
 from game.repositories.code_repository import CodeRepository
 from game.services.errors import GameError
+from game.content.items import ITEMS
 
 class CodeService:
     def __init__(self, players, audit, repository: CodeRepository | None = None):
@@ -13,8 +14,15 @@ class CodeService:
 
     def create(self, actor_id: str, code: str | None, stones: int, item_id: str | None, qty: int, max_uses: int):
         code = (code or "KATO-" + secrets.token_hex(4)).upper().strip()
+        item_id = (item_id or "").strip().lower() or None
         if not code or len(code) > 32 or stones < 0 or qty < 0 or max_uses < 1:
             raise GameError("Thông số mật lệnh không hợp lệ.")
+        if item_id and item_id not in ITEMS:
+            raise GameError(f"Không tìm thấy ID vật phẩm `{item_id}`. Dùng `.vatpham` để tra ID chính xác.")
+        if item_id and qty < 1:
+            raise GameError("Đã chọn vật phẩm thì số lượng phải ít nhất là 1.")
+        if not item_id and qty > 0:
+            raise GameError("Đã nhập số lượng vật phẩm nhưng chưa có ID. Dùng `.vatpham` để tra ID hoặc đặt số lượng = 0.")
         if self.repo.exists(code):
             raise GameError("Mã đã tồn tại.")
         self.repo.create(code, stones, item_id or None, qty, max_uses)

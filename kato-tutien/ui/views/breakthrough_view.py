@@ -179,7 +179,7 @@ class BreakthroughView(ThemedView):
                         embed=success_embed(
                             f"{EMOJI['breakthrough']} Vượt Cửu Lôi Kiếp thành công",
                             f"Ngươi đã chịu đủ chín tia lôi kiếp!\nCảnh giới mới: **{result['realm']}**\n"
-                            f"Tỷ lệ đột phá ban đầu: **{result['chance']:.0%}**\n\n{summary}",
+                            f"Tỷ lệ đột phá: **{result['chance']:.0%}** · Bảo hộ đã đặt lại về **0** sau thành công.\n\n{summary}",
                         ),
                         view=None,
                     )
@@ -187,7 +187,8 @@ class BreakthroughView(ThemedView):
                     await interaction.response.edit_message(
                         embed=error_embed(
                             f"Ngươi gục trước Cửu Lôi Kiếp; cảnh giới vẫn là **{result['realm']}**.\n"
-                            f"Tu vi hao tổn, thương thế tăng và phải hồi phục **{result.get('recovery_seconds', 0)}s**.\n\n{summary}"
+                            f"Tu vi hao tổn, thương thế tăng và phải hồi phục **{result.get('recovery_seconds', 0)}s**.\n"
+                            f"🛡️ Bảo hộ đột phá: **+{result.get('pity_after', 0)} điểm phần trăm** cho lần sau (tối đa +20).\n\n{summary}"
                         ),
                         view=None,
                     )
@@ -200,7 +201,8 @@ class BreakthroughView(ThemedView):
                 await interaction.response.edit_message(
                     embed=error_embed(
                         f"Đột phá thất bại · tỷ lệ **{result['chance']:.0%}**\n"
-                        f"Tu vi bị tổn thất. 🩹 Hồi phục **{result.get('recovery_seconds', 0)}s** trước khi tiếp tục tu luyện."
+                        f"Tu vi bị tổn thất. 🩹 Hồi phục **{result.get('recovery_seconds', 0)}s** trước khi tiếp tục tu luyện.\n"
+                        f"🛡️ Bảo hộ tích lũy: **+{result.get('pity_after', 0)} điểm phần trăm** cho lần sau (tối đa +20)."
                     ),
                     view=None,
                 )

@@ -24,5 +24,5 @@ STARTING_STONES = 1000
 MARKET_TAX_RATE = 0.02  # seller receives 98%
 BE_QUAN_COST = 50
 BE_QUAN_INTERVAL = 5 * 60
-ADMIN_SESSION_TTL = 300
+ADMIN_SESSION_TTL = 24 * 60 * 60  # One-day admin session
 GACHA_TICKET_ID = "thien_co_lenh"

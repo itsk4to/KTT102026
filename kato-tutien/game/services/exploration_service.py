@@ -57,6 +57,9 @@ class ExplorationService:
 
     def set_zone(self, user_id: str, zone_key: str) -> dict:
         p = self._require(user_id)
+        active_encounter = self.combat.get_encounter(user_id)
+        if active_encounter and not active_encounter.finished:
+            raise GameError("Không thể đổi khu vực giữa trận đấu. Hãy kết thúc hoặc rút lui trước.")
         z = EXPLORE_ZONES.get(zone_key)
         if not z or not z.get("enabled", True):
             raise GameError("Khu vực không khả dụng.")
@@ -85,6 +88,9 @@ class ExplorationService:
 
     def explore(self, user_id: str, zone_key: str | None = None) -> dict:
         p = self._require(user_id)
+        active_encounter = self.combat.get_encounter(user_id)
+        if active_encounter and not active_encounter.finished:
+            raise GameError("Ngươi đang trong một trận đấu. Hãy tiếp tục trận hiện tại trước khi khám phá tiếp.")
         pending = self.pending(user_id)
         if pending:
             return {"choice": True, "event": pending["event"], "zone": EXPLORE_ZONES[pending["zone_key"]], "pending": True}
@@ -118,6 +124,8 @@ class ExplorationService:
                 event = weighted_pick(self.rng, [(e, e["weight"]) for e in candidates])
                 self._save_pending(user_id, event, key)
                 self.players.save(p)
+                if getattr(self, "missions", None) is not None:
+                    self.missions.track_action(user_id, "explore", 1)
                 result = {"choice": True, "event": event, "zone": z, "pending": False}
                 if spawned:
                     result["world_event"] = spawned
@@ -154,11 +162,15 @@ class ExplorationService:
             if spawned:
                 result["world_event"] = spawned
             self.players.save(p)
+            if getattr(self, "missions", None) is not None:
+                self.missions.track_action(user_id, "explore", 1)
             if getattr(self, "sect_tower", None) is not None:
                 self.sect_tower.record_activity(user_id, "explore", 1)
             return result
         self._apply_effect(p, user_id, event, result)
         self.players.save(p)
+        if getattr(self, "missions", None) is not None:
+            self.missions.track_action(user_id, "explore", 1)
         result["player"] = p
         result["quest_progress"] = result_quest
         if spawned:
@@ -195,7 +207,7 @@ class ExplorationService:
             if key not in effect:
                 continue
             value = effect[key]
-            amount = self.rng.randint(*value) if isinstance(value, list) else int(value)
+            amount = self.rng.randint(*value) if isinstance(value, (list, tuple)) else int(value)
             if key == "stones":
                 amount = int(amount * stone_loot_multiplier(p.luck)) if amount > 0 else amount
                 p.spirit_stones = max(0, p.spirit_stones + amount)
@@ -229,6 +241,9 @@ class ExplorationService:
 
     def hunt(self, user_id: str) -> dict:
         p = self._require(user_id)
+        active_encounter = self.combat.get_encounter(user_id)
+        if active_encounter and not active_encounter.finished:
+            raise GameError("Ngươi đang trong một trận đấu. Hãy tiếp tục trận hiện tại trước khi săn trận mới.")
         now = int(time.time())
         remain = HUNT_COOLDOWN - (now - p.last_hunt)
         if remain > 0:

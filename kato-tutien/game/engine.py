@@ -28,6 +28,7 @@ from game.repositories.heavenly_dao_repository import HeavenlyDaoRepository
 from game.repositories.mission_repository import MissionRepository
 from game.repositories.pvp_repository import PvpRepository
 from game.repositories.secret_realm_repository import SecretRealmRepository
+from game.repositories.player_mission_repository import PlayerMissionRepository
 from game.services.player_service import PlayerService
 from game.services.cultivation_service import CultivationService
 from game.services.breakthrough_service import BreakthroughService
@@ -48,6 +49,7 @@ from game.services.sect_tower_service import SectTowerService
 from game.services.heavenly_dao_service import HeavenlyDaoService
 from game.services.pvp_service import PvpService
 from game.services.secret_realm_service import SecretRealmService
+from game.services.player_mission_service import PlayerMissionService
 from game.services.code_service import CodeService
 from game.security.admin_auth import AdminAuth
 from game.services.errors import GameError
@@ -77,10 +79,13 @@ class GameEngine:
         self._missions = MissionRepository(db)
         self._pvp_repo = PvpRepository(db)
         self._secret_realms = SecretRealmRepository(db)
+        self._player_missions = PlayerMissionRepository(db)
 
         # services
         self.players = PlayerService(self._players, self.rng)
+        self.missions = PlayerMissionService(self._players, self._player_missions)
         self.cultivation = CultivationService(self._players, self.rng, self._inventory)
+        self.cultivation.missions = self.missions
         self.breakthrough = BreakthroughService(self.cultivation, self._players, self._inventory)
         self.combat = CombatService(self._players, self._inventory, self.rng)
         # Breakthrough tribulation uses the same equipment/talent/Dao max HP as combat.
@@ -89,11 +94,13 @@ class GameEngine:
         self.secret_realm = SecretRealmService(self._players, self._secret_realms, self.rng)
         self.economy = EconomyService(self._players, self._inventory, self._market, self.rng, self._codes)
         self.economy.combat = self.combat
+        self.economy.missions = self.missions
         self.quests = QuestService(self._players, self._quests, self._inventory)
         self.world = WorldService(self._players, self._world, self.rng)
         self.npc = NPCService(self._players, self.quests, self._npcs)
         self.quests.npc_service = self.npc
         self.exploration = ExplorationService(self._players, self._inventory, self.combat, self.quests, self.world, self.rng, self._exploration)
+        self.exploration.missions = self.missions
         self.sect = SectService(self._players, self._sects)
         self.sect_tower = SectTowerService(self._players, self._sects, self.rng, self._missions)
         self.cultivation.sect_tower = self.sect_tower
@@ -106,7 +113,7 @@ class GameEngine:
         self.dao_lu = DaoLuService(self._players, self._dao_lu)
         self.heavenly_dao = HeavenlyDaoService(self._players, self._audit, self._heavenly)
         self.codes = CodeService(self._players, self._audit, self._codes)
-        self.admin_auth = AdminAuth()
+        self.admin_auth = AdminAuth(db)
         self.admin = AdminService(self._players, self._sects, self._audit, self.admin_auth)
         self.audit = self._audit
 

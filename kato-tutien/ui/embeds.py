@@ -44,6 +44,8 @@ def cultivation_preview_embed(preview: dict) -> discord.Embed:
     e = base_embed(f"{EMOJI['breakthrough']} Đột phá", f"**{preview['realm']}**\n{status}")
     e.add_field(name="Tu vi", value=f"{progress_bar(current, maximum)}\n{fmt_amount(current)} / {fmt_amount(maximum)}", inline=False)
     e.add_field(name="Tỷ lệ", value=f"{preview['chance']:.0%}", inline=True)
+    pity_points = max(0, min(20, int(preview.get("pity_points", 0))))
+    e.add_field(name="Bảo hộ tích lũy", value=f"+{pity_points} điểm phần trăm\nThất bại +5 · tối đa +20", inline=True)
     if preview.get("needs_tribulation"):
         e.add_field(name="Thiên kiếp", value="Cần Ứng Thiên Kiếp", inline=True)
     if preview.get("needs_thunder_tribulation"):
@@ -110,12 +112,12 @@ def shop_embed(catalog: dict) -> discord.Embed:
     return base_embed(f"{EMOJI['shop']} Tiên Phường · Chưởng quầy đón khách", "\n".join(lines))
 
 
-def combat_embed(enc, player=None) -> discord.Embed:
+def combat_embed(enc, player=None, *, combat_stats: dict | None = None) -> discord.Embed:
     color = COLOR_WARN if not enc.finished else (COLOR_SUCCESS if enc.victory else COLOR_ERROR)
     threat_label = "👑 BOSS · " if getattr(enc, "is_boss", False) else ""
     e = base_embed(f"{EMOJI['attack']} {threat_label}{enc.enemy_name}", color=color)
-    player_attack = getattr(player, "attack", 0)
-    player_defense = getattr(player, "defense", 0)
+    player_attack = int((combat_stats or {}).get("attack", getattr(player, "attack", 0)))
+    player_defense = int((combat_stats or {}).get("defense", getattr(player, "defense", 0)))
     enemy_stats = (
         f"{EMOJI['att']} **Công:** {enc.enemy_attack}\n"
         f"{EMOJI['hp']} **HP:** {enc.enemy_hp}/{enc.enemy_max_hp}\n"

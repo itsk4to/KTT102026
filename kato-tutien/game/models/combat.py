@@ -27,6 +27,8 @@ class Encounter:
     log: list[str] = field(default_factory=list)
     finished: bool = False
     victory: bool | None = None
+    # Monotonic action counter used to invalidate stale/duplicate Discord combat views.
+    turn_number: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -45,6 +47,7 @@ class Encounter:
             "log": list(self.log),
             "finished": self.finished,
             "victory": self.victory,
+            "turn_number": self.turn_number,
         }
 
     @classmethod
@@ -67,4 +70,5 @@ class Encounter:
             log=list(data.get("log", [])),
             finished=bool(data.get("finished")),
             victory=data.get("victory"),
+            turn_number=max(0, int(data.get("turn_number", 0))),
         )

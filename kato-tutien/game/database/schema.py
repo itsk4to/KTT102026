@@ -1,7 +1,7 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 16
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS players (
     last_hunt INTEGER NOT NULL DEFAULT 0,
     last_daily INTEGER NOT NULL DEFAULT 0,
     breakthrough_recovery_until INTEGER NOT NULL DEFAULT 0,
+    breakthrough_pity INTEGER NOT NULL DEFAULT 0,
     daily_streak INTEGER NOT NULL DEFAULT 0,
     be_quan_active INTEGER NOT NULL DEFAULT 0,
     be_quan_last_tick INTEGER NOT NULL DEFAULT 0,
@@ -192,6 +193,12 @@ CREATE TABLE IF NOT EXISTS admin_users (
     user_id TEXT PRIMARY KEY
 );
 
+CREATE TABLE IF NOT EXISTS admin_sessions (
+    user_id TEXT PRIMARY KEY,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS admin_audit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     actor_id TEXT NOT NULL,
@@ -271,6 +278,16 @@ CREATE TABLE IF NOT EXISTS secret_realm_sessions (
     cycle_started_at INTEGER NOT NULL,
     claims INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS player_mission_progress (
+    user_id TEXT NOT NULL,
+    mission_id TEXT NOT NULL,
+    period_key TEXT NOT NULL,
+    progress INTEGER NOT NULL DEFAULT 0,
+    claimed INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, mission_id, period_key)
+);
 """
 
 # Known columns from the canonical v10 schema. This allows old SQLite files to
@@ -309,6 +326,7 @@ _REQUIRED_COLUMNS = {
         "last_hunt": "INTEGER NOT NULL DEFAULT 0",
         "last_daily": "INTEGER NOT NULL DEFAULT 0",
         "breakthrough_recovery_until": "INTEGER NOT NULL DEFAULT 0",
+        "breakthrough_pity": "INTEGER NOT NULL DEFAULT 0",
         "daily_streak": "INTEGER NOT NULL DEFAULT 0",
         "be_quan_active": "INTEGER NOT NULL DEFAULT 0",
         "be_quan_last_tick": "INTEGER NOT NULL DEFAULT 0",
