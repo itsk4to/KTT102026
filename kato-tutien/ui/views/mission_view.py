@@ -4,7 +4,7 @@ import discord
 
 from game.services.errors import GameError
 from game.utils import fmt_amount
-from ui.embeds import base_embed, error_embed, success_embed
+from ui.embeds import base_embed, error_embed, success_embed, progress_bar
 from ui.theme.views import ThemedView
 from ui.emoji import EMOJI
 
@@ -27,31 +27,64 @@ class PlayerMissionView(ThemedView):
 
     def build_embed(self, notice: str = "") -> discord.Embed:
         missions = self._missions()
-        lines: list[str] = []
-        last_group = None
-        for mission in missions:
-            if mission["group"] != last_group:
-                if lines:
-                    lines.append("")
-                lines.append(f"**{mission['group_label']}**")
-                last_group = mission["group"]
-            if mission["claimed"]:
-                state = "✅ Đã nhận"
-            elif mission["claimable"]:
-                state = "🎁 **Có thể nhận**"
-            else:
-                state = f"📈 {mission['progress']}/{mission['target']}"
-            lines.append(
-                f"• **{mission['name']}** — {state}\n"
-                f"  {mission['description']}\n"
-                f"  🎁 {fmt_amount(mission['stones'])} linh thạch · ✨ {fmt_amount(mission['cultivation'])} tu vi"
-            )
+        claimable = sum(1 for mission in missions if mission["claimable"])
+        claimed = sum(1 for mission in missions if mission["claimed"])
+        e = base_embed(
+            "📜 NHẬT KÝ NHIỆM VỤ",
+            "Theo dõi tiến độ hành trình, hoàn thành mục tiêu và tự nhận phần thưởng khi đủ điều kiện.",
+        )
         if notice:
-            lines.insert(0, notice + "\n")
-        lines.extend(["", "Chọn nhiệm vụ trong danh sách rồi bấm **Nhận thưởng** khi đủ tiến độ.", "Nhiệm vụ ngày làm mới lúc 00:00; nhiệm vụ tuần làm mới vào thứ Hai (giờ Việt Nam)."])
-        embed = base_embed("📜 Nhật Ký Nhiệm Vụ", "\n".join(lines))
-        embed.set_footer(text="Tiến độ được tự ghi khi hành động thành công; phần thưởng phải tự nhận.")
-        return embed
+            e.add_field(name="🧾 Ghi nhận gần nhất", value=notice[:1024], inline=False)
+        e.add_field(
+            name="📊 Tổng quan",
+            value=f"🎁 Có thể nhận **{claimable}**  ·  ✅ Đã nhận **{claimed}**  ·  📜 Tổng **{len(missions)}**",
+            inline=False,
+        )
+        groups = (
+            ("starter", "🌱 NHIỆM VỤ KHỞI HÀNH"),
+            ("daily", "☀️ NHIỆM VỤ HẰNG NGÀY"),
+            ("weekly", "📅 NHIỆM VỤ HẰNG TUẦN"),
+        )
+        for group_key, group_label in groups:
+            rows = [mission for mission in missions if mission["group"] == group_key]
+            if not rows:
+                continue
+            lines = []
+            for mission in rows[:8]:
+                target = max(1, int(mission["target"]))
+                progress = max(0, min(target, int(mission["progress"])))
+                if mission["claimed"]:
+                    state = "✅ Đã nhận"
+                elif mission["claimable"]:
+                    state = "🎁 **Có thể nhận**"
+                else:
+                    state = f"{progress}/{target}"
+                lines.append(
+                    f"**{mission['name']}** · {state}\n"
+                    f"`{progress_bar(progress, target, 8)}`\n"
+                    f"💎 {fmt_amount(mission['stones'])} linh thạch · ✨ {fmt_amount(mission['cultivation'])} tu vi"
+                )
+            e.add_field(name=group_label, value="\n\n".join(lines)[:1024], inline=False)
+
+        selected = next((mission for mission in missions if mission["id"] == self.selected_id), None)
+        if selected:
+            target = max(1, int(selected["target"]))
+            progress = max(0, min(target, int(selected["progress"])))
+            status = "Đã nhận thưởng" if selected["claimed"] else ("Sẵn sàng nhận thưởng" if selected["claimable"] else "Đang thực hiện")
+            e.add_field(
+                name=f"🔎 Nhiệm vụ đã chọn · {selected['name']}",
+                value=(f"{selected['description']}\n\n**Trạng thái:** {status}\n"
+                       f"`{progress_bar(progress, target, 12)}` **{progress}/{target}**\n"
+                       f"🎁 {fmt_amount(selected['stones'])} linh thạch · {fmt_amount(selected['cultivation'])} tu vi"),
+                inline=False,
+            )
+        e.add_field(
+            name="🕰️ Lịch làm mới",
+            value="Nhiệm vụ ngày: 00:00 · Nhiệm vụ tuần: thứ Hai · Giờ Việt Nam (UTC+7).",
+            inline=False,
+        )
+        e.set_footer(text="NHIỆM VỤ · Chọn nhiệm vụ trong danh sách, sau đó nhận thưởng · KATO TU TIÊN")
+        return e
 
     def _build(self):
         self.clear_items()

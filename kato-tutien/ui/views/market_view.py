@@ -52,16 +52,27 @@ class MarketView(ThemedView):
 
     def build_embed(self):
         rows = self.listings
+        embed = base_embed(
+            "🏪 CHỢ NGƯỜI CHƠI",
+            "Giao dịch giữa các tu sĩ. Chọn một tin đăng trong danh sách để xem thông tin trước khi mua hoặc hủy tin của mình.",
+        )
         if not rows:
-            return base_embed("🏪 Chợ Người Chơi", "Chưa có tin đăng.")
-        selected = next((r for r in rows if r["id"] == self.selected_id), None)
+            embed.add_field(name="📦 Sạp hàng", value="Chưa có tin đăng nào. Hãy quay lại sau hoặc tự đăng vật phẩm bằng lệnh chợ.", inline=False)
+            return embed
+
         lines = [
-            f"`#{r['id']}` **{r['name']}** ×{r['qty']} · {fmt_amount(r['price_each'])}/cái · {fmt_amount(r['price_total'])} {EMOJI['spirit_stone']}"
-            for r in rows[:15]
+            f"`#{row['id']}` **{row['name']}** ×{row['qty']} · {fmt_amount(row['price_each'])}/món"
+            for row in rows[:10]
         ]
+        embed.add_field(name="📜 Sạp hàng đang mở", value="\n".join(lines)[:1024], inline=False)
+        if len(rows) > 10:
+            embed.add_field(name="Các tin khác", value=f"Còn {len(rows) - 10} tin đang được tải trong menu chọn.", inline=True)
+        selected = next((row for row in rows if row["id"] == self.selected_id), None)
         if selected:
-            lines += ["", f"Đang chọn: **#{selected['id']} {selected['name']}** ×{selected['qty']}", f"Tổng: **{fmt_amount(selected['price_total'])}** {EMOJI['spirit_stone']}"]
-        return base_embed("🏪 Chợ Người Chơi", "\n".join(lines))
+            name = ITEMS.get(selected["item_id"], {}).get("name", selected["name"])
+            embed.add_field(name="🔎 Tin đang chọn", value=f"**{name}** ×{selected['qty']}\nGiá mỗi món: **{fmt_amount(selected['price_each'])}** {EMOJI['spirit_stone']}\nTổng giá: **{fmt_amount(selected['price_total'])}** {EMOJI['spirit_stone']}\nMã tin: `#{selected['id']}`", inline=False)
+        embed.set_footer(text="CHỢ NGƯỜI CHƠI · Chọn tin → kiểm tra giá → xác nhận mua · KATO TU TIÊN")
+        return embed
 
     async def _select(self, interaction: discord.Interaction):
         if not self._guard(interaction):

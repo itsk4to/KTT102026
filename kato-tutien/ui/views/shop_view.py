@@ -115,44 +115,68 @@ class ShopView(ThemedView):
         return next((i for i in self.selected_items if i["id"] == self.selected_id), None)
 
     def build_embed(self):
+        balance = 0
+        try:
+            player = self.engine.players.get(str(self.user_id)) if self.user_id else None
+            balance = int(player.spirit_stones) if player else 0
+        except Exception:
+            player = None
+
         if not self.category:
-            lines = [f"{_CATEGORY_ICONS.get(c['name'], EMOJI['item'])} **{c['name']}** · {len(c['items'])} vật phẩm" for c in self.catalog.get("categories", [])]
-            balance = 0
-            try:
-                player = self.engine.players.get(str(self.user_id)) if self.user_id else None
-                balance = int(player.spirit_stones) if player else 0
-            except Exception:
-                balance = 0
-            text = "Chọn danh mục trước, sau đó chọn **một vật phẩm** để xem công dụng và chỉ số đầy đủ.\n\n" + "\n".join(lines)
-            text += f"\n\n{EMOJI['spirit_stone']} Số dư: **{fmt_amount(balance)}** linh thạch."
+            embed = base_embed(
+                f"{EMOJI['shop']} TIÊN PHƯỜNG · CHỢ BẢO VẬT",
+                "Chưởng quầy đã bày hàng. Chọn một quầy bên dưới, sau đó chọn món để xem chỉ số và công dụng.",
+            )
+            for category in self.catalog.get("categories", []):
+                icon = _CATEGORY_ICONS.get(category["name"], EMOJI["item"])
+                embed.add_field(
+                    name=f"{icon} {category['name']}",
+                    value=f"**{len(category.get('items', []))}** vật phẩm",
+                    inline=True,
+                )
+            embed.add_field(
+                name=f"{EMOJI['spirit_stone']} Túi linh thạch",
+                value=f"**{fmt_amount(balance)}**",
+                inline=False,
+            )
             if self.last_purchase_notice:
-                text = self.last_purchase_notice + "\n\n" + text
-            return base_embed(f"{EMOJI['shop']} Tiên Phường", text)
+                embed.add_field(name="🧾 Giao dịch gần nhất", value=self.last_purchase_notice[:1024], inline=False)
+            embed.set_footer(text="TIÊN PHƯỜNG · Chọn quầy → chọn vật phẩm → xem chi tiết → mua")
+            return embed
+
+        if not self.selected_item:
+            embed = base_embed(
+                f"{_CATEGORY_ICONS.get(self.category, EMOJI['item'])} TIÊN PHƯỜNG · {self.category.upper()}",
+                "Chọn một món trong danh sách vật phẩm để mở bảng chi tiết. Các nút mua sẽ được mở khi đã chọn món.",
+            )
+            embed.add_field(name="Số món trong quầy", value=f"**{len(self.selected_items)}**", inline=True)
+            embed.add_field(name="Linh thạch hiện có", value=f"**{fmt_amount(balance)}**", inline=True)
+            if self.last_purchase_notice:
+                embed.add_field(name="🧾 Giao dịch gần nhất", value=self.last_purchase_notice[:1024], inline=False)
+            embed.set_footer(text="TIÊN PHƯỜNG · Dùng menu thứ hai để chọn vật phẩm")
+            return embed
+
         item = self.selected_item
-        if not item:
-            balance = 0
-            try:
-                player = self.engine.players.get(str(self.user_id)) if self.user_id else None
-                balance = int(player.spirit_stones) if player else 0
-            except Exception:
-                balance = 0
-            text = (f"Danh mục **{self.category}** có **{len(self.selected_items)}** món.\n"
-                    "Chọn một món trong menu vật phẩm bên dưới để xem công dụng, giá và ID.\n\n"
-                    f"{EMOJI['spirit_stone']} Số dư hiện tại: **{fmt_amount(balance)}** linh thạch.")
-            return base_embed(f"{EMOJI['shop']} Tiên Phường · {self.category}", text)
-        player = self.engine.players.get(str(self.user_id)) if self.user_id else None
-        balance = int(player.spirit_stones) if player else 0
-        detail = (
-            f"Danh mục: **{self.category}** · ID: `{item['id']}`\n"
-            f"Phẩm cấp: {item.get('rarity_emoji', '⚪')} **{item['rarity']} phẩm**\n"
-            f"Giá: **{fmt_amount(item['price'])}** {EMOJI['spirit_stone']}\n"
-            f"Số dư: **{fmt_amount(balance)}** linh thạch\n"
-            f"\n**✨ Tác dụng**\n" + "\n".join(f"• {effect}" for effect in item.get("effects", [])) +
-            f"\n\n📖 {item['description']}"
+        item_icon = item.get("emoji", _CATEGORY_ICONS.get(self.category, EMOJI["item"]))
+        embed = base_embed(
+            f"{item_icon} {item['name']}",
+            item.get("description", "Một bảo vật đang chờ chủ nhân hữu duyên."),
+        )
+        embed.add_field(name="Phẩm cấp", value=f"{item.get('rarity_emoji', '⚪')} **{item['rarity']} phẩm**", inline=True)
+        embed.add_field(name="Danh mục", value=f"**{self.category}**", inline=True)
+        embed.add_field(name="Mã vật phẩm", value=f"`{item['id']}`", inline=True)
+        embed.add_field(name="Giá mỗi món", value=f"**{fmt_amount(item['price'])}** {EMOJI['spirit_stone']}", inline=True)
+        embed.add_field(name="Linh thạch hiện có", value=f"**{fmt_amount(balance)}** {EMOJI['spirit_stone']}", inline=True)
+        effects = item.get("effects", [])
+        embed.add_field(
+            name="✨ Hiệu ứng / chỉ số",
+            value=("\n".join(f"• {effect}" for effect in effects[:10])[:1024] if effects else "Không có hiệu ứng chỉ số đặc biệt."),
+            inline=False,
         )
         if self.last_purchase_notice:
-            detail += f"\n\n{self.last_purchase_notice}"
-        return base_embed(f"{item.get('emoji', _CATEGORY_ICONS.get(self.category, EMOJI['item']))} {item['name']}", detail)
+            embed.add_field(name="🧾 Giao dịch gần nhất", value=self.last_purchase_notice[:1024], inline=False)
+        embed.set_footer(text="TIÊN PHƯỜNG · Chọn số lượng bên dưới để mua")
+        return embed
 
     def _build_controls(self):
         self.clear_items()

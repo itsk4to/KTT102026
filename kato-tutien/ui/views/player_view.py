@@ -13,7 +13,36 @@ from ui.embeds import (
     cultivation_embed,
     cultivation_preview_embed,
     player_embed,
+    progress_bar,
 )
+
+
+class PlayerActionSelect(discord.ui.Select):
+    """Compact action directory; quick-action buttons stay below it."""
+
+    def __init__(self, owner: "PlayerMenuView"):
+        self.owner = owner
+        options = [
+            discord.SelectOption(label="Tu luyện", value="cultivate", emoji="🌱", description="Tích lũy tu vi."),
+            discord.SelectOption(label="Đột phá", value="breakthrough", emoji="⚡", description="Kiểm tra điều kiện và thử đột phá."),
+            discord.SelectOption(label="Thiên kiếp", value="tribulation", emoji="🌩️", description="Tiếp tục khi đã đủ điều kiện."),
+            discord.SelectOption(label="Điểm danh", value="daily", emoji="🎁", description="Nhận thưởng hằng ngày."),
+            discord.SelectOption(label="Túi Càn Khôn", value="inventory", emoji="🎒", description="Xem và sử dụng vật phẩm."),
+            discord.SelectOption(label="Đường Đạo", value="dao", emoji="☯️", description="Xem hoặc khai mở Đạo."),
+            discord.SelectOption(label="Trung tâm", value="main", emoji="🏠", description="Trở về bảng điều hướng."),
+            discord.SelectOption(label="Đóng giao diện", value="close", emoji="✖️", description="Đóng các nút hiện tại."),
+        ]
+        super().__init__(placeholder="Mở hệ thống nhân vật…", options=options, row=0)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if not self.owner._guard(interaction):
+            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            return
+        action = self.values[0]
+        if action in {"cultivate", "breakthrough", "tribulation", "daily"}:
+            await self.owner._perform_action(interaction, action)
+        else:
+            await self.owner._system_callback(action)(interaction)
 
 
 class PlayerMenuView(ThemedView):
@@ -30,6 +59,7 @@ class PlayerMenuView(ThemedView):
 
     def _build(self) -> None:
         self.clear_items()
+        self.add_item(PlayerActionSelect(self))
 
         actions = [
             ("Tu luyện", "cultivate", discord.ButtonStyle.primary, EMOJI["cultivation"]),
@@ -38,7 +68,7 @@ class PlayerMenuView(ThemedView):
             ("Daily", "daily", discord.ButtonStyle.secondary, "🎁"),
         ]
         for label, action, style, emoji in actions:
-            button = discord.ui.Button(label=label, style=style, emoji=emoji, row=0)
+            button = discord.ui.Button(label=label, style=style, emoji=emoji, row=1)
             button.callback = self._action_callback(action)
             self.add_item(button)
 
@@ -50,7 +80,7 @@ class PlayerMenuView(ThemedView):
         ]
         for label, action in systems:
             style = discord.ButtonStyle.danger if action == "close" else discord.ButtonStyle.secondary
-            button = discord.ui.Button(label=label, style=style, row=1)
+            button = discord.ui.Button(label=label, style=style, row=2)
             button.callback = self._system_callback(action)
             self.add_item(button)
 
@@ -240,13 +270,17 @@ def build_player_dashboard(engine, user_id: str, notice: str | None = None) -> d
     if player.dao_type:
         status.append(f"Đạo: **{player.dao_type}**")
     if preview:
+        current = int(preview.get("cultivation", player.cultivation))
+        requirement = max(1, int(preview.get("requirement", max(current, 1))))
+        progress = max(0.0, min(1.0, current / requirement))
         status.append(
-            f"Tiến độ đột phá: **{fmt_amount(preview['cultivation'])}/{fmt_amount(preview['requirement'])}** · {preview['chance']:.0%}"
+            f"🌱 **Tiến độ tu vi** `{progress_bar(current, requirement, 12)}` **{progress:.0%}**\n"
+            f"{fmt_amount(current)} / {fmt_amount(requirement)} · Tỷ lệ đột phá hiện tại **{preview['chance']:.0%}**"
         )
 
     if notice:
         status.insert(0, f"✅ {notice}")
 
     embed.description = "\n".join(status)
-    embed.set_footer(text="Lệnh nhanh vẫn dùng được: .tu · .dp · .tk · .dl")
+    embed.set_footer(text="HỒ SƠ TU SĨ · .tu Tu luyện · .dp Đột phá · .tk Thiên kiếp · .dl Đạo lữ")
     return embed

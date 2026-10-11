@@ -144,7 +144,7 @@ class BreakthroughView(ThemedView):
             else:
                 value = "Chưa chọn đan/bùa hộ kiếp; ngươi có thể tiếp tục nhưng rủi ro sẽ cao hơn."
             embed.add_field(name="Vật phẩm hộ kiếp", value=value, inline=False)
-            embed.set_footer(text="Đan/bùa chỉ bị tiêu hao nếu tỷ lệ đột phá thành công và Cửu Lôi Kiếp bắt đầu.")
+            embed.set_footer(text="Đan/bùa chỉ bị tiêu hao nếu đột phá thành công và Cửu Lôi Kiếp bắt đầu · KATO TU TIÊN")
         return embed
 
     async def _accept(self, interaction: discord.Interaction):

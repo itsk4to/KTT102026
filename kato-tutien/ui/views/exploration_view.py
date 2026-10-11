@@ -60,26 +60,39 @@ class ExplorationMenuView(ThemedView):
         current = self.zone_key or next((z["key"] for z in zones if z.get("enabled")), None)
         zone = next((z for z in zones if z["key"] == current), None)
         if not zone:
-            return base_embed("🗺️ Khám Phá", "Chưa có khu vực khả dụng.")
-        path_label = {"tien": "Tiên đạo", "ma": "Ma đạo", "both": "Tiên / Ma"}.get(zone.get("path", "both"), "Tiên / Ma")
+            return base_embed("🗺️ BẢN ĐỒ KHÁM PHÁ", "Chưa có khu vực khả dụng.")
+
+        path_label = {"tien": "Tiên Đạo", "ma": "Ma Đạo", "both": "Tiên / Ma"}.get(zone.get("path", "both"), "Tiên / Ma")
         player = self.engine.players.get(self.user_id)
-        lines = [
-            f"**{zone['name']}**",
-            zone["description"],
-            f"{EMOJI['cultivator']} Tu vi tối thiểu: **{realm_text(zone['min_realm'], 1)}**",
-            f"Con đường: **{path_label}**",
-        ]
         realm_index = getattr(player, "realm_index", 0)
         local_mobs = [m for m in MONSTERS if zone["key"] in m.get("zones", []) and abs(m["min_realm"] - realm_index) <= 1]
         general_mobs = [m for m in MONSTERS if not m.get("zones") and abs(m["min_realm"] - realm_index) <= 1]
-        shown_mobs = (local_mobs or general_mobs)[:3]
+        shown_mobs = (local_mobs or general_mobs)[:5]
         local_bosses = [b for b in BOSS_MONSTERS if zone["key"] in b.get("zones", []) and abs(b["min_realm"] - realm_index) <= 1]
+
+        embed = base_embed(f"🗺️ {zone['name'].upper()}", zone["description"])
+        embed.add_field(name="🌌 Yêu cầu cảnh giới", value=f"**{realm_text(zone['min_realm'], 1)}**", inline=True)
+        embed.add_field(name="☯️ Đạo lộ", value=f"**{path_label}**", inline=True)
+        embed.add_field(name="🧭 Trạng thái", value="**Có thể thăm dò**" if zone.get("enabled") else "**Chưa mở khóa** 🔒", inline=True)
         if shown_mobs:
-            lines.extend(["", "**Dấu vết yêu thú**", " · ".join(m["name"] for m in shown_mobs)])
+            embed.add_field(
+                name="🐾 Dấu vết yêu thú",
+                value="\n".join(f"• {m['name']}" for m in shown_mobs),
+                inline=True,
+            )
         if local_bosses:
-            lines.extend(["", "**⚠️ Boss có thể xuất hiện**", " · ".join(b["name"] for b in local_bosses[:2])])
-        lines.extend(["", "Chọn khu bằng menu, sau đó bấm **Khám phá** để bắt đầu.", "*Khu vực càng cao, quái và boss càng nguy hiểm.*"])
-        return base_embed(f"{EMOJI['explore']} Khám Phá", "\n".join(lines))
+            embed.add_field(
+                name="👑 Dị tượng / Boss",
+                value="\n".join(f"• **{boss['name']}**" for boss in local_bosses[:4]),
+                inline=True,
+            )
+        embed.add_field(
+            name="📜 Hành động",
+            value="Chọn khu bằng danh sách phía trên, sau đó **Khám phá** để tìm cơ duyên hoặc **Săn yêu thú** để chủ động giao chiến.",
+            inline=False,
+        )
+        embed.set_footer(text="BẢN ĐỒ THẾ GIỚI · Khu vực cao hơn có rủi ro và phần thưởng lớn hơn")
+        return embed
 
     def _rebuild(self):
         self.clear_items()

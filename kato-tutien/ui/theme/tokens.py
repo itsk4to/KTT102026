@@ -1,19 +1,20 @@
-"""Design tokens: one place to tune the whole bot's visual identity."""
+"""Central visual language for Kato Tu Tiên's Discord RPG interface."""
 
-# Discord embed accents; buttons use Discord's native component palette.
-COLOR_MAIN = 0x7564E8       # mystical violet
-COLOR_SUCCESS = 0x28B996   # jade
-COLOR_INFO = 0x4798E8      # celestial blue
-COLOR_WARN = 0xE4B65A      # spirit-gold
-COLOR_ERROR = 0xDE5F70     # coral-red
-COLOR_GOLD = 0xC9A65D
-COLOR_SURFACE = 0x202434
+# Embed accents; native Discord components provide the matching button palette.
+COLOR_MAIN = 0x6255D9       # đạo lực / mystical violet
+COLOR_SUCCESS = 0x239B72   # jade / success
+COLOR_INFO = 0x3D86D9      # celestial blue
+COLOR_WARN = 0xD7A33F      # spirit gold / warning
+COLOR_ERROR = 0xC94F62     # danger / blood-red
+COLOR_GOLD = 0xC7A14A
+COLOR_SURFACE = 0x171B2B
+COLOR_CYAN = 0x3AB7BE
+COLOR_PURPLE = 0x8A66D9
 
-BRAND_NAME = "KATO TU TIÊN"
-BRAND_FOOTER = "✦ KATO TU TIÊN  •  ĐẠO LỘ MMORPG"
+BRAND_NAME = "KATO TU TIÊN  •  ĐẠO LỘ MMORPG"
+BRAND_FOOTER = "✦ KATO TU TIÊN  •  ĐẠO LỘ MMORPG  ·  Giao diện tương tác"
 DEFAULT_TIMEOUT = 300
 
-# Button roles communicate intent consistently across all feature views.
 BUTTON_ROLES = {
     "primary": "primary",
     "navigation": "secondary",
@@ -22,26 +23,65 @@ BUTTON_ROLES = {
     "quiet": "secondary",
 }
 
-# Label-based rules are deliberately small and semantic: destructive actions red,
-# confirmations jade, main actions violet, and navigation neutral.
+# Semantic label rules are normalized (accent-insensitive) by ui.theme.views.
+# Keep exact-ish phrases first in each role to reduce accidental matches.
 BUTTON_LABELS = {
     "danger": (
-        "tu choi", "huy", "dong", "xoa", "roi tong", "vo hieu hoa",
-        "bo chay", "tu bo", "xoa thanh vien", "huy loi moi", "giai tan",
-        "khai tru", "giang chuc", "nhuong tong chu",
+        "bo chay", "tu choi", "huy", "dong", "xoa", "roi tong", "roi bi canh",
+        "vo hieu hoa", "tu bo", "xoa thanh vien", "huy loi moi", "giai tan",
+        "khai tru", "giang chuc", "nhuong tong chu", "giam", "tu choi dot pha",
     ),
     "success": (
-        "nhan loi", "chap nhan", "xac nhan", "dong y", "nhan nhiem vu",
-        "nhan thuong", "mua", "cap linh thach", "cong hien", "trang bi",
-        "duyet", "thang chuc", "xin gia nhap",
+        "nhan thuong", "nhan loi", "chap nhan", "xac nhan", "dong y", "mua",
+        "cap linh thach", "cong hien", "trang bi", "duyet", "thang chuc",
+        "xin gia nhap", "nhan nhiem vu", "nhan loi moi", "hoc cong phap",
     ),
     "primary": (
         "tu luyen", "dot pha", "tan cong", "kham pha", "bat dau", "tao tong",
         "tao mat lenh", "thach dau", "noi chuyen", "dung vat pham", "xem chi tiet",
         "cau duyen", "song tu", "san yeu thu", "ho the", "gop suc", "nhap quy tac",
+        "thi trien", "chon dao", "tiep tuc", "mo tui", "chuan bi",
     ),
     "navigation": (
         "trang chinh", "trung tam", "quay lai", "tro lai", "lam moi", "refresh",
-        "trang truoc", "trang sau", "nhan vat",
+        "trang truoc", "trang sau", "mo menu", "danh muc", "xem bxh",
     ),
 }
+
+BUTTON_EMOJIS = (
+    (("trang chinh", "trung tam", "ve menu", "mo menu"), "🏠"),
+    (("quay lai", "tro lai", "trang truoc"), "◀️"),
+    (("trang sau", "tiep tuc"), "▶️"),
+    (("lam moi", "refresh"), "🔄"),
+    (("dong", "huy"), "✖️"),
+    (("tu luyen",), "🌱"),
+    (("dot pha",), "⚡"),
+    (("tan cong", "san yeu thu"), "⚔️"),
+    (("kham pha",), "🗺️"),
+    (("nhan thuong",), "🎁"),
+    (("mua",), "🛒"),
+    (("xem chi tiet", "chi tiet"), "🔎"),
+    (("nhiem vu",), "📜"),
+    (("cong phap", "hoc cong phap", "ky nang"), "📖"),
+    (("bi canh",), "🌌"),
+)
+
+
+def color_for_title(title: str) -> int:
+    """Pick a readable, game-like accent from common screen intents."""
+    text = (title or "").casefold()
+    if any(token in text for token in ("lỗi", "thất bại", "bị từ chối", "không thành", "cảnh báo")):
+        return COLOR_ERROR
+    if any(token in text for token in ("thành công", "hoàn thành", "đã nhận", "chiến thắng", "vượt kiếp")):
+        return COLOR_SUCCESS
+    if any(token in text for token in ("boss", "chiến đấu", "trận", "quái", "cửu lôi")):
+        return COLOR_WARN
+    if any(token in text for token in ("tiên phường", "shop", "chợ", "linh thạch", "giao dịch")):
+        return COLOR_GOLD
+    if any(token in text for token in ("nhân vật", "hồ sơ", "bảng xếp hạng", "trung tâm", "thể trạng")):
+        return COLOR_INFO
+    if any(token in text for token in ("tông môn", "nhiệm vụ", "nhật ký", "đồng đạo")):
+        return COLOR_SUCCESS
+    if any(token in text for token in ("bí cảnh", "đạo", "tu luyện", "đột phá", "khai đạo")):
+        return COLOR_PURPLE
+    return COLOR_MAIN

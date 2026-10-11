@@ -1,4 +1,4 @@
-"""Shared component constructors for consistent labels and native Discord styles."""
+"""Shared constructors for tidy, mobile-friendly Discord RPG controls."""
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -25,19 +25,19 @@ def themed_button(
     custom_id: str | None = None,
     callback: Callable[..., Any] | None = None,
 ) -> discord.ui.Button:
-    """Build a Discord button through the common visual vocabulary."""
+    """Build a button with predictable sizing and semantic role colors."""
     mapped = BUTTON_ROLES.get(role, "secondary")
     kwargs: dict[str, Any] = {
-        "label": label,
+        "label": (label or "Hành động")[:80],
         "style": _STYLE_MAP[mapped],
         "disabled": disabled,
     }
     if emoji is not None:
         kwargs["emoji"] = emoji
     if row is not None:
-        kwargs["row"] = row
+        kwargs["row"] = max(0, min(4, int(row)))
     if custom_id is not None:
-        kwargs["custom_id"] = custom_id
+        kwargs["custom_id"] = custom_id[:100]
     button = discord.ui.Button(**kwargs)
     if callback is not None:
         button.callback = callback
@@ -53,12 +53,20 @@ def themed_select(
     max_values: int = 1,
     disabled: bool = False,
 ) -> discord.ui.Select:
-    """Build a single-purpose select menu with bounded, predictable defaults."""
+    """Create a select menu within Discord's option and selection limits."""
+    safe_options = list(options[:25])
+    if not safe_options:
+        safe_options = [discord.SelectOption(label="Chưa có lựa chọn", value="__empty__", description="Hiện chưa có dữ liệu.")]
+        disabled = True
+    min_allowed = max(0, min(int(min_values), len(safe_options)))
+    max_allowed = max(1, min(int(max_values), len(safe_options), 25))
+    if min_allowed > max_allowed:
+        min_allowed = max_allowed
     return discord.ui.Select(
-        placeholder=placeholder[:150],
-        options=options[:25],
-        row=row,
-        min_values=min_values,
-        max_values=max_values,
+        placeholder=(placeholder or "Chọn một mục…")[:150],
+        options=safe_options,
+        row=max(0, min(4, int(row))),
+        min_values=min_allowed,
+        max_values=max_allowed,
         disabled=disabled,
     )

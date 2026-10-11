@@ -8,7 +8,7 @@ from ui.emoji import EMOJI
 from ui.embeds import error_embed, inventory_embed, inventory_item_icon
 
 
-_PAGE_SIZE = 20
+_PAGE_SIZE = 12
 _CATEGORY_ALL = "Tất cả"
 _CATEGORY_ORDER = ("Đan dược", "Bùa chú", "Pháp bảo", "Binh khí", "Công pháp")
 

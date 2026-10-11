@@ -1,10 +1,17 @@
-Kato Tu Tiên v3.6.1 — Shop, Missions & Breakthrough Protection
+Kato Tu Tiên v3.6.3 — Immersive Game UI Rework
 
-# Kato Tu Tiên v3.6.1
+# Kato Tu Tiên v3.6.3
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
 > Ưu tiên số 1: code rõ ràng, module nhỏ, dễ đọc, dễ sửa và dễ mở rộng.
+
+## Giao diện MMORPG v3.6.3
+
+- HUD nhân vật, thanh HP/tu vi, bảng chỉ số và điều hướng game được đồng bộ qua `ui/theme/`.
+- Menu chính gọn lại với dropdown hệ thống + nút tắt; màn Nhân vật có action menu.
+- Shop, Túi Càn Khôn, Nhiệm vụ, Khám Phá, Bí Cảnh, Chợ và Đường Đạo dùng panel/field và dropdown để đọc dễ hơn trên di động.
+- Chỉ thay đổi presentation; logic chiến đấu và dữ liệu gameplay giữ nguyên.
 
 ## Cơ chế hồi phục sau thất bại đột phá
 
@@ -244,3 +251,12 @@ Dùng `.bicanh` hoặc `.bc` để mở GUI bí cảnh. Chọn một nơi phù h
 ## Audit tiền tệ & chỉ số (v3.5.6)
 
 Các thông số cân bằng hiện tại được ghi chi tiết tại [`docs/ECONOMY_AND_BALANCE.md`](docs/ECONOMY_AND_BALANCE.md). Bản audit giới hạn thưởng tu vi theo tầng hiện tại, phần thưởng điểm danh theo streak 30 ngày, mức tăng linh thạch từ May Mắn ở +25%, và tỷ lệ đột phá trong 5%–90%. Chỉ số chiến đấu/HP trên menu dùng giá trị thực chiến sau trang bị, thiên phú và Đạo; bỏ trang bị HP sẽ kẹp HP theo giới hạn mới. Thất bại chiến đấu áp dụng các hình phạt đã khai báo: thương thế, mất tu vi nhỏ và 1% linh thạch (không vượt quá số đang sở hữu).
+
+
+## v3.6.2 — Sửa cân bằng tỷ lệ đột phá
+
+- Giảm mức phạt thương thế trong công thức đột phá từ 1 điểm phần trăm mỗi điểm thương thế xuống 0,3 điểm phần trăm.
+- Mỗi lần thất bại thông thường (+5 bảo hộ, +5 thương thế) nay tăng tỷ lệ dự kiến ròng khoảng 3,5 điểm phần trăm thay vì hai hiệu ứng triệt tiêu nhau.
+- Tỷ lệ tối thiểu tăng từ 5% lên 10%; trần vẫn là 90%.
+- Công thức preview và lần thử thật vẫn dùng cùng một hàm; chỉ số căn cơ, đạo tâm, ngộ tính, đạo giai, thương thế, thiên phú/định mệnh, vật phẩm và bảo hộ vẫn có ảnh hưởng.
+- Không thay đổi logic chiến đấu/khám phá hoặc schema database.

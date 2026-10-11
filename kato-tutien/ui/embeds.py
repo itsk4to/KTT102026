@@ -7,11 +7,8 @@ from ui.emoji import EMOJI
 from game.utils import fmt_amount
 
 
-def base_embed(title: str, description: str = "", color: int = COLOR_MAIN) -> discord.Embed:
-    """Compatibility facade used throughout commands and views.
-
-    All screens inherit the same branded footer and accent palette from ui/theme.
-    """
+def base_embed(title: str, description: str = "", color: int | None = None) -> discord.Embed:
+    """Compatibility facade applying the shared game palette to every screen."""
     return create_embed(title, description, color)
 
 
@@ -65,23 +62,38 @@ def cultivation_preview_embed(preview: dict) -> discord.Embed:
 
 
 def player_embed(info: dict, *, combat_stats: dict | None = None) -> discord.Embed:
+    """Game-style player HUD with identity, resources and live combat stats."""
     p = info["player"]
-    e = base_embed(f"👤 {p.display_name}", color=COLOR_INFO)
-    e.add_field(name="Cảnh giới", value=info["realm"], inline=True)
     path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
-    e.add_field(name="Con đường", value=path_name, inline=True)
-    e.add_field(name="Tu vi", value=fmt_amount(p.cultivation), inline=True)
-    e.add_field(name=f"{EMOJI['spirit_stone']} Linh thạch", value=fmt_amount(p.spirit_stones), inline=True)
-    e.add_field(name="Căn cơ", value=str(p.root), inline=True)
-    e.add_field(name="Ngộ tính", value=str(p.insight), inline=True)
     stats = combat_stats or {"max_hp": p.max_hp, "attack": p.attack, "defense": p.defense}
     effective_max_hp = max(1, int(stats.get("max_hp", p.max_hp)))
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
-    e.add_field(name=f"{EMOJI['hp']} HP thực chiến", value=f"{displayed_hp}/{effective_max_hp}", inline=True)
-    e.add_field(name=f"{EMOJI['att']} Công thực chiến", value=str(int(stats.get("attack", p.attack))), inline=True)
-    e.add_field(name=f"{EMOJI['def']} Thủ thực chiến", value=str(int(stats.get("defense", p.defense))), inline=True)
-    if p.dao_type:
-        e.add_field(name="Đạo", value=p.dao_type, inline=True)
+    hp_ratio = max(0.0, min(1.0, displayed_hp / effective_max_hp))
+
+    e = base_embed(f"🧑‍🚀 HỒ SƠ TU SĨ · {p.display_name}", f"**{info['realm']}**\n{path_name}  ·  *Hồ sơ nhân vật / chỉ số thực chiến*")
+    e.add_field(name="🌌 Cảnh giới", value=f"**{info['realm']}**", inline=True)
+    e.add_field(name="🪙 Linh thạch", value=f"**{fmt_amount(p.spirit_stones)}**", inline=True)
+    e.add_field(name="☯️ Đạo lộ", value=f"**{p.dao_type or 'Chưa khai Đạo'}**", inline=True)
+    e.add_field(
+        name="❤️ Khí huyết",
+        value=f"`{progress_bar(displayed_hp, effective_max_hp, 10)}` **{hp_ratio:.0%}**\n{displayed_hp:,} / {effective_max_hp:,} HP",
+        inline=False,
+    )
+    e.add_field(
+        name="⚔️ Chiến lực thực tế",
+        value=f"{EMOJI['att']} Công **{int(stats.get('attack', p.attack)):,}**\n{EMOJI['def']} Thủ **{int(stats.get('defense', p.defense)):,}**",
+        inline=True,
+    )
+    e.add_field(
+        name="🌱 Thiên phú",
+        value=f"Căn cơ **{p.root}**\nNgộ tính **{p.insight}**",
+        inline=True,
+    )
+    e.add_field(
+        name="✨ Tu vi hiện tại",
+        value=f"**{fmt_amount(p.cultivation)}**\n*Tiếp tục tu luyện để tích lũy đạo hạnh.*",
+        inline=True,
+    )
     return e
 
 
@@ -113,25 +125,42 @@ def shop_embed(catalog: dict) -> discord.Embed:
 
 
 def combat_embed(enc, player=None, *, combat_stats: dict | None = None) -> discord.Embed:
+    """Compact battle HUD; combat rules and callbacks are intentionally untouched."""
     color = COLOR_WARN if not enc.finished else (COLOR_SUCCESS if enc.victory else COLOR_ERROR)
     threat_label = "👑 BOSS · " if getattr(enc, "is_boss", False) else ""
-    e = base_embed(f"{EMOJI['attack']} {threat_label}{enc.enemy_name}", color=color)
+    e = base_embed(f"⚔️ {threat_label}{enc.enemy_name}", color=color)
     player_attack = int((combat_stats or {}).get("attack", getattr(player, "attack", 0)))
     player_defense = int((combat_stats or {}).get("defense", getattr(player, "defense", 0)))
-    enemy_stats = (
-        f"{EMOJI['att']} **Công:** {enc.enemy_attack}\n"
-        f"{EMOJI['hp']} **HP:** {enc.enemy_hp}/{enc.enemy_max_hp}\n"
-        f"{EMOJI['def']} **Thủ:** {enc.enemy_defense}"
+    enemy_hp = max(0, int(enc.enemy_hp))
+    enemy_max = max(1, int(enc.enemy_max_hp))
+    player_hp = max(0, int(enc.player_hp))
+    player_max = max(1, int(enc.player_max_hp))
+    enemy_ratio = min(1.0, enemy_hp / enemy_max)
+    player_ratio = min(1.0, player_hp / player_max)
+
+    e.add_field(
+        name=f"👹 Đối thủ · {enc.enemy_name}",
+        value=(f"❤️ `{progress_bar(enemy_hp, enemy_max, 10)}` **{enemy_ratio:.0%}**\n"
+               f"**{enemy_hp:,} / {enemy_max:,} HP**\n"
+               f"{EMOJI['att']} Công **{int(enc.enemy_attack):,}**  ·  {EMOJI['def']} Thủ **{int(enc.enemy_defense):,}**"),
+        inline=True,
     )
-    player_stats = (
-        f"{EMOJI['att']} **Công:** {player_attack}\n"
-        f"{EMOJI['hp']} **HP:** {enc.player_hp}/{enc.player_max_hp}\n"
-        f"{EMOJI['def']} **Thủ:** {player_defense}"
+    e.add_field(
+        name=f"🧑‍🚀 Tu sĩ · {getattr(player, 'display_name', 'Ngươi')}",
+        value=(f"❤️ `{progress_bar(player_hp, player_max, 10)}` **{player_ratio:.0%}**\n"
+               f"**{player_hp:,} / {player_max:,} HP**\n"
+               f"{EMOJI['att']} Công **{player_attack:,}**  ·  {EMOJI['def']} Thủ **{player_defense:,}**"),
+        inline=True,
     )
-    e.add_field(name=f"{EMOJI['attack']} {enc.enemy_name}", value=enemy_stats, inline=True)
-    e.add_field(name=f"{EMOJI['cultivator']} Ngươi", value=player_stats, inline=True)
+    turn = getattr(enc, "turn_number", None)
+    if turn is not None:
+        e.add_field(name="Lượt chiến đấu", value=f"`{int(turn)}`", inline=True)
     if enc.log:
-        e.add_field(name="Diễn biến", value="\n".join(enc.log[-6:]), inline=False)
+        e.add_field(name="📜 Diễn biến trận đấu", value="\n".join(enc.log[-6:])[:1024], inline=False)
+    if enc.finished:
+        e.add_field(name="Kết cục", value="✅ Đã chiến thắng" if enc.victory else "❌ Trận đấu kết thúc", inline=False)
+    else:
+        e.add_field(name="Mệnh lệnh chiến đấu", value="Chọn **Công Pháp** hoặc **vật phẩm** ở danh sách phía trên, hoặc sử dụng nút hành động bên dưới.", inline=False)
     return e
 
 _ITEM_TYPE_NAMES = {
@@ -203,7 +232,7 @@ def inventory_embed(
     items: list[dict],
     *,
     page: int = 0,
-    page_size: int = 20,
+    page_size: int = 12,
     category: str = "Tất cả",
     selected: dict | None = None,
     notice: str | None = None,
@@ -214,7 +243,11 @@ def inventory_embed(
     start = page * page_size
     visible = items[start:start + page_size]
 
-    description = f"Loại vật phẩm: **{category}**\n\n**{len(items)} loại vật phẩm** · {total_quantity} món"
+    description = (
+        f"**TÚI CÀN KHÔN**  ·  {category}\n"
+        f"{len(items)} loại vật phẩm  ·  Tổng cộng **{total_quantity:,}** món\n"
+        "*Chọn danh mục → chọn món → xem chỉ số → thao tác.*"
+    )
     if notice:
         description = f"{notice}\n\n{description}"
 
@@ -231,7 +264,7 @@ def inventory_embed(
         effects = _item_effect_lines(meta)
         if effects:
             details.append("\n".join(f"• {line}" for line in effects[:5]))
-        embed.add_field(name="Vật phẩm đang chọn", value="\n".join(details), inline=False)
+        embed.add_field(name="🔎 Vật phẩm đang chọn", value="\n".join(details)[:1024], inline=False)
 
     if not visible:
         embed.add_field(name="Kho đồ", value="Túi đồ đang trống.", inline=False)
@@ -243,12 +276,12 @@ def inventory_embed(
             icon = inventory_item_icon(item)
             marker = " ◀" if selected and item.get("id") == selected.get("id") else ""
             lines.append(f"`{offset:02d}` {icon} **{item['name']}** ×{item['qty']} · {rarity}{marker}")
-        embed.add_field(name="Danh sách vật phẩm", value="\n".join(lines), inline=False)
+        embed.add_field(name=f"📦 Danh sách · {start + 1}–{start + len(visible)}", value="\n".join(lines)[:1024], inline=False)
 
     if max_page > 0:
-        footer = f"Trang {page + 1}/{max_page + 1} · Chọn loại → chọn vật phẩm → thao tác"
+        footer = f"TÚI CÀN KHÔN · Trang {page + 1}/{max_page + 1} · Chọn loại → chọn món → thao tác"
     else:
-        footer = "Chọn loại → chọn vật phẩm → thao tác nhanh"
+        footer = "TÚI CÀN KHÔN · Chọn loại → chọn món → thao tác nhanh"
     embed.set_footer(text=footer)
     return embed
 
@@ -267,5 +300,5 @@ def inventory_item_embed(item: dict) -> discord.Embed:
     effects = _item_effect_lines(meta)
     if effects:
         e.add_field(name="Tác dụng", value="\n".join(f"• {line}" for line in effects), inline=False)
-    e.set_footer(text=f"Mã vật phẩm: {item['id']}")
+    e.set_footer(text=f"ID: {item['id']}  ·  KATO TU TIÊN")
     return e

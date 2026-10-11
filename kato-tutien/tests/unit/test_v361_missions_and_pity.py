@@ -169,3 +169,27 @@ def test_schema_v16_migration_keeps_existing_player_data():
     assert loaded.breakthrough_pity == 0
     assert SCHEMA_VERSION == 16
     assert engine.db.fetchone("SELECT 1 FROM player_mission_progress LIMIT 1") is None
+
+
+def test_failure_pity_outweighs_the_injury_penalty_in_next_preview():
+    engine, player = make_engine()
+    player.realm_index = 1
+    player.realm_layer = 1
+    player.cultivation = cultivation_requirement(player.realm_index, player.realm_layer)
+    player.injury = 0
+    engine._players.save(player)
+    chance_before = engine.cultivation.breakthrough_preview("u1")["chance"]
+    engine.cultivation.rng = FixedRng(0.99)
+    engine.cultivation.breakthrough("u1")
+    after = engine.players.get("u1")
+    chance_after = engine.cultivation.breakthrough_preview("u1")["chance"]
+    assert after.injury == 5
+    assert after.breakthrough_pity == 5
+    assert chance_after > chance_before
+    assert round(chance_after - chance_before, 3) == 0.035
+
+
+def test_injury_penalty_is_bounded_and_does_not_force_five_percent_floor():
+    from game.rules.cultivation_rules import breakthrough_chance
+    chance = breakthrough_chance(root=55, mind=55, insight=55, injury=100, dao_stage=0)
+    assert abs(chance - 0.28) < 1e-9

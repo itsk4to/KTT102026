@@ -72,8 +72,12 @@ def breakthrough_chance(
     # old 90%+ ceiling. Good stats, Dao stages and preparation still matter.
     base = 0.25 + root * 0.0025 + mind * 0.002 + insight * 0.0015 + dao_stage * 0.02
     base += foundation_bonus
-    base -= injury * 0.01
-    return max(0.05, min(0.90, base))
+    # Injury matters, but must not cancel pity one-for-one after every failure.
+    # At 0.003 per injury point, +5 pity offsets the +5 injury from a normal
+    # failure and still yields a net +3.5 percentage points toward recovery.
+    # Severe injury remains meaningful (up to a 30pp penalty at injury 100).
+    base -= max(0, min(100, int(injury))) * 0.003
+    return max(0.10, min(0.90, base))
 
 
 def cultivate_gain(root: int, insight: int, luck: int, talent_mult: float = 1.0) -> int:

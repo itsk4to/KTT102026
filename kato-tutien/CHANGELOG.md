@@ -1,3 +1,18 @@
+## v3.6.3 — Immersive Game UI Rework
+
+- Chuẩn hóa màu sắc, author/footer, bảng thông tin và kiểu nút trong toàn bộ view qua `ui/theme/`.
+- Menu chính chuyển sang dạng hub: dropdown hệ thống, nút tắt cho Nhân vật/Khám Phá/Túi/Shop/Bí Cảnh/Nhiệm vụ/Tông Môn/Đạo lữ, kèm Làm mới và BXH.
+- Hồ sơ nhân vật có action select; thêm HUD thanh HP/tu vi và trường chỉ số dễ quét.
+- Shop tách quầy hàng, chi tiết vật phẩm, ID, giá, số dư và hiệu ứng; Túi Càn Khôn hiển thị 12 món mỗi trang.
+- Khám Phá, Chợ Người Chơi, Nhiệm vụ, Bí Cảnh, Thế Giới và Đường Đạo trình bày dữ liệu theo panel; lựa chọn Đạo chuyển sang dropdown + xác nhận.
+- Combat embed chỉ thay bố cục thanh HP và log chiến đấu; không sửa callback hoặc service chiến đấu.
+- Không đổi schema database hoặc công thức gameplay.
+
+## v3.6.2 — Cân bằng tỷ lệ đột phá
+- Sửa lỗi thương thế tăng sau mỗi lần thất bại triệt tiêu điểm bảo hộ, khiến tỷ lệ không cải thiện.
+- Thương thế trừ 0,3 điểm phần trăm mỗi điểm; sàn tỷ lệ 10%, trần 90%.
+- Thêm test hồi quy cho tỷ lệ tăng sau thất bại và mức phạt thương thế.
+
 ## v3.6.1 — Shop, Nhiệm Vụ Thưởng & Bảo Hộ Đột Phá
 
 - Làm rõ luồng Tiên Phường: chọn danh mục, chọn một vật phẩm, xem riêng giá/công dụng/ID/số dư rồi mới mua; sau mua tiếp tục hiển thị chi tiết và số dư mới.

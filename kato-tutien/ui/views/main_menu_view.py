@@ -7,7 +7,7 @@ from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from game.content.dao_paths import DAO_PATHS
 from ui.emoji import EMOJI
-from ui.embeds import base_embed, error_embed, shop_embed, inventory_embed, progress_bar
+from ui.embeds import base_embed, error_embed, inventory_embed, progress_bar
 from ui.views.inventory_view import InventoryView
 from ui.views.shop_view import ShopView
 from ui.views.market_view import MarketView
@@ -44,53 +44,51 @@ class MainMenuView(ThemedView):
 
     def _build(self) -> None:
         self.clear_items()
+        # A single master directory keeps the panel readable on mobile. Common actions
+        # remain one-tap shortcuts; secondary systems live in the select menu.
         self.add_item(MainMenuSelect(self))
 
-        # Row 1: primary gameplay destinations.
-        primary = (
+        quick = (
             ("Nhân vật", "player", "cultivator"),
+            ("Khám phá", "explore", "explore"),
             ("Túi Càn Khôn", "inventory", "item"),
             ("Tiên Phường", "shop", "shop"),
-            ("Khám phá", "explore", "explore"),
-            ("Bí cảnh", "secret_realm", "🌌"),
         )
-        for label, action, icon_key in primary:
-            button = themed_button(
+        for label, action, icon_key in quick:
+            self.add_item(themed_button(
                 label, role="primary", emoji=EMOJI.get(icon_key, "•"), row=1,
                 callback=self._button_callback(action),
-            )
-            self.add_item(button)
+            ))
 
-        # Row 2: progression, community and economy.
-        social = (
+        journey = (
+            ("Bí cảnh", "secret_realm", "🌌"),
             ("Nhiệm vụ", "quest", EMOJI["technique"]),
-            ("NPC", "npc", "🧑"),
-            ("Chợ", "market", "🪙"),
             ("Tông môn", "sect", EMOJI["sect"]),
+            ("Đạo lữ", "dao_lu", "💞"),
         )
-        for label, action, icon in social:
+        for label, action, icon in journey:
             self.add_item(themed_button(
                 label, role="navigation", emoji=icon, row=2,
                 callback=self._button_callback(action),
             ))
 
-        # Row 3: deeper cultivation systems and rankings.
-        advanced = (
-            ("Đạo", "dao", EMOJI["dao"]),
-            ("Đạo lữ", "dao_lu", "💞"),
-            ("Thế giới", "world", "🌍"),
-            ("Bảng xếp hạng", "leaderboard", "🏆"),
-        )
-        for label, action, icon in advanced:
-            self.add_item(themed_button(
-                label, role="navigation", emoji=icon, row=3,
-                callback=self._button_callback(action),
-            ))
-
         self.add_item(themed_button(
-            "Đóng giao diện", role="danger", emoji=EMOJI["close"], row=4,
-            callback=self._close_callback,
+            "Bảng xếp hạng", role="navigation", emoji="🏆", row=3,
+            callback=self._button_callback("leaderboard"),
         ))
+        self.add_item(themed_button(
+            "Làm mới", role="navigation", row=3, callback=self._refresh_callback,
+        ))
+        self.add_item(themed_button(
+            "Đóng menu", role="danger", row=3, callback=self._close_callback,
+        ))
+
+    async def _refresh_callback(self, interaction: discord.Interaction):
+        if not self._guard(interaction):
+            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            return
+        view = MainMenuView(self.engine, self.user_id)
+        await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=view)
 
     def _button_callback(self, action: str):
         async def callback(interaction: discord.Interaction):
@@ -187,9 +185,9 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
         else f"{EMOJI['faction_ma']} Ma Đạo"
     )
     description = (
-        f"**{p.display_name}** · {path_label}\n"
-        "*Thiên địa rộng lớn, cơ duyên đang chờ. Chọn một khu vực bên dưới để tiếp tục đạo lộ.*\n\n"
-        "**Lệnh nhanh**　`.tu`　·　`.dp`　·　`.tk`　·　`.dl`"
+        f"**{p.display_name}**  ·  {path_label}\n"
+        "*Thiên địa mở lối. Chọn một hành động để tiếp tục đạo lộ.*\n\n"
+        "`TU LUYỆN` .tu   ·   `ĐỘT PHÁ` .dp   ·   `THIÊN KIẾP` .tk   ·   `ĐẠO LỮ` .dl"
     )
     embed = base_embed("✦ ĐẠO LỘ · TRUNG TÂM HÀNH TRÌNH", description)
     embed.set_author(name=f"KATO TU TIÊN  ·  ĐẠO LỘ CỦA {p.display_name.upper()[:180]}")
@@ -235,11 +233,11 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
     dao_name = DAO_PATHS.get(p.dao_type, {}).get("name", p.dao_type) if p.dao_type else "Chưa khai Đạo"
     embed.add_field(name="☯️ ĐẠO TÂM", value=f"**{dao_name}**", inline=True)
     embed.add_field(
-        name="🗺️ ĐI TIẾP NHƯ THẾ NÀO?",
+        name="🧭 BẢNG ĐIỀU HƯỚNG",
         value=(
-            "`Nhân vật` · tu luyện và đột phá　　`Túi Càn Khôn` · vật phẩm\n"
-            "`Tiên Phường` · mua sắm　　　　　`Khám phá` · săn yêu thú\n"
-            "`Nhiệm vụ` · nhận thưởng　　　　 `Tông môn` · đồng đạo"
+            "**Lối tắt** · Nhân vật · Khám phá · Túi Càn Khôn · Tiên Phường\n"
+            "**Hành trình** · Bí cảnh · Nhiệm vụ · Tông môn · Đạo lữ\n"
+            "**Hệ thống khác** · chọn trong menu danh sách phía trên"
         ),
         inline=False,
     )
@@ -272,7 +270,8 @@ async def render_section(interaction: discord.Interaction, engine, user_id: str,
 
         if action == "shop":
             catalog = engine.economy.shop_catalog()
-            await interaction.response.edit_message(embed=shop_embed(catalog), view=ShopView(engine, catalog, user_id))
+            view = ShopView(engine, catalog, user_id)
+            await interaction.response.edit_message(embed=view.build_embed(), view=view)
             return
 
         if action == "market":

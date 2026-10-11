@@ -31,8 +31,8 @@ class EconomyAndStatBalanceTests(unittest.TestCase):
         strong = breakthrough_chance(root=100, mind=100, insight=100, injury=0, dao_stage=5, foundation_bonus=0.2)
         injured = breakthrough_chance(root=55, mind=55, insight=55, injury=10, dao_stage=0)
         self.assertEqual(strong, 0.90)
-        self.assertAlmostEqual(injured, 0.48)
-        self.assertGreaterEqual(injured, 0.05)
+        self.assertAlmostEqual(injured, 0.55)
+        self.assertGreaterEqual(injured, 0.10)
 
     def test_new_character_stats_are_in_bounded_start_range(self):
         p = self.make_player()

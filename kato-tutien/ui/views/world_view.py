@@ -38,12 +38,23 @@ class WorldMenuView(ThemedView):
     def build_embed(self) -> discord.Embed:
         events = self.engine.world.active()
         if not events:
-            return base_embed("🌍 Biến Động Thiên Hạ", "Thiên địa hiện đang yên tĩnh. Nhưng sự yên tĩnh này sẽ không kéo dài...")
-        lines = []
-        for e in events:
-            mins = max(0, int((int(e["expires_at"]) - time.time()) // 60))
-            lines.append(f"🌟 **{e['event_key']}** · {e['progress']}/{e['target']} · {mins} phút\nKhu: `{e['zone_key']}`")
-        return base_embed("🌍 Biến Động Thiên Hạ", "\n\n".join(lines))
+            return base_embed("🌍 BIẾN ĐỘNG THIÊN HẠ", "Thiên địa hiện đang yên tĩnh. Khi có biến động, nơi đây sẽ hiển thị mục tiêu, tiến độ và thời gian còn lại.")
+        embed = base_embed("🌍 BIẾN ĐỘNG THIÊN HẠ", "Các sự kiện đang diễn ra trên thế giới. Chọn một biến động rồi bấm **Góp sức** để đóng góp.")
+        for event in events[:10]:
+            mins = max(0, int((int(event["expires_at"]) - time.time()) // 60))
+            target = max(1, int(event["target"]))
+            progress = max(0, min(target, int(event["progress"])))
+            ratio = progress / target
+            filled = round(ratio * 10)
+            bar = "▰" * filled + "▱" * (10 - filled)
+            embed.add_field(
+                name=f"🌟 {event['event_key']}",
+                value=(f"`{bar}` **{ratio:.0%}** · {progress}/{target}\n"
+                       f"Khu vực: `{event['zone_key']}` · Còn **{mins} phút**"),
+                inline=True,
+            )
+        embed.set_footer(text="THIÊN HẠ · Chọn một biến động để góp sức · KATO TU TIÊN")
+        return embed
 
     async def _select(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:

@@ -40,24 +40,25 @@ class SecretRealmView(ThemedView):
         status = self.engine.secret_realm.status(self.user_id)
         session = status["session"]
         if not session:
-            lines = [
-                "Chọn một bí cảnh để bắt đầu chu kỳ tu luyện **3 giờ**. Khi đủ thời gian, hãy nhận cả linh thạch và tu vi.",
-                "Chỉ có **một bí cảnh đang hoạt động**; đổi nơi giữa chu kỳ sẽ mất tiến độ chưa hoàn thành.",
-                "Mỗi lần chỉ nhận **một phần thưởng**; thời gian bỏ qua không cộng dồn thành nhiều phần thưởng.",
-                "",
-            ]
-            for realm in status["realms"]:
-                lock = "✅" if realm["unlocked"] else "🔒"
-                lines.append(
-                    f"{lock} {realm['emoji']} **{realm['name']}** · {realm['style']}\n"
-                    f"   Yêu cầu: {realm['required_realm']}\n"
-                    f"   💎 {realm['stones'][0]:,}–{realm['stones'][1]:,} linh thạch · "
-                    f"✨ {realm['cultivation'][0]:,}–{realm['cultivation'][1]:,} tu vi\n"
-                    f"   *{realm['description']}*"
+            embed = base_embed(
+                "🌌 BÍ CẢNH TU LUYỆN",
+                "Chọn một bí cảnh rồi bắt đầu chu kỳ 3 giờ. Khi đủ thời gian, nhận linh thạch và tu vi tại đây.",
+            )
+            for realm in status["realms"][:20]:
+                unlocked = bool(realm["unlocked"])
+                state = "✅ Đã mở" if unlocked else "🔒 Bị khóa"
+                if realm["key"] == self.realm_key:
+                    state = "🔹 Đang chọn · " + state
+                embed.add_field(
+                    name=f"{realm['emoji']} {realm['name']} · {state}",
+                    value=(f"**Yêu cầu:** {realm['required_realm']} · **Phong cách:** {realm['style']}\n"
+                           f"💎 {realm['stones'][0]:,}–{realm['stones'][1]:,} linh thạch\n"
+                           f"✨ {realm['cultivation'][0]:,}–{realm['cultivation'][1]:,} tu vi\n"
+                           f"*{realm['description']}*"),
+                    inline=True,
                 )
-            embed = base_embed("🌌 BÍ CẢNH TU LUYỆN", "\n\n".join(lines))
-            embed.add_field(name="Chu kỳ", value="03:00:00", inline=True)
-            embed.add_field(name="Trạng thái", value="Chưa chọn bí cảnh", inline=True)
+            embed.add_field(name="⏳ Chu kỳ", value="**03:00:00** mỗi lần nhận thưởng", inline=True)
+            embed.add_field(name="📌 Quy tắc", value="Một bí cảnh tại một thời điểm. Rời giữa chu kỳ sẽ mất tiến độ chưa hoàn thành; thời gian bỏ qua không cộng dồn nhiều lượt.", inline=True)
         else:
             realm = status["realm"]
             remaining = int(status["remaining"] or 0)
@@ -73,7 +74,7 @@ class SecretRealmView(ThemedView):
                 f"`{_duration(remaining)}` còn lại\n"
                 f"**Tiến độ:** {percent}% · **Chu kỳ:** 3 giờ"
             )
-            embed = base_embed(f"{realm['emoji']} {realm['name']}", desc)
+            embed = base_embed(f"{realm['emoji']} {realm['name'].upper()}", desc)
             embed.add_field(
                 name="🎁 Thưởng mỗi chu kỳ",
                 value=(f"💎 **{realm['stones'][0]:,}–{realm['stones'][1]:,}** linh thạch\n"
@@ -85,7 +86,7 @@ class SecretRealmView(ThemedView):
             room = max(0, requirement - player.cultivation)
             realm_label = realm_text(player.realm_index, player.realm_layer, player.path)
             embed.add_field(
-                name="📜 Nhân vật",
+                name="📜 Hồ sơ tu sĩ",
                 value=(f"**Cảnh giới:** {realm_label}\n"
                        f"**Linh thạch:** {player.spirit_stones:,}\n"
                        f"**Tu vi:** {player.cultivation:,}/{requirement:,}"),
@@ -93,14 +94,14 @@ class SecretRealmView(ThemedView):
             )
             if room == 0:
                 embed.add_field(
-                    name="⚠️ Lưu ý tu vi",
-                    value="Tu vi hiện tại đã đầy. Thưởng tu vi sẽ được giới hạn để không bỏ qua đột phá; hãy đột phá khi đủ điều kiện.",
+                    name="⚠️ Tu vi đã đầy",
+                    value="Thưởng tu vi được giới hạn theo tầng hiện tại để không vượt qua đột phá. Hãy đột phá khi đã đủ điều kiện.",
                     inline=False,
                 )
-            embed.add_field(name="Số chu kỳ đã nhận", value=str(session.get("claims", 0)), inline=True)
+            embed.add_field(name="Số chu kỳ đã nhận", value=f"**{session.get('claims', 0)}**", inline=True)
         if self.last_notice:
-            embed.add_field(name="📜 Ghi nhận gần nhất", value=self.last_notice, inline=False)
-        embed.set_footer(text="KATO TU TIÊN  •  Thưởng được lưu trong database, không mất khi bot khởi động lại")
+            embed.add_field(name="📜 Ghi nhận gần nhất", value=self.last_notice[:1024], inline=False)
+        embed.set_footer(text="BÍ CẢNH TU LUYỆN · Trạng thái được lưu qua restart · KATO TU TIÊN")
         return embed
 
     def _rebuild(self) -> None:
