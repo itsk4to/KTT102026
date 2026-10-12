@@ -115,13 +115,6 @@ class ShopView(ThemedView):
         return next((i for i in self.selected_items if i["id"] == self.selected_id), None)
 
     def build_embed(self):
-        balance = 0
-        try:
-            player = self.engine.players.get(str(self.user_id)) if self.user_id else None
-            balance = int(player.spirit_stones) if player else 0
-        except Exception:
-            player = None
-
         if not self.category:
             embed = base_embed(
                 f"{EMOJI['shop']} TIÊN PHƯỜNG · CHỢ BẢO VẬT",
@@ -134,11 +127,6 @@ class ShopView(ThemedView):
                     value=f"**{len(category.get('items', []))}** vật phẩm",
                     inline=True,
                 )
-            embed.add_field(
-                name=f"{EMOJI['spirit_stone']} Túi linh thạch",
-                value=f"**{fmt_amount(balance)}**",
-                inline=False,
-            )
             if self.last_purchase_notice:
                 embed.add_field(name="🧾 Giao dịch gần nhất", value=self.last_purchase_notice[:1024], inline=False)
             embed.set_footer(text="TIÊN PHƯỜNG · Chọn quầy → chọn vật phẩm → xem chi tiết → mua")
@@ -150,7 +138,6 @@ class ShopView(ThemedView):
                 "Chọn một món trong danh sách vật phẩm để mở bảng chi tiết. Các nút mua sẽ được mở khi đã chọn món.",
             )
             embed.add_field(name="Số món trong quầy", value=f"**{len(self.selected_items)}**", inline=True)
-            embed.add_field(name="Linh thạch hiện có", value=f"**{fmt_amount(balance)}**", inline=True)
             if self.last_purchase_notice:
                 embed.add_field(name="🧾 Giao dịch gần nhất", value=self.last_purchase_notice[:1024], inline=False)
             embed.set_footer(text="TIÊN PHƯỜNG · Dùng menu thứ hai để chọn vật phẩm")
@@ -166,7 +153,6 @@ class ShopView(ThemedView):
         embed.add_field(name="Danh mục", value=f"**{self.category}**", inline=True)
         embed.add_field(name="Mã vật phẩm", value=f"`{item['id']}`", inline=True)
         embed.add_field(name="Giá mỗi món", value=f"**{fmt_amount(item['price'])}** {EMOJI['spirit_stone']}", inline=True)
-        embed.add_field(name="Linh thạch hiện có", value=f"**{fmt_amount(balance)}** {EMOJI['spirit_stone']}", inline=True)
         effects = item.get("effects", [])
         embed.add_field(
             name="✨ Hiệu ứng / chỉ số",
@@ -252,7 +238,6 @@ class ShopView(ThemedView):
             item = result["item"]
             self.last_purchase_notice = (
                 f"{EMOJI.get('ok', '✅')} Đã mua **{item['name']} ×{qty}** · **{fmt_amount(result['total'])}** linh thạch."
-                f"\n{EMOJI['spirit_stone']} Còn lại: **{fmt_amount(result['player'].spirit_stones)}**"
             )
             await interaction.response.edit_message(embed=self.build_embed(), view=self)
         except GameError as exc:

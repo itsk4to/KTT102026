@@ -20,7 +20,7 @@ class PathChoiceView(ThemedView):
             return
         try:
             p = self.engine.players.create(self.user_id, self.display_name, path)
-            await interaction.response.edit_message(embed=player_embed(self.engine.players.info_text(self.user_id), combat_stats=self.engine.combat.battle_stats(p)), view=None)
+            await interaction.response.edit_message(embed=player_embed(self.engine.players.info_text(self.user_id), combat_stats=self.engine.combat.battle_stats(p), show_currency=False), view=None)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 

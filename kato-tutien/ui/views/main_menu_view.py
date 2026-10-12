@@ -225,11 +225,6 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
     embed = base_embed("✦ TRUNG TÂM ĐẠO LỘ", description)
     embed.set_author(name=f"HỒ SƠ ĐẠO HỮU · {p.display_name.upper()[:180]}")
     embed.add_field(name=f"{EMOJI['cultivator']} CẢNH GIỚI", value=f"**{realm}**", inline=True)
-    embed.add_field(
-        name=f"{EMOJI['spirit_stone']} LINH THẠCH",
-        value=f"**{fmt_amount(p.spirit_stones)}**",
-        inline=True,
-    )
     combat_stats = engine.combat.battle_stats(p)
     effective_max_hp = max(1, int(combat_stats.get("max_hp", p.max_hp)))
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)

@@ -12,7 +12,7 @@ async def cmd_create(ctx, message: discord.Message, args: list[str] | None = Non
     if args and args[0].lower() in ("tien", "ma"):
         try:
             p = ctx.engine.players.create(str(message.author.id), message.author.display_name, args[0].lower())
-            await message.reply(embed=player_embed(ctx.engine.players.info_text(p.user_id), combat_stats=ctx.engine.combat.battle_stats(p)))
+            await message.reply(embed=player_embed(ctx.engine.players.info_text(p.user_id), combat_stats=ctx.engine.combat.battle_stats(p), show_currency=False))
         except GameError as e:
             await message.reply(embed=error_embed(str(e)))
         return
@@ -123,7 +123,7 @@ async def cmd_info(ctx, message: discord.Message, args: list[str] | None = None)
             return
 
         info = ctx.engine.players.info_text(str(message.author.id))
-        embed = player_embed(info, combat_stats=ctx.engine.combat.battle_stats(info["player"]))
+        embed = player_embed(info, combat_stats=ctx.engine.combat.battle_stats(info["player"]), show_currency=True)
         try:
             await message.author.send(embed=embed)
         except discord.Forbidden:

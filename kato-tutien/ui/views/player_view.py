@@ -312,7 +312,7 @@ def build_player_dashboard(engine, user_id: str, notice: str | None = None) -> d
     info = engine.players.info_text(user_id)
     player = info["player"]
     combat_stats = engine.combat.battle_stats(player)
-    embed = player_embed(info, combat_stats=combat_stats)
+    embed = player_embed(info, combat_stats=combat_stats, show_currency=False)
 
     try:
         preview = engine.cultivation.breakthrough_preview(user_id)
@@ -322,7 +322,6 @@ def build_player_dashboard(engine, user_id: str, notice: str | None = None) -> d
     status = [
         "Chạm nút bên dưới hoặc mở menu để tu luyện.",
         "",
-        f"{EMOJI['spirit_stone']} **{fmt_amount(player.spirit_stones)}** linh thạch",
         f"{EMOJI['hp']} **{min(max(0, int(player.hp)), int(combat_stats.get('max_hp', player.max_hp)))}/{int(combat_stats.get('max_hp', player.max_hp))} HP thực chiến**",
     ]
     if player.dao_type:

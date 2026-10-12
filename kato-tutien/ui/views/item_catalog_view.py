@@ -6,11 +6,15 @@ from game.content.items import ITEMS, SHOP_ORDER
 from game.content.item_catalog import category_items, item_effect_lines
 from ui.theme.views import ThemedView
 from ui.embeds import base_embed
+from ui.emoji import EMOJI
 from game.utils import fmt_amount
 
 _CATEGORY_EMOJI = {
-    "Đan dược": "💊", "Bùa chú": "🔮", "Pháp bảo": "💠",
-    "Binh khí": "⚔️", "Công pháp": "📜",
+    "Đan dược": EMOJI["consumable"],
+    "Bùa chú": EMOJI["talisman"],
+    "Pháp bảo": EMOJI["artifact"],
+    "Binh khí": EMOJI["weapon"],
+    "Công pháp": EMOJI["technique"],
 }
 
 
@@ -71,15 +75,15 @@ class ItemIdBrowserView(ThemedView):
 
     def build_embed(self):
         if not self.category:
-            lines = [f"{_CATEGORY_EMOJI.get(cat, '📦')} **{cat}** · {len(category_items(cat))} món" for cat in SHOP_ORDER]
+            lines = [f"{_CATEGORY_EMOJI.get(cat, EMOJI["unknown"])} **{cat}** · {len(category_items(cat))} món" for cat in SHOP_ORDER]
             body = (
                 "Chọn danh mục rồi chọn vật phẩm để xem ID chính xác.\n\n"
                 + "\n".join(lines)
                 + "\n\nDùng ID hiển thị trong `.mua`, `.dung`, `.trangbi` và phần tạo Mật Lệnh."
             )
-            return base_embed("🧾 Tra cứu ID vật phẩm", body)
+            return base_embed(f"{EMOJI['item']} Tra cứu ID vật phẩm", body)
         if not self.selected_id or self.selected_id not in ITEMS:
-            return base_embed(f"🧾 Tra cứu ID · {self.category}", "Chọn vật phẩm ở danh sách bên dưới để xem mã ID.")
+            return base_embed(f"{EMOJI['item']} Tra cứu ID · {self.category}", "Chọn vật phẩm ở danh sách bên dưới để xem mã ID.")
         item = ITEMS[self.selected_id]
         price = item.get("price", 0)
         body = (
@@ -90,13 +94,13 @@ class ItemIdBrowserView(ThemedView):
             f"**Chỉ số / hiệu ứng**\n" + "\n".join(item_effect_lines(item))
             + f"\n\n📖 {item.get('description', 'Chưa có mô tả.')}"
         )
-        return base_embed(f"🧾 {item.get('name', self.selected_id)}", body)
+        return base_embed(f"{EMOJI['item']} {item.get('name', self.selected_id)}", body)
 
     def rebuild(self):
         self.clear_items()
         self.add_item(ItemCatalogCategorySelect(self))
         self.add_item(ItemCatalogItemSelect(self))
-        close = discord.ui.Button(label="Khép lại", emoji="✖️", style=discord.ButtonStyle.secondary, row=2)
+        close = discord.ui.Button(label="Khép lại", emoji=EMOJI["close"], style=discord.ButtonStyle.secondary, row=2)
         async def close_callback(interaction: discord.Interaction):
             if not self.guard(interaction):
                 await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)

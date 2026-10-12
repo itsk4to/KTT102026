@@ -1,4 +1,19 @@
+## v3.7.3 — Tích hợp emoji Discord toàn GUI
+
+- Bật custom emoji từ `assets/emojis/server/emojis.json` mặc định; đặt `KATO_CUSTOM_EMOJI=0` để quay về Unicode.
+- Chuẩn hóa màn tra cứu ID vật phẩm dùng registry emoji chung.
+- Giữ nguyên các thay đổi riêng tư số dư từ v3.7.2.
+
 # Changelog
+
+## v3.7.2 — Quyền riêng tư số dư linh thạch
+
+- Chỉ lệnh `/info` của chính người chơi mới hiển thị số dư linh thạch đầy đủ (phản hồi riêng tư/DM).
+- Ẩn số dư khỏi Trung tâm, hồ sơ dashboard, Shop, giao diện Bí Cảnh và các màn hình liên quan.
+- Shop vẫn hiển thị giá món hàng và chi phí giao dịch; thông báo mua hàng không tiết lộ số dư còn lại.
+- Lỗi không đủ tiền không nêu số dư hiện có; người chơi được hướng dẫn xem số dư trong `.info`.
+- Xác nhận quản trị cấp linh thạch chỉ ghi số lượng đã cấp, không tiết lộ tổng tài sản của người nhận.
+- Không thay đổi gameplay, số dư lưu trữ, schema database hoặc dữ liệu người chơi.
 
 ## v3.7.1 — Khám Phá: Yêu Thú Cường Hóa & Bestiary Mở Rộng
 

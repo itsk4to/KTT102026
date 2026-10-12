@@ -89,7 +89,6 @@ class SecretRealmView(ThemedView):
             embed.add_field(
                 name=f"{EMOJI.get('cultivator', '📜')} Hồ sơ đạo hữu",
                 value=(f"**Cảnh giới:** {realm_label}\n"
-                       f"**Linh thạch:** {player.spirit_stones:,}\n"
                        f"**Tu vi:** {player.cultivation:,}/{requirement:,}"),
                 inline=True,
             )

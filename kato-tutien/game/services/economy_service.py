@@ -95,7 +95,7 @@ class EconomyService:
             p = self._require(user_id)
             total = int(item["price"]) * qty
             if not can_afford(p.spirit_stones, total):
-                raise GameError(f"Không đủ linh thạch. Cần **{total}**, có **{p.spirit_stones}**.")
+                raise GameError(f"Không đủ linh thạch cho giao dịch này. Cần **{total}**; dùng `.info` để xem số dư riêng.")
             p.spirit_stones -= total
             self._inventory.add(user_id, item_id, qty)
             self.players.save(p)

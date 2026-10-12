@@ -15,7 +15,7 @@ def _reload_registry():
     return importlib.reload(emoji_module)
 
 
-def test_unicode_emoji_are_the_default_everywhere_in_registry(monkeypatch):
+def test_unicode_fallback_is_available_when_custom_emoji_disabled(monkeypatch):
     monkeypatch.setenv("KATO_CUSTOM_EMOJI", "0")
     module = _reload_registry()
     assert module.EMOJI["spirit_stone"] == "💎"
@@ -26,16 +26,16 @@ def test_unicode_emoji_are_the_default_everywhere_in_registry(monkeypatch):
     assert all(not CUSTOM_TOKEN.fullmatch(value) for value in module.EMOJI.values())
 
 
-def test_server_emoji_tree_is_separate_and_opt_in(monkeypatch):
+def test_server_emoji_tree_is_separate_and_custom_emoji_enabled(monkeypatch):
     source = (ROOT / "ui/emoji.py").read_text(encoding="utf-8")
     assert not CUSTOM_TOKEN.search(source)
     config_path = ROOT / "assets/emojis/server/emojis.json"
     payload = json.loads(config_path.read_text(encoding="utf-8"))
-    assert payload["emojis"]["spirit_stone"].startswith("<:linhthach:")
-    assert payload["emojis"]["cultivator"].startswith("<:tutien:")
-    assert payload["emojis"]["demon"].startswith("<:tuma:")
-    assert payload["emojis"]["faction_tien"].startswith("<:tutien:")
-    assert payload["emojis"]["faction_ma"].startswith("<:tuma:")
+    assert payload["emojis"]["spirit_stone"].startswith("<:spirit_stone:")
+    assert payload["emojis"]["cultivator"].startswith("<:cultivator:")
+    assert payload["emojis"]["demon"].startswith("<:demon:")
+    assert payload["emojis"]["faction_tien"].startswith("<:cultivator:")
+    assert payload["emojis"]["faction_ma"].startswith("<:demon:")
 
     previous = os.getenv("KATO_CUSTOM_EMOJI")
     try:
@@ -52,3 +52,12 @@ def test_server_emoji_tree_is_separate_and_opt_in(monkeypatch):
         else:
             monkeypatch.setenv("KATO_CUSTOM_EMOJI", previous)
         _reload_registry()
+
+
+def test_custom_emoji_enabled_by_default(monkeypatch):
+    monkeypatch.delenv("KATO_CUSTOM_EMOJI", raising=False)
+    module = _reload_registry()
+    payload = json.loads((ROOT / "assets/emojis/server/emojis.json").read_text(encoding="utf-8"))
+    assert module.EMOJI["spirit_stone"] == payload["emojis"]["spirit_stone"]
+    assert module.EMOJI["attack"] == payload["emojis"]["attack"]
+    assert module.EMOJI["victory"] == payload["emojis"]["victory"]

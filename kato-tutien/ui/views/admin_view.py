@@ -72,7 +72,7 @@ class GrantStonesModal(discord.ui.Modal, title="💎 Cấp Linh Thạch"):
             await interaction.response.send_message(
                 embed=success_embed(
                     "💎 Đã cấp linh thạch",
-                    f"<@{player.user_id}> hiện có **{player.spirit_stones}** {EMOJI['spirit_stone']}.",
+                    f"Đã cộng **{amount:,}** {EMOJI['spirit_stone']} cho <@{player.user_id}>.",
                 ),
                 ephemeral=True,
             )

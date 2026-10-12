@@ -61,18 +61,25 @@ def cultivation_preview_embed(preview: dict) -> discord.Embed:
     return e
 
 
-def player_embed(info: dict, *, combat_stats: dict | None = None) -> discord.Embed:
-    """Game-style player HUD with identity, resources and live combat stats."""
+def player_embed(
+    info: dict, *, combat_stats: dict | None = None, show_currency: bool = False
+) -> discord.Embed:
+    """Player HUD; private currency is opt-in and reserved for the self /info command."""
     p = info["player"]
     path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
-    stats = combat_stats or {"max_hp": p.max_hp, "attack": p.attack, "defense": p.defense}
+    stats = combat_stats or {
+        "max_hp": getattr(p, "max_hp", 100),
+        "attack": getattr(p, "attack", 10),
+        "defense": getattr(p, "defense", 5),
+    }
     effective_max_hp = max(1, int(stats.get("max_hp", p.max_hp)))
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
     hp_ratio = max(0.0, min(1.0, displayed_hp / effective_max_hp))
 
     e = base_embed(f"🧑‍🚀 HỒ SƠ TU SĨ · {p.display_name}", f"**{info['realm']}**\n{path_name}  ·  *Hồ sơ nhân vật / chỉ số thực chiến*")
     e.add_field(name="🌌 Cảnh giới", value=f"**{info['realm']}**", inline=True)
-    e.add_field(name="🪙 Linh thạch", value=f"**{fmt_amount(p.spirit_stones)}**", inline=True)
+    if show_currency:
+        e.add_field(name="🪙 Linh thạch", value=f"**{fmt_amount(p.spirit_stones)}**", inline=True)
     e.add_field(name="☯️ Đạo lộ", value=f"**{p.dao_type or 'Chưa khai Đạo'}**", inline=True)
     e.add_field(
         name="❤️ Khí huyết",

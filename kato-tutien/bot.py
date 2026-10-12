@@ -46,7 +46,7 @@ async def info_slash(interaction: discord.Interaction, player: discord.Member | 
         stats = engine.combat.battle_stats(info["player"])
         if player is None:
             await interaction.response.send_message(
-                embed=player_embed(info, combat_stats=stats), ephemeral=True
+                embed=player_embed(info, combat_stats=stats, show_currency=True), ephemeral=True
             )
         else:
             await interaction.response.send_message(
