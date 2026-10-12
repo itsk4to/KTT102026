@@ -243,7 +243,7 @@ class AdminView(ThemedView):
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
-    @discord.ui.button(label="Đóng", style=discord.ButtonStyle.danger, emoji="✖️", row=3)
+    @discord.ui.button(label="Khép lại", style=discord.ButtonStyle.danger, emoji="✖️", row=3)
     async def close(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         try:
             self._check(interaction)
@@ -290,7 +290,7 @@ class CodeAdminView(ThemedView):
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
-    @discord.ui.button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.secondary, row=2)
+    @discord.ui.button(label="Khép lại", emoji="✖️", style=discord.ButtonStyle.secondary, row=2)
     async def close_codes(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         try:
             self._check(interaction)
@@ -318,7 +318,7 @@ class HeavenlyAdminView(ThemedView):
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
-    @discord.ui.button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Khép lại", emoji="✖️", style=discord.ButtonStyle.danger)
     async def close_rule(self, interaction, _button):
         try:
             self._check(interaction)

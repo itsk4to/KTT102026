@@ -9,7 +9,7 @@ from ui.embeds import base_embed, error_embed, success_embed
 from ui.emoji import EMOJI
 
 
-class SectContributionModal(discord.ui.Modal, title="Cống hiến linh thạch"):
+class SectContributionModal(discord.ui.Modal, title="Cống hiến Tông Môn"):
     amount = discord.ui.TextInput(label="Số linh thạch", placeholder="Ví dụ: 1000", min_length=1, max_length=9, required=True)
 
     def __init__(self, owner: "SectMenuView"):
@@ -18,7 +18,7 @@ class SectContributionModal(discord.ui.Modal, title="Cống hiến linh thạch"
 
     async def on_submit(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.owner.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             amount = int(str(self.amount.value).strip())
@@ -46,7 +46,7 @@ class SectCreateModal(discord.ui.Modal, title="🏯 Sáng lập Tông Môn"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.owner.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.owner.engine.sect.create(self.owner.user_id, str(self.name.value), str(self.description.value))
@@ -57,7 +57,7 @@ class SectCreateModal(discord.ui.Modal, title="🏯 Sáng lập Tông Môn"):
 
 
 class SectRecruitModal(discord.ui.Modal, title="🏯 Tuyển Thành Viên"):
-    target = discord.ui.TextInput(label="Người chơi", placeholder="@người_chơi hoặc User ID", min_length=2, max_length=32, required=True)
+    target = discord.ui.TextInput(label="Đạo hữu", placeholder="@đạo hữu hoặc User ID", min_length=2, max_length=32, required=True)
 
     def __init__(self, owner: "SectMenuView"):
         super().__init__()
@@ -65,7 +65,7 @@ class SectRecruitModal(discord.ui.Modal, title="🏯 Tuyển Thành Viên"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.owner.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         raw = str(self.target.value).strip()
         target_id = raw.strip("<@!>") if raw.startswith("<@") else raw
@@ -102,66 +102,162 @@ class SectMenuView(ThemedView):
         self._build()
 
     def _build(self):
+        """Mobile-first Tông Môn panel.
+
+        Not in sect:
+          Row 0 select · Row 1 create/apply · Row 3 nav
+        In sect:
+          Row 1 activities · Row 2 management · Row 3 nav
+        """
         self.clear_items()
         ov = self.engine.sect.overview(self.user_id)
         if not ov["in_sect"]:
-            options = [discord.SelectOption(label=s["name"][:100], value=s["sect_id"], description=f"Cấp {s['level']}", emoji=EMOJI["sect"]) for s in ov["sects"][:25]]
+            options = [
+                discord.SelectOption(
+                    label=s["name"][:100],
+                    value=s["sect_id"],
+                    description=f"Cấp {s['level']}",
+                    emoji=EMOJI["sect"],
+                )
+                for s in ov["sects"][:25]
+            ]
             if options:
-                select = discord.ui.Select(placeholder="Chọn tông môn để xem…", options=options, row=0)
+                select = discord.ui.Select(
+                    placeholder="Chọn tông môn để xem…",
+                    options=options,
+                    row=0,
+                )
                 select.callback = self._select_sect
                 self.add_item(select)
-            create_btn = discord.ui.Button(label="Tạo Tông Môn", style=discord.ButtonStyle.primary, emoji=EMOJI["sect"], row=1)
+            create_btn = discord.ui.Button(
+                label="Sáng lập",
+                style=discord.ButtonStyle.primary,
+                emoji=EMOJI["sect"],
+                row=1,
+            )
             create_btn.callback = self._create_modal
             self.add_item(create_btn)
-            apply_btn = discord.ui.Button(label="Xin gia nhập", style=discord.ButtonStyle.success, emoji=EMOJI["ok"], row=1, disabled=not self.selected_sect)
+            apply_btn = discord.ui.Button(
+                label="Xin gia nhập",
+                style=discord.ButtonStyle.success,
+                emoji=EMOJI["ok"],
+                row=1,
+                disabled=not self.selected_sect,
+            )
             apply_btn.callback = self._apply
             self.add_item(apply_btn)
         else:
-            contribute = discord.ui.Button(label="Cống hiến", style=discord.ButtonStyle.success, emoji=EMOJI["spirit_stone"], row=1)
+            # Row 1 — daily activities
+            contribute = discord.ui.Button(
+                label="Cống hiến",
+                style=discord.ButtonStyle.success,
+                emoji=EMOJI["spirit_stone"],
+                row=1,
+            )
             contribute.callback = self._contribute_modal
             self.add_item(contribute)
-            leave = discord.ui.Button(label="Rời tông", style=discord.ButtonStyle.danger, emoji=EMOJI["no"], row=1)
-            leave.callback = self._leave
-            self.add_item(leave)
-            ov_current = self.engine.sect.overview(self.user_id)
-            my_role = ov_current.get("my_role")
-            can_invite = my_role in {"Tông Chủ", "Phó Tông Chủ", "Trưởng Lão", "Chấp Sự"}
-            recruit = discord.ui.Button(label="Tuyển thành viên", style=discord.ButtonStyle.primary, emoji=EMOJI["ok"], row=2, disabled=not can_invite)
-            recruit.callback = self._recruit_modal
-            self.add_item(recruit)
-            inbox = discord.ui.Button(label="Duyệt / Lời mời", style=discord.ButtonStyle.secondary, emoji=EMOJI["item"], row=3)
-            inbox.callback = self._inbox
-            self.add_item(inbox)
-            manage = discord.ui.Button(label="Quản trị thành viên", style=discord.ButtonStyle.secondary, emoji=EMOJI["sect"], row=3)
-            manage.callback = self._manage_members
-            self.add_item(manage)
-            tower = discord.ui.Button(label="Tông Tháp", style=discord.ButtonStyle.primary, emoji="🏯", row=2)
+
+            tower = discord.ui.Button(
+                label="Tông Tháp",
+                style=discord.ButtonStyle.primary,
+                emoji=EMOJI.get("sect", "🏯"),
+                row=1,
+            )
             tower.callback = self._tower
             self.add_item(tower)
-            mission = discord.ui.Button(label="Nhiệm vụ Tông Môn", style=discord.ButtonStyle.secondary, emoji="📜", row=2)
+
+            mission = discord.ui.Button(
+                label="Nhiệm vụ",
+                style=discord.ButtonStyle.secondary,
+                emoji=EMOJI.get("technique", "📜"),
+                row=1,
+            )
             mission.callback = self._mission
             self.add_item(mission)
-            lingmai = discord.ui.Button(label="Linh Mạch", style=discord.ButtonStyle.secondary, emoji="🌿", row=2)
+
+            lingmai = discord.ui.Button(
+                label="Linh Mạch",
+                style=discord.ButtonStyle.secondary,
+                emoji="🌿",
+                row=1,
+            )
             lingmai.callback = self._lingmai
             self.add_item(lingmai)
-        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=2)
+
+            # Row 2 — management
+            ov_current = ov
+            my_role = ov_current.get("my_role")
+            can_invite = my_role in {"Tông Chủ", "Phó Tông Chủ", "Trưởng Lão", "Chấp Sự"}
+            recruit = discord.ui.Button(
+                label="Tuyển thành viên",
+                style=discord.ButtonStyle.primary,
+                emoji=EMOJI["ok"],
+                row=2,
+                disabled=not can_invite,
+            )
+            recruit.callback = self._recruit_modal
+            self.add_item(recruit)
+
+            inbox = discord.ui.Button(
+                label="Duyệt / Lời mời",
+                style=discord.ButtonStyle.secondary,
+                emoji=EMOJI["item"],
+                row=2,
+            )
+            inbox.callback = self._inbox
+            self.add_item(inbox)
+
+            manage = discord.ui.Button(
+                label="Quản trị",
+                style=discord.ButtonStyle.secondary,
+                emoji=EMOJI["sect"],
+                row=2,
+            )
+            manage.callback = self._manage_members
+            self.add_item(manage)
+
+            leave = discord.ui.Button(
+                label="Rời tông",
+                style=discord.ButtonStyle.danger,
+                emoji=EMOJI["no"],
+                row=2,
+            )
+            leave.callback = self._leave
+            self.add_item(leave)
+
+        # Row 3 — always navigation
+        back = discord.ui.Button(
+            label="Trung tâm",
+            style=discord.ButtonStyle.secondary,
+            emoji=EMOJI.get("home", "🏠"),
+            row=3,
+        )
         back.callback = self._back
         self.add_item(back)
+
+        close = discord.ui.Button(
+            label="Khép lại",
+            style=discord.ButtonStyle.danger,
+            emoji=EMOJI.get("close", "✖️"),
+            row=3,
+        )
+        close.callback = self._close
+        self.add_item(close)
 
     def build_embed(self) -> discord.Embed:
         ov = self.engine.sect.overview(self.user_id)
         if not ov["in_sect"]:
             lines = [f"{EMOJI['sect']} **{s['name']}** · Cấp {s['level']}" for s in ov["sects"][:12]]
-            lines.append("\nChọn một tông môn rồi bấm **Xin gia nhập**.")
-            return base_embed(f"{EMOJI['sect']} Tông Môn", "\n".join(lines) or "Chưa có tông môn.")
+            lines.append("\nChọn tông môn rồi bấm **Xin gia nhập**, hoặc **Sáng lập** tông mới.")
+            return base_embed(f"{EMOJI['sect']} Tông Môn", "\n".join(lines) or "Thiên hạ chưa có tông môn nào.")
         s = ov["sect"]
-        text = [f"**{s.name}** · Cấp {s.level}", f"Vai trò: **{ov['my_role']}**", f"Khố tông: **{fmt_amount(s.treasury)}** {EMOJI['spirit_stone']}", f"Đơn xin gia nhập: **{len(ov.get('applications', []))}**", "", "**Thành viên**"]
+        text = [f"**{s.name}** · Cấp {s.level}", f"Chức vị: **{ov['my_role']}**", f"{EMOJI['spirit_stone']} Khố tông: **{fmt_amount(s.treasury)}**", f"Đơn xin: **{len(ov.get('applications', []))}**", "", "**Đồng môn**"]
         text.extend(f"• <@{m.user_id}> — {m.role} · {fmt_amount(m.contribution)}" for m in ov["members"][:10])
         return base_embed(f"{EMOJI['sect']} Nội Vụ Tông Môn", "\n".join(text))
 
     async def _select_sect(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.selected_sect = interaction.data["values"][0]
         self._build()
@@ -169,7 +265,7 @@ class SectMenuView(ThemedView):
 
     async def _apply(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.sect.apply(self.user_id, self.selected_sect)
@@ -180,7 +276,7 @@ class SectMenuView(ThemedView):
 
     async def _manage_members(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.sect_member_admin_view import SectMemberAdminView
         view = SectMemberAdminView(self.engine, self.user_id)
@@ -188,32 +284,32 @@ class SectMenuView(ThemedView):
 
     async def _inbox(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True); return
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True); return
         from ui.views.sect_management_view import SectManagementView
         view=SectManagementView(self.engine,self.user_id)
         await interaction.response.edit_message(embed=view.build_embed(),view=view)
 
     async def _contribute_modal(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await interaction.response.send_modal(SectContributionModal(self))
 
     async def _recruit_modal(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await interaction.response.send_modal(SectRecruitModal(self))
 
     async def _create_modal(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await interaction.response.send_modal(SectCreateModal(self))
 
     async def _tower(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.sect_tower.challenge(self.user_id)
@@ -225,7 +321,7 @@ class SectMenuView(ThemedView):
 
     async def _mission(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             state = self.engine.sect_tower.mission_state(self.user_id)
@@ -282,7 +378,7 @@ class SectMenuView(ThemedView):
 
     async def _lingmai(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.sect_tower.upgrade_lingmai(self.user_id)
@@ -292,18 +388,25 @@ class SectMenuView(ThemedView):
 
     async def _leave(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             self.engine.sect.leave(self.user_id)
             self._build()
-            await interaction.response.edit_message(embed=success_embed("🏯 Đã rời tông môn", "Con đường phía trước lại do ngươi tự chọn."), view=self)
+            await interaction.response.edit_message(embed=success_embed("🏯 Đã rời tông môn", "Con đường phía trước lại do đạo hữu tự chọn."), view=self)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
+    async def _close(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.edit_message(view=None)
+
     async def _back(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

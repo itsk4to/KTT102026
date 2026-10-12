@@ -22,7 +22,7 @@ class InventoryCategorySelect(discord.ui.Select):
                 value=_CATEGORY_ALL,
                 emoji=EMOJI["all"],
                 default=owner.category == _CATEGORY_ALL,
-                description="Hiển thị toàn bộ vật phẩm.",
+                description="Xem toàn bộ linh vật trong túi.",
             )
         ]
         categories = []
@@ -50,7 +50,7 @@ class InventoryCategorySelect(discord.ui.Select):
                 )
             )
         super().__init__(
-            placeholder="Chọn loại vật phẩm…",
+            placeholder="Chọn loại linh vật…",
             min_values=1,
             max_values=1,
             options=options,
@@ -59,7 +59,7 @@ class InventoryCategorySelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.message = interaction.message
         self.owner.category = self.values[0]
@@ -108,7 +108,7 @@ class InventoryItemSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.message = interaction.message
         value = self.values[0]
@@ -138,7 +138,7 @@ class InventoryQuantityModal(discord.ui.Modal, title="Chọn số lượng"):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             quantity = int(str(self.quantity.value).strip())
@@ -220,7 +220,7 @@ class InventoryView(ThemedView):
         quantity = int(selected.get("qty", 0)) if selected else 0
 
         for qty, label, emoji in (
-            (1, "Dùng ×1", "1️⃣"),
+            (1, "Dùng ×1", EMOJI.get("pill", "1️⃣")),
             (5, "Dùng ×5", "5️⃣"),
             (10, "Dùng ×10", "🔟"),
         ):
@@ -261,8 +261,9 @@ class InventoryView(ThemedView):
         self._action_button.callback = self._make_action_callback(action_name, 0)
         self.add_item(self._action_button)
 
+        # Row 3 — pagination + navigation (thumb zone)
         previous = discord.ui.Button(
-            label="Trang trước",
+            label="Trước",
             style=discord.ButtonStyle.secondary,
             emoji=EMOJI["previous"],
             row=3,
@@ -272,7 +273,7 @@ class InventoryView(ThemedView):
         self.add_item(previous)
 
         next_button = discord.ui.Button(
-            label="Trang sau",
+            label="Sau",
             style=discord.ButtonStyle.secondary,
             emoji=EMOJI["next"],
             row=3,
@@ -280,6 +281,15 @@ class InventoryView(ThemedView):
         )
         next_button.callback = self._page_callback(1)
         self.add_item(next_button)
+
+        home = discord.ui.Button(
+            label="Trung tâm",
+            style=discord.ButtonStyle.secondary,
+            emoji=EMOJI.get("home", "🏠"),
+            row=3,
+        )
+        home.callback = self._home_callback
+        self.add_item(home)
 
         refresh = discord.ui.Button(
             label="Làm mới",
@@ -291,7 +301,7 @@ class InventoryView(ThemedView):
         self.add_item(refresh)
 
         close = discord.ui.Button(
-            label="Đóng",
+            label="Khép lại",
             style=discord.ButtonStyle.danger,
             emoji=EMOJI["close"],
             row=3,
@@ -305,7 +315,7 @@ class InventoryView(ThemedView):
     def _make_action_callback(self, action: str, quantity: int):
         async def callback(interaction: discord.Interaction) -> None:
             if not self._guard(interaction):
-                await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+                await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
                 return
             self.message = interaction.message
             await self.perform_action(interaction, action, quantity)
@@ -346,7 +356,7 @@ class InventoryView(ThemedView):
 
     async def _custom_quantity_callback(self, interaction: discord.Interaction) -> None:
         if not self._guard(interaction):
-            await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
             return
         if not self.selected:
             await interaction.response.send_message(embed=error_embed("Hãy chọn một vật phẩm trước."), ephemeral=True)
@@ -357,7 +367,7 @@ class InventoryView(ThemedView):
     def _page_callback(self, delta: int):
         async def callback(interaction: discord.Interaction) -> None:
             if not self._guard(interaction):
-                await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+                await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
                 return
             self.message = interaction.message
             self.page = max(0, min(self.page + delta, self.max_page))
@@ -367,7 +377,7 @@ class InventoryView(ThemedView):
 
     async def _refresh_callback(self, interaction: discord.Interaction) -> None:
         if not self._guard(interaction):
-            await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.message = interaction.message
         self.all_items = self.engine.economy.inventory(self.user_id)
@@ -379,7 +389,7 @@ class InventoryView(ThemedView):
 
     async def _close_callback(self, interaction: discord.Interaction) -> None:
         if not self._guard(interaction):
-            await interaction.response.send_message("Túi đồ này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.stop()
         await interaction.response.edit_message(view=None)

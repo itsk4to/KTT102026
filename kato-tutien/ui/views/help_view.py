@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import discord
 
+from ui.emoji import EMOJI
 from ui.theme.views import ThemedView
 from ui.theme.components import themed_button
 from ui.views.main_menu_view import MainMenuView, build_main_embed
 
 
 class HelpView(ThemedView):
-    """Paginated command guide with owner-guarded navigation."""
+    """Cẩm nang người mới — phân trang, dễ bấm trên mobile."""
 
     def __init__(self, pages: list[discord.Embed], engine, user_id: str, timeout: float = 300):
         super().__init__(timeout=timeout)
@@ -19,30 +20,56 @@ class HelpView(ThemedView):
         self._sync_buttons()
 
     def _sync_buttons(self) -> None:
+        """
+        Row 0 — lật trang (gần nội dung)
+        Row 1 — Trung tâm · Khép lại (thumb zone)
+        """
         self.clear_items()
+        total = max(1, len(self.pages))
+
         previous = themed_button(
-            "Trang trước", role="navigation", emoji="◀️", row=0,
-            disabled=self.page_index <= 0, callback=self._previous,
+            "Trước",
+            role="navigation",
+            emoji=EMOJI.get("previous", "◀️"),
+            row=0,
+            disabled=self.page_index <= 0,
+            callback=self._previous,
         )
         next_page = themed_button(
-            "Trang sau", role="primary", emoji="▶️", row=0,
-            disabled=self.page_index >= len(self.pages) - 1, callback=self._next,
-        )
-        home = themed_button(
-            "Mở menu", role="navigation", emoji="🏠", row=0, callback=self._home,
-        )
-        close = themed_button(
-            "Đóng", role="danger", emoji="✖️", row=0, callback=self._close,
+            "Sau",
+            role="primary",
+            emoji=EMOJI.get("next", "▶️"),
+            row=0,
+            disabled=self.page_index >= total - 1,
+            callback=self._next,
         )
         self.add_item(previous)
         self.add_item(next_page)
+
+        home = themed_button(
+            "Trung tâm",
+            role="navigation",
+            emoji=EMOJI.get("home", "🏠"),
+            row=1,
+            callback=self._home,
+        )
+        close = themed_button(
+            "Khép lại",
+            role="danger",
+            emoji=EMOJI.get("close", "✖️"),
+            row=1,
+            callback=self._close,
+        )
         self.add_item(home)
         self.add_item(close)
 
     async def _guard(self, interaction: discord.Interaction) -> bool:
         if str(interaction.user.id) == self.user_id:
             return True
-        await interaction.response.send_message("Cẩm nang này không thuộc về ngươi.", ephemeral=True)
+        await interaction.response.send_message(
+            "Cẩm nang này không thuộc về đạo hữu.",
+            ephemeral=True,
+        )
         return False
 
     async def _show_page(self, interaction: discord.Interaction, target: int) -> None:

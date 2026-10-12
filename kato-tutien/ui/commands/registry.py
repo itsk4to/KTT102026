@@ -31,9 +31,9 @@ class CommandSpec:
 
 COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("tutien", ("tt", "tamuontutien", "tao"), "start", ".tutien tien|ma", "Khai đạo tạo nhân vật.", cmd_create, True),
-    CommandSpec("help", ("h",), "start", ".help", "Hướng dẫn người mới và mở menu tổng.", cmd_help),
+    CommandSpec("help", ("h",), "start", ".help", "Cẩm nang người mới — lộ trình 5 bước và danh sách lệnh.", cmd_help),
     CommandSpec("menu", ("mn",), "system", ".menu", "Mở Help + menu tổng (tương thích lệnh cũ).", cmd_menu),
-    CommandSpec("info", ("i", "xem"), "start", ".info", "Xem nhân vật.", cmd_info),
+    CommandSpec("info", ("i", "xem"), "start", ".info [@player]", "Xem hồ sơ riêng qua DM hoặc hồ sơ công khai của đạo hữu.", cmd_info),
     CommandSpec("tu", ("tl", "tuluyen"), "cultivation", ".tu", "Tu luyện.", cmd_cultivate),
     CommandSpec("dotpha", ("dp",), "cultivation", ".dotpha", "Đột phá cảnh giới.", cmd_breakthrough),
     CommandSpec("thienkiep", ("tk",), "cultivation", ".thienkiep", "Ứng Thiên Kiếp.", cmd_tribulation),

@@ -35,7 +35,7 @@ def cultivation_preview_embed(preview: dict) -> discord.Embed:
     current = int(preview["cultivation"])
     maximum = int(preview["requirement"])
     if preview.get("recovery_remaining", 0) > 0:
-        status = f"🩹 Đang hồi phục · còn **{preview['recovery_remaining']}s**"
+        status = f"{EMOJI.get('recover', '🩹')} Đang hồi phục · còn **{preview['recovery_remaining']}s**"
     else:
         status = "✅ Đủ tu vi" if preview["ready"] else "⏳ Chưa đủ tu vi"
     e = base_embed(f"{EMOJI['breakthrough']} Đột phá", f"**{preview['realm']}**\n{status}")
@@ -97,6 +97,34 @@ def player_embed(info: dict, *, combat_stats: dict | None = None) -> discord.Emb
     return e
 
 
+def public_player_embed(info: dict, *, combat_stats: dict | None = None) -> discord.Embed:
+    """Public, privacy-filtered player card: no currency, inventory, or private stats."""
+    from game.content.items import ITEMS, EQUIP_SLOTS
+
+    p = info["player"]
+    stats = combat_stats or {"max_hp": getattr(p, "max_hp", 100), "attack": getattr(p, "attack", 10), "defense": getattr(p, "defense", 5)}
+    path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
+    power = int(stats.get("attack", getattr(p, "attack", 10))) * 2 + int(stats.get("defense", getattr(p, "defense", 5))) * 2 + int(stats.get("max_hp", getattr(p, "max_hp", 100))) // 10
+    e = base_embed(
+        f"🧑‍🚀 HỒ SƠ CÔNG KHAI · {p.display_name}",
+        f"**{info['realm']}**\n{path_name} · *Hồ sơ công khai*",
+    )
+    e.add_field(name="🌌 Cảnh giới", value=f"**{info['realm']}**", inline=True)
+    e.add_field(name="⚔️ Chiến lực", value=f"**{power:,}**", inline=True)
+    e.add_field(name="🏯 Tông môn", value=f"**{'Đã gia nhập' if p.sect_id else 'Tán tu'}**", inline=True)
+
+    slot_names = {"weapon": "Vũ khí", "artifact": "Pháp bảo", "armor": "Giáp", "accessory": "Phụ kiện"}
+    gear_lines = []
+    loadout = p.loadout or {}
+    for slot in EQUIP_SLOTS:
+        item_id = loadout.get(slot)
+        item = ITEMS.get(item_id, {}) if item_id else {}
+        gear_lines.append(f"• **{slot_names.get(slot, slot.title())}:** {item.get('name', 'Chưa trang bị')}")
+    e.add_field(name="🛡️ Trang bị đang mặc", value="\n".join(gear_lines), inline=False)
+    e.set_footer(text="Hồ sơ đạo hữu · Linh thạch và Túi Càn Khôn được giữ riêng tư")
+    return e
+
+
 def error_embed(msg: str) -> discord.Embed:
     return base_embed("❌ Lỗi", msg, COLOR_ERROR)
 
@@ -112,7 +140,7 @@ def shop_embed(catalog: dict) -> discord.Embed:
     lines = [
         "Một mùi linh dược thoang thoảng trong không khí, các kệ bảo vật trải dài trước mắt.",
         "Chủ tiệm vuốt râu, cười nói:",
-        '*"Đạo hữu ghé Tiên Phường rồi! Muốn mua thứ gì? Cứ chọn loại vật phẩm bên dưới, ta sẽ lấy hàng cho ngươi xem."*',
+        '*"Đạo hữu ghé Tiên Phường rồi! Muốn mua thứ gì? Cứ chọn loại vật phẩm bên dưới, ta sẽ lấy hàng cho đạo hữu xem."*',
         "",
         "**📦 Các quầy hàng**",
     ]
@@ -128,7 +156,7 @@ def combat_embed(enc, player=None, *, combat_stats: dict | None = None) -> disco
     """Compact battle HUD; combat rules and callbacks are intentionally untouched."""
     color = COLOR_WARN if not enc.finished else (COLOR_SUCCESS if enc.victory else COLOR_ERROR)
     threat_label = "👑 BOSS · " if getattr(enc, "is_boss", False) else ""
-    e = base_embed(f"⚔️ {threat_label}{enc.enemy_name}", color=color)
+    e = base_embed(f"{EMOJI.get('attack', '⚔️')} {threat_label}{enc.enemy_name}", color=color)
     player_attack = int((combat_stats or {}).get("attack", getattr(player, "attack", 0)))
     player_defense = int((combat_stats or {}).get("defense", getattr(player, "defense", 0)))
     enemy_hp = max(0, int(enc.enemy_hp))
@@ -139,15 +167,15 @@ def combat_embed(enc, player=None, *, combat_stats: dict | None = None) -> disco
     player_ratio = min(1.0, player_hp / player_max)
 
     e.add_field(
-        name=f"👹 Đối thủ · {enc.enemy_name}",
-        value=(f"❤️ `{progress_bar(enemy_hp, enemy_max, 10)}` **{enemy_ratio:.0%}**\n"
+        name=f"{EMOJI.get('demon', '👹')} Đối thủ · {enc.enemy_name}",
+        value=(f"{EMOJI['hp']} `{progress_bar(enemy_hp, enemy_max, 10)}` **{enemy_ratio:.0%}**\n"
                f"**{enemy_hp:,} / {enemy_max:,} HP**\n"
                f"{EMOJI['att']} Công **{int(enc.enemy_attack):,}**  ·  {EMOJI['def']} Thủ **{int(enc.enemy_defense):,}**"),
         inline=True,
     )
     e.add_field(
-        name=f"🧑‍🚀 Tu sĩ · {getattr(player, 'display_name', 'Ngươi')}",
-        value=(f"❤️ `{progress_bar(player_hp, player_max, 10)}` **{player_ratio:.0%}**\n"
+        name=f"{EMOJI.get('cultivator', '🧘')} Đạo hữu · {getattr(player, 'display_name', 'Đạo hữu')}",
+        value=(f"{EMOJI['hp']} `{progress_bar(player_hp, player_max, 10)}` **{player_ratio:.0%}**\n"
                f"**{player_hp:,} / {player_max:,} HP**\n"
                f"{EMOJI['att']} Công **{player_attack:,}**  ·  {EMOJI['def']} Thủ **{player_defense:,}**"),
         inline=True,
@@ -158,7 +186,7 @@ def combat_embed(enc, player=None, *, combat_stats: dict | None = None) -> disco
     if enc.log:
         e.add_field(name="📜 Diễn biến trận đấu", value="\n".join(enc.log[-6:])[:1024], inline=False)
     if enc.finished:
-        e.add_field(name="Kết cục", value="✅ Đã chiến thắng" if enc.victory else "❌ Trận đấu kết thúc", inline=False)
+        e.add_field(name="Kết cục", value=(f"{EMOJI.get('victory', '✅')} Đã chiến thắng" if enc.victory else f"{EMOJI.get('defeat', '❌')} Trận đấu kết thúc"), inline=False)
     else:
         e.add_field(name="Mệnh lệnh chiến đấu", value="Chọn **Công Pháp** hoặc **vật phẩm** ở danh sách phía trên, hoặc sử dụng nút hành động bên dưới.", inline=False)
     return e
@@ -300,5 +328,5 @@ def inventory_item_embed(item: dict) -> discord.Embed:
     effects = _item_effect_lines(meta)
     if effects:
         e.add_field(name="Tác dụng", value="\n".join(f"• {line}" for line in effects), inline=False)
-    e.set_footer(text=f"ID: {item['id']}  ·  KATO TU TIÊN")
+    e.set_footer(text=f"ID: {item['id']}")
     return e

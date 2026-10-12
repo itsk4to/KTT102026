@@ -21,11 +21,11 @@ class SectInviteNoticeView(ThemedView):
         inv = engine.sect.invitation_info(invitation_id)
         if not inv:
             return base_embed("🏯 Lời mời", "Lời mời không còn tồn tại.")
-        return base_embed("🏯 Lời mời tông môn", f"**{inv['sect_name']}** mời ngươi gia nhập.\nNgười gửi: <@{inv['inviter_id']}>\nMã: **#{invitation_id}**")
+        return base_embed("🏯 Lời mời tông môn", f"**{inv['sect_name']}** mời đạo hữu gia nhập.\nNgười gửi: <@{inv['inviter_id']}>\nMã: **#{invitation_id}**")
 
     async def accept(self, i):
         if str(i.user.id) != self.user_id:
-            return await i.response.send_message("Lời mời này không thuộc về ngươi.", ephemeral=True)
+            return await i.response.send_message("Lời mời này không thuộc về đạo hữu.", ephemeral=True)
         try:
             self.engine.sect.accept_invite(self.user_id, self.invitation_id)
             await i.response.edit_message(embed=success_embed("🏯 Tông Môn", "Đã nhận lời mời."), view=None)
@@ -34,7 +34,7 @@ class SectInviteNoticeView(ThemedView):
 
     async def reject(self, i):
         if str(i.user.id) != self.user_id:
-            return await i.response.send_message("Lời mời này không thuộc về ngươi.", ephemeral=True)
+            return await i.response.send_message("Lời mời này không thuộc về đạo hữu.", ephemeral=True)
         try:
             self.engine.sect.reject_invite(self.user_id, self.invitation_id)
             await i.response.edit_message(embed=base_embed("🏯 Lời mời", "Đã từ chối lời mời."), view=None)
@@ -59,7 +59,7 @@ class SectManagementView(ThemedView):
         if invs:
             x=discord.ui.Select(placeholder="Chọn lời mời…",options=[discord.SelectOption(label=f"#{a['id']} · {a['sect_id']}",value=str(a['id'])) for a in invs[:25]],row=2); x.callback=self.sel_inv; self.add_item(x)
             ok=discord.ui.Button(label="Nhận lời mời",emoji=EMOJI['ok'],style=discord.ButtonStyle.success,row=3); no=discord.ui.Button(label="Từ chối",emoji=EMOJI['no'],style=discord.ButtonStyle.danger,row=3); ok.callback=self.accept_inv; no.callback=self.reject_inv; self.add_item(ok); self.add_item(no)
-        back=discord.ui.Button(label="Quay lại",style=discord.ButtonStyle.secondary,row=4); back.callback=self.back; self.add_item(back)
+        back=discord.ui.Button(label="Trở về",style=discord.ButtonStyle.secondary,row=4); back.callback=self.back; self.add_item(back)
     def build_embed(self):
         ov = self.engine.sect.overview(self.user_id)
         text = (
@@ -69,32 +69,32 @@ class SectManagementView(ThemedView):
         return base_embed("🏯 Quản lý tông môn", text)
 
     async def sel_app(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         self.app=int(i.data['values'][0]); await i.response.edit_message(embed=self.build_embed(),view=self)
     async def sel_inv(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         self.inv=int(i.data['values'][0]); await i.response.edit_message(embed=self.build_embed(),view=self)
     async def accept_app(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         if self.app is None: return await i.response.send_message("Hãy chọn một đơn trước.",ephemeral=True)
         try: self.engine.sect.accept_application(self.user_id,self.app); self.build(); await i.response.edit_message(embed=success_embed("🏯 Tông Môn","Đã duyệt đơn."),view=self)
         except GameError as e: await i.response.send_message(embed=error_embed(str(e)),ephemeral=True)
     async def reject_app(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         if self.app is None: return await i.response.send_message("Hãy chọn một đơn trước.",ephemeral=True)
         try: self.engine.sect.reject_application(self.user_id,self.app); self.build(); await i.response.edit_message(embed=base_embed("🏯 Tông Môn","Đã từ chối đơn."),view=self)
         except GameError as e: await i.response.send_message(embed=error_embed(str(e)),ephemeral=True)
     async def accept_inv(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         if self.inv is None: return await i.response.send_message("Hãy chọn một lời mời trước.",ephemeral=True)
         try: self.engine.sect.accept_invite(self.user_id,self.inv); self.build(); await i.response.edit_message(embed=success_embed("🏯 Tông Môn","Đã gia nhập tông môn."),view=self)
         except GameError as e: await i.response.send_message(embed=error_embed(str(e)),ephemeral=True)
     async def reject_inv(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         if self.inv is None: return await i.response.send_message("Hãy chọn một lời mời trước.",ephemeral=True)
         try: self.engine.sect.reject_invite(self.user_id,self.inv); self.build(); await i.response.edit_message(embed=base_embed("🏯 Lời mời","Đã từ chối."),view=self)
         except GameError as e: await i.response.send_message(embed=error_embed(str(e)),ephemeral=True)
     async def back(self,i):
-        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về ngươi.",ephemeral=True)
+        if not self.guard(i): return await i.response.send_message("Giao diện này không thuộc về đạo hữu.",ephemeral=True)
         from ui.views.sect_view import SectMenuView
         v=SectMenuView(self.engine,self.user_id); await i.response.edit_message(embed=v.build_embed(),view=v)

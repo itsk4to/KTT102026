@@ -71,12 +71,12 @@ class MarketView(ThemedView):
         if selected:
             name = ITEMS.get(selected["item_id"], {}).get("name", selected["name"])
             embed.add_field(name="🔎 Tin đang chọn", value=f"**{name}** ×{selected['qty']}\nGiá mỗi món: **{fmt_amount(selected['price_each'])}** {EMOJI['spirit_stone']}\nTổng giá: **{fmt_amount(selected['price_total'])}** {EMOJI['spirit_stone']}\nMã tin: `#{selected['id']}`", inline=False)
-        embed.set_footer(text="CHỢ NGƯỜI CHƠI · Chọn tin → kiểm tra giá → xác nhận mua · KATO TU TIÊN")
+        embed.set_footer(text="Chọn tin → kiểm tra giá → xác nhận mua")
         return embed
 
     async def _select(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.selected_id = int(interaction.data["values"][0])
         self.rebuild()
@@ -84,7 +84,7 @@ class MarketView(ThemedView):
 
     async def _buy(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         if self.selected_id is None:
             await interaction.response.send_message(embed=error_embed("Hãy chọn một tin đăng trước."), ephemeral=True)
@@ -103,7 +103,7 @@ class MarketView(ThemedView):
 
     async def _cancel(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         if self.selected_id is None:
             await interaction.response.send_message(embed=error_embed("Hãy chọn một tin đăng trước."), ephemeral=True)
@@ -122,14 +122,14 @@ class MarketView(ThemedView):
 
     async def _refresh(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.rebuild()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
     async def _back(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

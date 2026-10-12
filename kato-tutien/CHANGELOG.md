@@ -1,4 +1,57 @@
-## v3.6.3 — Immersive Game UI Rework
+# Changelog
+
+## v3.7.1 — Khám Phá: Yêu Thú Cường Hóa & Bestiary Mở Rộng
+
+- Mở rộng danh sách từ 27 lên 48 yêu thú thường và từ 13 lên 20 Boss, thêm quái bản địa cho cả 7 khu vực.
+- Bổ sung quái cho cảnh giới cao nhất (Tiên Vương / Tiên Đế), tránh thiếu đối thủ ở cuối tiến trình.
+- Tăng sức ép theo khu vực: chỉ số quái tăng theo vùng, cảnh giới và cấp độ trận; Tinh Anh và Boss có hệ số HP/công/thủ riêng.
+- Bổ sung 6 sự kiện chiến đấu theo vùng/cảnh giới, gồm Tinh Anh và Boss, để tăng tỷ lệ chạm trán ở khu nguy hiểm.
+- Màn hình Khám Phá hiển thị tối đa 7 dấu vết yêu thú cùng cảnh giới xuất hiện, và thêm thông tin Boss có thể gặp.
+- Không đổi schema database, ID vật phẩm, hoặc cấu trúc lưu nhân vật.
+
+### Cân bằng dự kiến
+- Hoang Nguyên vẫn giữ mức vào game tương đối dễ.
+- Hải Vực trở đi tăng rõ rệt độ nguy hiểm; Ma Vực, Vạn Cốt Lăng và Hư Không Cổ Giới dành cho tu sĩ đã chuẩn bị trang bị/kỹ năng.
+- Boss có thêm sức bền và sát thương; khuyến nghị hồi phục và trang bị trước khi săn.
+
+
+## v3.7.0
+
+### GUI
+- Cáº©m nang `.help`: layout mobile (TrÆ°á»c/Sau Â· Trung tÃ¢m Â· KhÃ©p láº¡i), lá» trÃ¬nh 5 bÆ°á»c cho ngÆ°á»i má»i, copy tu tiÃªn.
+
+
+## v3.6.9
+
+### GUI
+- Đạo Lộ + Đạo Lữ: layout mobile, nút Trung tâm / Khép lại, copy tu tiên.
+
+
+## v3.6.8
+
+### GUI
+- Xuất hành: layout mobile (chọn khu · Khám phá / Săn · Trung tâm / Làm mới / Khép lại).
+
+
+## v3.6.7
+
+### GUI
+- Sứ mệnh (cốt truyện + ngày/tuần): layout mobile, nút Trung tâm / Khép lại, emoji custom.
+
+
+## v3.6.6
+
+### GUI
+- Bí Cảnh: layout mobile (chọn bí cảnh → Vào / Nhận thưởng / Rời; hàng điều hướng Trung tâm · Làm mới · Khép lại).
+- Nút gọn, emoji custom, footer chu kỳ 3 giờ.
+
+
+## 3.6.5 — Hồ sơ riêng tư
+- Thêm slash command `/info`: xem hồ sơ bản thân bằng phản hồi ephemeral; chọn người chơi để xem hồ sơ công khai.
+- Hồ sơ công khai chỉ hiển thị cảnh giới, phe, tông môn, chiến lực và trang bị đang mặc; không hiển thị linh thạch, túi đồ hoặc chỉ số thiên phú riêng.
+- Lệnh prefix `.info` gửi hồ sơ bản thân qua DM; `.info @player` hiển thị hồ sơ công khai đã lọc.
+- Không thay đổi gameplay, công thức chiến đấu hoặc schema database.
+
 
 - Chuẩn hóa màu sắc, author/footer, bảng thông tin và kiểu nút trong toàn bộ view qua `ui/theme/`.
 - Menu chính chuyển sang dạng hub: dropdown hệ thống, nút tắt cho Nhân vật/Khám Phá/Túi/Shop/Bí Cảnh/Nhiệm vụ/Tông Môn/Đạo lữ, kèm Làm mới và BXH.

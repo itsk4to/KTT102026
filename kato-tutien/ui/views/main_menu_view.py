@@ -43,49 +43,81 @@ class MainMenuView(ThemedView):
         return str(interaction.user.id) == self.user_id
 
     def _build(self) -> None:
+        """Mobile-first hub layout.
+
+        Row 0 — directory select (all systems)
+        Row 1 — primary actions (one-tap, high frequency)
+        Row 2 — journey systems
+        Row 3 — utility / close (always bottom)
+        """
         self.clear_items()
-        # A single master directory keeps the panel readable on mobile. Common actions
-        # remain one-tap shortcuts; secondary systems live in the select menu.
         self.add_item(MainMenuSelect(self))
 
-        quick = (
-            ("Nhân vật", "player", "cultivator"),
-            ("Khám phá", "explore", "explore"),
-            ("Túi Càn Khôn", "inventory", "item"),
-            ("Tiên Phường", "shop", "shop"),
+        # Row 1: 4 primary actions — large tap targets on phone
+        primary = (
+            ("Đạo hữu", "player", "cultivator", "primary"),
+            ("Xuất hành", "explore", "explore", "primary"),
+            ("Túi Càn Khôn", "inventory", "item", "primary"),
+            ("Tiên Phường", "shop", "shop", "primary"),
         )
-        for label, action, icon_key in quick:
+        for label, action, icon_key, role in primary:
             self.add_item(themed_button(
-                label, role="primary", emoji=EMOJI.get(icon_key, "•"), row=1,
+                label,
+                role=role,
+                emoji=EMOJI.get(icon_key, "•"),
+                row=1,
                 callback=self._button_callback(action),
             ))
 
+        # Row 2: journey — secondary systems
         journey = (
-            ("Bí cảnh", "secret_realm", "🌌"),
-            ("Nhiệm vụ", "quest", EMOJI["technique"]),
-            ("Tông môn", "sect", EMOJI["sect"]),
-            ("Đạo lữ", "dao_lu", "💞"),
+            ("Bí Cảnh", "secret_realm", EMOJI.get("secret_realm", "🌌")),
+            ("Sứ mệnh", "quest", EMOJI["technique"]),
+            ("Tông Môn", "sect", EMOJI["sect"]),
+            ("Đạo Lữ", "dao_lu", EMOJI.get("dao", "💞")),
         )
         for label, action, icon in journey:
             self.add_item(themed_button(
-                label, role="navigation", emoji=icon, row=2,
+                label,
+                role="navigation",
+                emoji=icon,
+                row=2,
                 callback=self._button_callback(action),
             ))
 
+        # Row 3: utility bar — always last row for thumb reach
         self.add_item(themed_button(
-            "Bảng xếp hạng", role="navigation", emoji="🏆", row=3,
+            "Thiên Bảng",
+            role="navigation",
+            emoji=EMOJI.get("victory", "🏆"),
+            row=3,
             callback=self._button_callback("leaderboard"),
         ))
         self.add_item(themed_button(
-            "Làm mới", role="navigation", row=3, callback=self._refresh_callback,
+            "Thiên Hạ",
+            role="navigation",
+            emoji=EMOJI.get("explore", "🌍"),
+            row=3,
+            callback=self._button_callback("world"),
         ))
         self.add_item(themed_button(
-            "Đóng menu", role="danger", row=3, callback=self._close_callback,
+            "Làm mới",
+            role="navigation",
+            emoji=EMOJI.get("refresh", "🔄"),
+            row=3,
+            callback=self._refresh_callback,
+        ))
+        self.add_item(themed_button(
+            "Khép lại",
+            role="danger",
+            emoji=EMOJI.get("close", "✖️"),
+            row=3,
+            callback=self._close_callback,
         ))
 
     async def _refresh_callback(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         view = MainMenuView(self.engine, self.user_id)
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=view)
@@ -93,14 +125,14 @@ class MainMenuView(ThemedView):
     def _button_callback(self, action: str):
         async def callback(interaction: discord.Interaction):
             if not self._guard(interaction):
-                await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+                await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
                 return
             await render_section(interaction, self.engine, self.user_id, action)
         return callback
 
     async def _close_callback(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.stop()
         await interaction.response.edit_message(view=None)
@@ -110,25 +142,25 @@ class MainMenuSelect(discord.ui.Select):
     def __init__(self, owner: MainMenuView):
         self.owner = owner
         options = [
-            discord.SelectOption(label="Nhân vật", value="player", emoji=EMOJI["cultivator"], description="Xem thuộc tính và thao tác nhanh."),
-            discord.SelectOption(label="Túi Càn Khôn", value="inventory", emoji=EMOJI["item"], description="Xem và sử dụng vật phẩm."),
-            discord.SelectOption(label="Tiên Phường", value="shop", emoji=EMOJI["shop"], description="Xem và mua vật phẩm."),
-            discord.SelectOption(label="Chợ", value="market", emoji="🪙", description="Mua bán vật phẩm giữa người chơi."),
-            discord.SelectOption(label="Khám phá", value="explore", emoji=EMOJI["explore"], description="Chọn khu và bắt đầu hành trình."),
-            discord.SelectOption(label="Bí cảnh", value="secret_realm", emoji="🌌", description="Tu luyện nhàn rỗi, nhận thưởng sau 3 giờ."),
-            discord.SelectOption(label="Nhiệm vụ", value="quest", emoji=EMOJI["technique"], description="Theo dõi và nhận nhiệm vụ."),
-            discord.SelectOption(label="NPC", value="npc", emoji="👤", description="Gặp gỡ người trong giang hồ."),
-            discord.SelectOption(label="Tông môn", value="sect", emoji=EMOJI["sect"], description="Quản lý và xem tông môn."),
-            discord.SelectOption(label="Đạo", value="dao", emoji=EMOJI["dao"], description="Chọn hoặc xem Đạo."),
-            discord.SelectOption(label="Đạo lữ", value="dao_lu", emoji="💞", description="Cầu duyên và song tu."),
-            discord.SelectOption(label="Thế giới", value="world", emoji="🌍", description="Xem biến động thiên hạ."),
-            discord.SelectOption(label="BXH", value="leaderboard", emoji="🏆", description="Xem bảng xếp hạng."),
+            discord.SelectOption(label="Đạo hữu", value="player", emoji=EMOJI["cultivator"], description="Xem căn cơ, tu vi và thao tác tu luyện."),
+            discord.SelectOption(label="Túi Càn Khôn", value="inventory", emoji=EMOJI["item"], description="Kiểm tra và dùng vật phẩm trong túi."),
+            discord.SelectOption(label="Tiên Phường", value="shop", emoji=EMOJI["shop"], description="Mua đan dược, pháp bảo tại Tiên Phường."),
+            discord.SelectOption(label="Phường Thị", value="market", emoji=EMOJI["spirit_stone"], description="Giao dịch linh vật với các đạo hữu khác."),
+            discord.SelectOption(label="Xuất hành", value="explore", emoji=EMOJI["explore"], description="Xuất hành khám phá danh sơn kỳ cảnh."),
+            discord.SelectOption(label="Bí Cảnh", value="secret_realm", emoji=EMOJI.get("secret_realm", "🌌"), description="Luyện khí trong Bí Cảnh, nhận thưởng sau canh giờ."),
+            discord.SelectOption(label="Sứ mệnh", value="quest", emoji=EMOJI["technique"], description="Nhận và hoàn thành sứ mệnh."),
+            discord.SelectOption(label="Kỳ ngộ", value="npc", emoji=EMOJI["cultivator"], description="Gặp gỡ kỳ nhân trong thiên hạ."),
+            discord.SelectOption(label="Tông Môn", value="sect", emoji=EMOJI["sect"], description="Xem tông môn và quản lý đồng môn."),
+            discord.SelectOption(label="Đạo Lộ", value="dao", emoji=EMOJI["dao"], description="Lựa chọn hoặc xem Đạo Lộ đang đi."),
+            discord.SelectOption(label="Đạo Lữ", value="dao_lu", emoji=EMOJI.get("dao", "💞"), description="Cầu duyên Đạo Lữ, cùng nhau song tu."),
+            discord.SelectOption(label="Thiên Hạ", value="world", emoji=EMOJI.get("explore", "🌍"), description="Xem thiên cơ và biến động thế giới."),
+            discord.SelectOption(label="Thiên Bảng", value="leaderboard", emoji=EMOJI.get("victory", "🏆"), description="Chiêm ngưỡng Thiên Bảng cao thủ."),
         ]
-        super().__init__(placeholder="Chọn hệ thống…", min_values=1, max_values=1, options=options[:25], row=0)
+        super().__init__(placeholder="Chọn đạo lộ…", min_values=1, max_values=1, options=options[:25], row=0)
 
     async def callback(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await render_section(interaction, self.owner.engine, self.owner.user_id, self.values[0])
 
@@ -139,13 +171,13 @@ class BackToMainView(ThemedView):
         self.engine = engine
         self.user_id = user_id
         self.child_view = child_view
-        button = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠")
+        button = discord.ui.Button(label="Trung tâm", style=discord.ButtonStyle.secondary, emoji=EMOJI.get("home", "🏠"))
         button.callback = self._callback
         self.add_item(button)
 
     async def _callback(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await interaction.response.edit_message(
             embed=build_main_embed(self.engine, self.user_id),
@@ -163,8 +195,8 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
     if not p:
         embed = base_embed(
             "✦ CỔNG KHAI ĐẠO",
-            "Chào mừng đến với **Kato Tu Tiên**.\n\n"
-            "*Hãy chọn con đường đầu tiên của ngươi; hành trình tu hành sẽ bắt đầu ngay sau đó.*",
+            "Chào mừng đạo hữu đến với **Kato Tu Tiên**.\n\n"
+            "*Hãy chọn con đường đầu tiên; đạo lộ tu hành sẽ mở ra ngay sau đó.*",
         )
         embed.add_field(
             name="🌱 BƯỚC 01 · CHỌN ĐẠO",
@@ -173,7 +205,7 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
         )
         embed.add_field(
             name="🧭 BƯỚC 02 · MỞ TRUNG TÂM",
-            value="Sau khi tạo nhân vật, dùng `.menu` hoặc `.tutien` để mở toàn bộ hệ thống bằng giao diện.",
+            value="Sau khi lập căn cơ, dùng `.menu` hoặc `.tutien` để mở toàn bộ đạo lộ bằng giao diện.",
             inline=False,
         )
         return embed
@@ -185,21 +217,26 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
         else f"{EMOJI['faction_ma']} Ma Đạo"
     )
     description = (
-        f"**{p.display_name}**  ·  {path_label}\n"
-        "*Thiên địa mở lối. Chọn một hành động để tiếp tục đạo lộ.*\n\n"
-        "`TU LUYỆN` .tu   ·   `ĐỘT PHÁ` .dp   ·   `THIÊN KIẾP` .tk   ·   `ĐẠO LỮ` .dl"
+        f"**{p.display_name}** · {path_label}\n"
+        "*Chạm nút bên dưới hoặc mở menu để tiếp tục đạo lộ.*\n\n"
+        f"{EMOJI['cultivate']} `.tu`  ·  {EMOJI['breakthrough']} `.dp`  ·  "
+        f"{EMOJI['heavenly_tribulation']} `.tk`  ·  {EMOJI.get('dao', '💞')} `.dl`"
     )
-    embed = base_embed("✦ ĐẠO LỘ · TRUNG TÂM HÀNH TRÌNH", description)
-    embed.set_author(name=f"KATO TU TIÊN  ·  ĐẠO LỘ CỦA {p.display_name.upper()[:180]}")
-    embed.add_field(name="🌌 CẢNH GIỚI", value=f"**{realm}**", inline=True)
-    embed.add_field(name="🪙 LINH THẠCH", value=f"**{fmt_amount(p.spirit_stones)}**", inline=True)
+    embed = base_embed("✦ TRUNG TÂM ĐẠO LỘ", description)
+    embed.set_author(name=f"HỒ SƠ ĐẠO HỮU · {p.display_name.upper()[:180]}")
+    embed.add_field(name=f"{EMOJI['cultivator']} CẢNH GIỚI", value=f"**{realm}**", inline=True)
+    embed.add_field(
+        name=f"{EMOJI['spirit_stone']} LINH THẠCH",
+        value=f"**{fmt_amount(p.spirit_stones)}**",
+        inline=True,
+    )
     combat_stats = engine.combat.battle_stats(p)
     effective_max_hp = max(1, int(combat_stats.get("max_hp", p.max_hp)))
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
     hp_ratio = max(0.0, min(1.0, displayed_hp / effective_max_hp))
     hp_bar = progress_bar(displayed_hp, effective_max_hp, size=8)
     embed.add_field(
-        name="❤️ THỂ TRẠNG",
+        name=f"{EMOJI['hp']} THỂ TRẠNG",
         value=f"{hp_bar} **{hp_ratio:.0%}**\n**{displayed_hp:,} / {effective_max_hp:,} HP**",
         inline=True,
     )
@@ -213,10 +250,10 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
             f"**{fmt_amount(current)} / {fmt_amount(required)}** · {progress_pct:.0%}"
         )
         if preview.get("recovery_remaining", 0) > 0:
-            progress_text += f"\n🩹 Đang hồi phục · còn **{preview['recovery_remaining']}s**"
+            progress_text += f"\n{EMOJI.get('recover', '🩹')} Đang hồi phục · còn **{preview['recovery_remaining']}s**"
         elif preview.get("ready"):
-            progress_text += "\n✨ Đã đủ tu vi để xem điều kiện đột phá."
-        embed.add_field(name="🌱 TIẾN ĐỘ TU VI", value=progress_text, inline=False)
+            progress_text += f"\n{EMOJI.get('breakthrough', '✨')} Đã đủ tu vi để xem điều kiện đột phá."
+        embed.add_field(name=f"{EMOJI['cultivate']} TIẾN ĐỘ TU VI", value=progress_text, inline=False)
     except Exception:
         # Dashboard navigation must remain usable even if preview data is unavailable.
         embed.add_field(name="🌱 TU VI HIỆN TẠI", value=f"**{fmt_amount(p.cultivation)}**", inline=False)
@@ -326,7 +363,7 @@ async def render_section(interaction: discord.Interaction, engine, user_id: str,
                 return "\n".join(
                     f"**{i}.** {p.display_name} — {realm_text(p.realm_index, p.realm_layer, p.path)}"
                     for i, p in enumerate(rows, 1)
-                ) or "Chưa có người chơi."
+                ) or "Chưa có đạo hữu trên bảng."
             embed = base_embed("🏆 Bảng Xếp Hạng Hai Phe", "Dùng `.bxh tien` hoặc `.bxh ma` để xem riêng từng phe.")
             embed.add_field(name="🧘 Tu Tiên", value=ranking("tien"), inline=True)
             embed.add_field(name="👹 Tu Ma", value=ranking("ma"), inline=True)

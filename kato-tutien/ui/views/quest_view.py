@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+from ui.emoji import EMOJI
 from ui.theme.views import ThemedView
 from game.services.errors import GameError
 from ui.embeds import base_embed, error_embed
@@ -12,14 +13,14 @@ class QuestOfferView(ThemedView):
         self.engine = engine
         self.user_id = user_id
         for key in quest_keys[:5]:
-            button = discord.ui.Button(label="📜 Nhận nhiệm vụ", style=discord.ButtonStyle.success)
+            button = discord.ui.Button(label="Nhận sứ mệnh", style=discord.ButtonStyle.success)
             button.callback = self._callback(key)
             self.add_item(button)
 
     def _callback(self, quest_key: str):
         async def callback(interaction: discord.Interaction):
             if str(interaction.user.id) != self.user_id:
-                await interaction.response.send_message("Đây không phải lời mời dành cho ngươi.", ephemeral=True)
+                await interaction.response.send_message("Đây không phải lời mời dành cho đạo hữu.", ephemeral=True)
                 return
             try:
                 r = self.engine.quests.start(self.user_id, quest_key)
@@ -47,17 +48,17 @@ class QuestChoiceView(ThemedView):
     def _callback(self, choice_id: str):
         async def callback(interaction: discord.Interaction):
             if str(interaction.user.id) != self.user_id:
-                await interaction.response.send_message("Đây không phải lựa chọn dành cho ngươi.", ephemeral=True)
+                await interaction.response.send_message("Đây không phải lựa chọn dành cho đạo hữu.", ephemeral=True)
                 return
             try:
                 r = self.engine.quests.choose(self.user_id, self.quest_key, choice_id)
-                text = r["choice"].get("effect", {}).get("text", "") or "Quyết định của ngươi đã được ghi vào nhân sinh."
+                text = r["choice"].get("effect", {}).get("text", "") or "Quyết định của đạo hữu đã được ghi vào nhân sinh."
                 if r["changes"]:
                     text += "\n\n" + "\n".join(f"• {x}" for x in r["changes"])
                 if r["status"]["done"]:
                     text += "\n\n✨ **Nhiệm vụ đã hoàn thành.**"
                 else:
-                    text += f"\n\n📜 **Mục tiêu tiếp theo:** {r['status']['step']['label']}"
+                    text += f"\n\n**Mục tiêu tiếp theo:** {r['status']['step']['label']}"
                 await interaction.response.edit_message(embed=base_embed(f"📜 {r['quest']['name']}", text), view=None)
             except GameError as e:
                 await interaction.response.send_message(embed=error_embed(str(e)), ephemeral=True)
@@ -75,6 +76,12 @@ class QuestMenuView(ThemedView):
         return str(interaction.user.id) == self.user_id
 
     def _build(self):
+        """Mobile-first Sứ mệnh (cốt truyện).
+
+        Row 0 — chọn sứ mệnh
+        Row 1 — chi tiết · ngày/tuần
+        Row 3 — điều hướng
+        """
         self.clear_items()
         active = self.engine.quests.active(self.user_id)
         available = self.engine.quests.list_available(self.user_id)
@@ -93,33 +100,72 @@ class QuestMenuView(ThemedView):
                 options.append(discord.SelectOption(
                     label=quest["name"][:100],
                     value=key,
-                    emoji="📜",
+                    emoji=EMOJI.get("technique", "📜"),
                     description="Đang làm" if active_flag else "Có thể nhận",
                     default=key == self.selected_key,
                 ))
-            select = discord.ui.Select(placeholder="Chọn nhiệm vụ…", options=options, row=0)
+            select = discord.ui.Select(
+                placeholder="Chọn sứ mệnh…",
+                options=options,
+                row=0,
+            )
             select.callback = self._select_callback
             self.add_item(select)
-        detail = discord.ui.Button(label="Xem chi tiết", style=discord.ButtonStyle.primary, row=1, disabled=not self.selected_key)
+
+        detail = discord.ui.Button(
+            label="Xem chi tiết",
+            style=discord.ButtonStyle.primary,
+            emoji=EMOJI.get("technique", "📜"),
+            row=1,
+            disabled=not self.selected_key,
+        )
         detail.callback = self._detail
         self.add_item(detail)
-        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=1)
-        back.callback = self._back
-        self.add_item(back)
-        missions = discord.ui.Button(label="Nhiệm vụ ngày / tuần", style=discord.ButtonStyle.success, emoji="🎁", row=2)
+
+        missions = discord.ui.Button(
+            label="Ngày / Tuần",
+            style=discord.ButtonStyle.success,
+            emoji=EMOJI.get("reward", "🎁"),
+            row=1,
+        )
         missions.callback = self._missions
         self.add_item(missions)
+
+        back = discord.ui.Button(
+            label="Trung tâm",
+            style=discord.ButtonStyle.secondary,
+            emoji=EMOJI.get("home", "🏠"),
+            row=3,
+        )
+        back.callback = self._back
+        self.add_item(back)
+
+        close = discord.ui.Button(
+            label="Khép lại",
+            style=discord.ButtonStyle.danger,
+            emoji=EMOJI.get("close", "✖️"),
+            row=3,
+        )
+        close.callback = self._close
+        self.add_item(close)
+
+    async def _close(self, interaction: discord.Interaction):
+        if not self._guard(interaction):
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.edit_message(view=None)
 
     def build_embed(self) -> discord.Embed:
         active = self.engine.quests.active(self.user_id)
         available = self.engine.quests.list_available(self.user_id)
         lines = []
         if active:
-            lines.append("**ĐANG LÀM**")
-            lines.extend(f"📜 **{x['quest']['name']}** · {x['step']['label']} · {x['row']['progress']}/{x['step'].get('amount', 1)}" for x in active[:8])
+            lines.append("**ĐANG THỰC HIỆN**")
+            lines.extend(f"**{x['quest']['name']}** · {x['step']['label']} · {x['row']['progress']}/{x['step'].get('amount', 1)}" for x in active[:8])
         if available:
             lines.append("\n**CÓ THỂ NHẬN**")
-            lines.extend(f"📜 **{x['name']}** · {x['npc']}" for x in available[:8])
+            lines.extend(f"**{x['name']}** · {x['npc']}" for x in available[:8])
         if not lines:
             lines.append("Chưa có nhiệm vụ cốt truyện. Hãy khám phá và gặp NPC.")
         lines.append("\n🎁 **Nhiệm vụ thưởng:** nhiệm vụ khởi hành, ngày và tuần có thể theo dõi/nhận thưởng riêng. Bấm nút bên dưới hoặc dùng `.nhiemvu thuong`.")
@@ -127,7 +173,7 @@ class QuestMenuView(ThemedView):
 
     async def _select_callback(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.selected_key = interaction.data["values"][0]
         self._build()
@@ -135,7 +181,7 @@ class QuestMenuView(ThemedView):
 
     async def _detail(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.quests.status(self.user_id, self.selected_key)
@@ -144,7 +190,7 @@ class QuestMenuView(ThemedView):
             available_keys = {item.get("key") for item in available}
             if self.selected_key in available_keys:
                 await interaction.response.edit_message(
-                    embed=base_embed("📜 Nhận Nhiệm Vụ", "Nhiệm vụ này đang chờ ngươi nhận. Bấm nút bên dưới để bắt đầu."),
+                    embed=base_embed("📜 Nhận Nhiệm Vụ", "Nhiệm vụ này đang chờ đạo hữu nhận. Bấm nút bên dưới để bắt đầu."),
                     view=QuestOfferView(self.engine, self.user_id, [self.selected_key]),
                 )
                 return
@@ -162,7 +208,7 @@ class QuestMenuView(ThemedView):
 
     async def _missions(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.mission_view import PlayerMissionView
         view = PlayerMissionView(self.engine, self.user_id)
@@ -170,7 +216,7 @@ class QuestMenuView(ThemedView):
 
     async def _back(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

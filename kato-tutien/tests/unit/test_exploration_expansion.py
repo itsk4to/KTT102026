@@ -23,10 +23,15 @@ class ExplorationExpansionTests(unittest.TestCase):
         self.engine._players.save(self.player)
 
     def test_bestiary_grew_and_has_unique_names(self):
-        self.assertGreaterEqual(len(MONSTERS), 25)
-        self.assertGreaterEqual(len(BOSS_MONSTERS), 12)
+        self.assertGreaterEqual(len(MONSTERS), 48)
+        self.assertGreaterEqual(len(BOSS_MONSTERS), 20)
         self.assertEqual(len({m["name"] for m in MONSTERS}), len(MONSTERS))
         self.assertEqual(len({m["name"] for m in BOSS_MONSTERS}), len(BOSS_MONSTERS))
+
+    def test_bestiary_covers_the_final_realms(self):
+        for realm_index in (12, 13):
+            self.assertTrue(any(m["min_realm"] == realm_index and "hukhong" in m.get("zones", []) for m in MONSTERS))
+            self.assertTrue(any(b["min_realm"] == realm_index and "hukhong" in b.get("zones", []) for b in BOSS_MONSTERS))
 
     def test_new_endgame_regions_exist_and_are_gated(self):
         self.assertEqual(EXPLORE_ZONES["vancotlang"]["min_realm"], 8)
@@ -75,6 +80,21 @@ class ExplorationExpansionTests(unittest.TestCase):
         self.assertIn("Tinh Anh", elite.enemy_name)
         self.assertGreater(elite.enemy_max_hp, normal.enemy_max_hp)
 
+
+    def test_normal_monster_scaling_increases_by_zone_and_realm(self):
+        enc = self.engine.combat.start_encounter("explorer", zone_key="hukhong")
+        enemy_name = enc.enemy_name
+        monster = next(m for m in MONSTERS if m["name"] == enemy_name)
+        scale = (1.0 + self.player.realm_index * 0.085) * 1.24
+        self.assertEqual(enc.enemy_max_hp, int(monster["hp"] * scale * 1.12))
+        self.assertEqual(enc.enemy_attack, int(monster["attack"] * scale * 1.08))
+
+    def test_boss_has_extra_durability_and_attack(self):
+        enc = self.engine.combat.start_encounter("explorer", boss=True, zone_key="hukhong")
+        monster = next(b for b in BOSS_MONSTERS if b["name"] == enc.enemy_name)
+        scale = (1.0 + self.player.realm_index * 0.085) * 1.24
+        self.assertEqual(enc.enemy_max_hp, int(monster["hp"] * scale * 1.12 * 1.14))
+        self.assertEqual(enc.enemy_attack, int(monster["attack"] * scale * 1.08 * 1.10))
 
 if __name__ == "__main__":
     unittest.main()

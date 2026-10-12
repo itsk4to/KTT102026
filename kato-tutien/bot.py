@@ -18,7 +18,7 @@ from discord import app_commands
 import config
 from game.engine import GameEngine, GameError
 from ui.commands import CommandContext, COMMAND_LOOKUP, COMMAND_SPECS
-from ui.embeds import base_embed, error_embed
+from ui.embeds import base_embed, error_embed, player_embed, public_player_embed
 from ui.views.admin_view import AdminLoginView, AdminView
 from game.security.permissions import is_owner
 from game.version import VERSION
@@ -33,6 +33,27 @@ tree = app_commands.CommandTree(client)
 
 engine = GameEngine(config.DB_PATH)
 ctx = CommandContext(engine=engine, command_specs=COMMAND_SPECS)
+
+
+@tree.command(name="info", description="Xem hồ sơ riêng hoặc hồ sơ công khai của người chơi")
+@app_commands.describe(player="Bỏ trống để xem hồ sơ riêng của bạn; chọn người chơi để xem hồ sơ công khai")
+async def info_slash(interaction: discord.Interaction, player: discord.Member | None = None) -> None:
+    """Private own profile; public filtered profile when a player is selected."""
+    target = player or interaction.user
+    user_id = str(target.id)
+    try:
+        info = engine.players.info_text(user_id)
+        stats = engine.combat.battle_stats(info["player"])
+        if player is None:
+            await interaction.response.send_message(
+                embed=player_embed(info, combat_stats=stats), ephemeral=True
+            )
+        else:
+            await interaction.response.send_message(
+                embed=public_player_embed(info, combat_stats=stats), ephemeral=False
+            )
+    except GameError as exc:
+        await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
 
 @tree.command(name="admin", description="Mở bảng quản trị Kato Tu Tiên")

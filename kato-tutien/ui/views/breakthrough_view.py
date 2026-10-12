@@ -29,7 +29,7 @@ class BreakthroughItemSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         if self.values[0] == "__empty__":
             await interaction.response.send_message("Ngươi chưa có đạo cụ hỗ trợ đột phá.", ephemeral=True)
@@ -66,7 +66,7 @@ class ThunderProtectionSelect(discord.ui.Select):
                     emoji=EMOJI.get("pill", "🧪") if item["item"].get("category") == "Đan dược" else "🧿",
                     default=selected_quantities.get(item["id"]) == str(quantity),
                 ))
-        options = options[:25] or [discord.SelectOption(label="Chưa có vật phẩm hộ kiếp", value="__empty__", emoji="🛡️")]
+        options = options[:25] or [discord.SelectOption(label="Chưa có vật phẩm hộ kiếp", value="__empty__", emoji=EMOJI.get("def", "🛡️"))]
         max_values = max(1, min(2, len(items)))
         super().__init__(
             placeholder="Chọn đan/bùa giảm sát thương (có thể chọn cả hai)…",
@@ -79,7 +79,7 @@ class ThunderProtectionSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         selections = [x for x in self.values if x != "__empty__"]
         selected_ids = [x.rsplit("::", 1)[0] if "::" in x else x for x in selections]
@@ -142,14 +142,14 @@ class BreakthroughView(ThemedView):
                         protection.append(f"• **{item['name']} ×{quantity}** · −{total:.0%}")
                 value = "\n".join(protection) or "Chưa chọn"
             else:
-                value = "Chưa chọn đan/bùa hộ kiếp; ngươi có thể tiếp tục nhưng rủi ro sẽ cao hơn."
+                value = "Chưa chọn đan/bùa hộ kiếp; đạo hữu có thể tiếp tục nhưng rủi ro sẽ cao hơn."
             embed.add_field(name="Vật phẩm hộ kiếp", value=value, inline=False)
-            embed.set_footer(text="Đan/bùa chỉ bị tiêu hao nếu đột phá thành công và Cửu Lôi Kiếp bắt đầu · KATO TU TIÊN")
+            embed.set_footer(text="Đan/bùa chỉ bị tiêu hao nếu đột phá thành công và Cửu Lôi Kiếp bắt đầu")
         return embed
 
     async def _accept(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             result = self.engine.breakthrough.breakthrough(
@@ -211,14 +211,14 @@ class BreakthroughView(ThemedView):
 
     async def _reject(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.stop()
         await interaction.response.edit_message(embed=success_embed("Đã từ chối đột phá", "Ngươi giữ nguyên cảnh giới và tiếp tục chuẩn bị."), view=None)
 
     async def _use_hint(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await interaction.response.send_message(
             "Đan tăng tỷ lệ chỉ bị tiêu hao khi xác nhận đột phá. Vật phẩm hộ kiếp chỉ bị tiêu hao khi đột phá thành công và Cửu Lôi Kiếp thực sự bắt đầu.",

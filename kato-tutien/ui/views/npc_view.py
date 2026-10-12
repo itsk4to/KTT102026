@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+from ui.emoji import EMOJI
 
 from ui.theme.views import ThemedView
 from game.services.errors import GameError
@@ -30,7 +31,7 @@ class NPCMenuView(ThemedView):
         talk = discord.ui.Button(label="Nói chuyện", style=discord.ButtonStyle.primary, row=1, disabled=not self.selected_key)
         talk.callback = self._talk
         self.add_item(talk)
-        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=1)
+        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji=EMOJI.get("home", "🏠"), row=1)
         back.callback = self._back
         self.add_item(back)
 
@@ -43,7 +44,7 @@ class NPCMenuView(ThemedView):
 
     async def _select(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.selected_key = interaction.data["values"][0]
         self._build()
@@ -51,7 +52,7 @@ class NPCMenuView(ThemedView):
 
     async def _talk(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.npc.talk(self.user_id, self.selected_key)
@@ -60,7 +61,7 @@ class NPCMenuView(ThemedView):
             if r.get("memory"):
                 desc += f"\n\nQuan hệ: **{r['memory'].get('affinity', 0):+d}** · Gặp **{r['memory'].get('encounters', 0)}** lần"
             if r["quests"]:
-                desc += "\n\n📜 Người này có chuyện muốn nhờ ngươi."
+                desc += "\n\n📜 Người này có chuyện muốn nhờ đạo hữu."
                 await interaction.response.edit_message(embed=base_embed(f"👤 {npc['name']}", desc), view=QuestOfferView(self.engine, self.user_id, r["quests"]))
             else:
                 desc += "\n\n*Hiện chưa có nhiệm vụ mới.*"
@@ -71,7 +72,7 @@ class NPCMenuView(ThemedView):
 
     async def _back(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

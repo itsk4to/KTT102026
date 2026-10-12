@@ -1,12 +1,12 @@
-Kato Tu Tiên v3.6.3 — Immersive Game UI Rework
+Kato Tu Tiên v3.6.4 — Immersive Game UI Rework
 
-# Kato Tu Tiên v3.6.3
+# Kato Tu Tiên v3.6.4
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
 > Ưu tiên số 1: code rõ ràng, module nhỏ, dễ đọc, dễ sửa và dễ mở rộng.
 
-## Giao diện MMORPG v3.6.3
+## Giao diện MMORPG v3.6.4
 
 - HUD nhân vật, thanh HP/tu vi, bảng chỉ số và điều hướng game được đồng bộ qua `ui/theme/`.
 - Menu chính gọn lại với dropdown hệ thống + nút tắt; màn Nhân vật có action menu.

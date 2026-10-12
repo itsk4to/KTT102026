@@ -9,9 +9,9 @@ class GameUIReworkTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_version_is_363_everywhere_current(self):
-        self.assertEqual(self.read("VERSION.txt").strip(), "3.6.3")
-        self.assertIn('version = "3.6.3"', self.read("pyproject.toml"))
+    def test_version_is_371_everywhere_current(self):
+        self.assertEqual(self.read("VERSION.txt").strip(), "3.7.1")
+        self.assertIn('version = "3.7.1"', self.read("pyproject.toml"))
 
     def test_theme_factory_has_shared_brand_and_semantic_colors(self):
         tokens = self.read("ui/theme/tokens.py")
@@ -25,11 +25,11 @@ class GameUIReworkTests(unittest.TestCase):
     def test_main_menu_is_compact_select_plus_quick_actions(self):
         source = self.read("ui/views/main_menu_view.py")
         self.assertIn("self.add_item(MainMenuSelect(self))", source)
-        self.assertIn('("Nhân vật", "player", "cultivator")', source)
-        self.assertIn('("Khám phá", "explore", "explore")', source)
+        self.assertIn('("Đạo hữu", "player", "cultivator", "primary")', source)
+        self.assertIn('("Xuất hành", "explore", "explore", "primary")', source)
         self.assertIn('"Làm mới"', source)
-        self.assertIn('"Đóng menu"', source)
-        self.assertIn('SelectOption(label="Chợ", value="market"', source)
+        self.assertIn('"Khép lại"', source)
+        self.assertIn('discord.SelectOption(label="Phường Thị", value="market"', source)
 
     def test_player_menu_has_action_select(self):
         source = self.read("ui/views/player_view.py")

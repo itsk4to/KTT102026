@@ -109,4 +109,10 @@ EMOJI = {
     "explore": _icon("explore", "🗺️"),
     "shop": _icon("shop", "🛍️"),
     "breakthrough": _icon("breakthrough", "✨"),
+    "heavenly_tribulation": _icon("heavenly_tribulation", "🌩️"),
+    "recover": _icon("recover", "💚"),
+    "level_up": _icon("level_up", "✨"),
+    "victory": _icon("victory", "🏆"),
+    "defeat": _icon("defeat", "💀"),
+    "reward": _icon("level_up", "🎁"),
 }

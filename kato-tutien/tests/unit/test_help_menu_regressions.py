@@ -27,7 +27,7 @@ class HelpMenuRegressionTests(unittest.TestCase):
 
     def test_market_is_available_in_select_menu(self):
         source = (ROOT / "ui/views/main_menu_view.py").read_text(encoding="utf-8")
-        self.assertIn('SelectOption(label="Chợ", value="market"', source)
+        self.assertIn('discord.SelectOption(label="Phường Thị", value="market"', source)
 
 
 if __name__ == "__main__":

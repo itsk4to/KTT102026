@@ -31,7 +31,7 @@ class WorldMenuView(ThemedView):
         refresh = discord.ui.Button(label="Làm mới", style=discord.ButtonStyle.secondary, emoji=EMOJI["refresh"], row=1)
         refresh.callback = self._refresh
         self.add_item(refresh)
-        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=1)
+        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji=EMOJI.get("home", "🏠"), row=1)
         back.callback = self._back
         self.add_item(back)
 
@@ -53,12 +53,12 @@ class WorldMenuView(ThemedView):
                        f"Khu vực: `{event['zone_key']}` · Còn **{mins} phút**"),
                 inline=True,
             )
-        embed.set_footer(text="THIÊN HẠ · Chọn một biến động để góp sức · KATO TU TIÊN")
+        embed.set_footer(text="Chọn một biến động để góp sức")
         return embed
 
     async def _select(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.selected_key = interaction.data["values"][0]
         self._build()
@@ -66,7 +66,7 @@ class WorldMenuView(ThemedView):
 
     async def _join(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.world.contribute(self.user_id, self.selected_key)
@@ -82,14 +82,14 @@ class WorldMenuView(ThemedView):
 
     async def _refresh(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self._build()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
     async def _back(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

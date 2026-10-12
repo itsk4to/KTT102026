@@ -28,7 +28,7 @@ class ItemCatalogCategorySelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         if not self.owner.guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.category = self.values[0]
         self.owner.selected_id = None
@@ -50,7 +50,7 @@ class ItemCatalogItemSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         if not self.owner.guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về bạn.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.selected_id = self.values[0]
         self.owner.rebuild()
@@ -96,10 +96,10 @@ class ItemIdBrowserView(ThemedView):
         self.clear_items()
         self.add_item(ItemCatalogCategorySelect(self))
         self.add_item(ItemCatalogItemSelect(self))
-        close = discord.ui.Button(label="Đóng", emoji="✖️", style=discord.ButtonStyle.secondary, row=2)
+        close = discord.ui.Button(label="Khép lại", emoji="✖️", style=discord.ButtonStyle.secondary, row=2)
         async def close_callback(interaction: discord.Interaction):
             if not self.guard(interaction):
-                await interaction.response.send_message("Giao diện này không thuộc về bạn.", ephemeral=True)
+                await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
                 return
             await interaction.response.edit_message(view=None)
         close.callback = close_callback

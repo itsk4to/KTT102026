@@ -26,7 +26,7 @@ class ShopQuantityModal(discord.ui.Modal, title="Mua vật phẩm"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             qty = int(str(self.quantity.value).strip())
@@ -50,11 +50,11 @@ class ShopCategorySelect(discord.ui.Select):
             )
             for c in owner.catalog.get("categories", [])
         ]
-        super().__init__(placeholder="Chọn danh mục vật phẩm…", options=options[:25], row=0)
+        super().__init__(placeholder="Chọn danh mục Tiên Phường…", options=options[:25], row=0)
 
     async def callback(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.category = self.values[0]
         self.owner.selected_id = None
@@ -77,11 +77,11 @@ class ShopItemSelect(discord.ui.Select):
         ]
         if not options:
             options = [discord.SelectOption(label="Danh mục trống", value="__empty__", emoji=EMOJI["no"])]
-        super().__init__(placeholder="Chọn vật phẩm…", options=options, disabled=not items, row=1)
+        super().__init__(placeholder="Chọn linh vật để mua…", options=options, disabled=not items, row=1)
 
     async def callback(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.selected_id = self.values[0]
         self.owner.rebuild()
@@ -183,16 +183,48 @@ class ShopView(ThemedView):
         self.add_item(ShopCategorySelect(self))
         if self.category:
             self.add_item(ShopItemSelect(self))
-            for qty, label in ((1, "Mua ×1"), (5, "Mua ×5"), (10, "Mua ×10")):
-                btn = discord.ui.Button(label=label, emoji=EMOJI["item"], style=discord.ButtonStyle.primary, row=2, disabled=self.selected_item is None)
+            for qty, label, emoji in (
+                (1, "Mua ×1", EMOJI["spirit_stone"]),
+                (5, "Mua ×5", EMOJI["spirit_stone"]),
+                (10, "Mua ×10", EMOJI["spirit_stone"]),
+            ):
+                btn = discord.ui.Button(
+                    label=label,
+                    emoji=emoji,
+                    style=discord.ButtonStyle.primary,
+                    row=2,
+                    disabled=self.selected_item is None,
+                )
                 btn.callback = self._make_buy(qty)
                 self.add_item(btn)
-            custom = discord.ui.Button(label="Số khác", emoji=EMOJI["quantity"], style=discord.ButtonStyle.secondary, row=2, disabled=self.selected_item is None)
+            custom = discord.ui.Button(
+                label="Số khác",
+                emoji=EMOJI["quantity"],
+                style=discord.ButtonStyle.secondary,
+                row=2,
+                disabled=self.selected_item is None,
+            )
             custom.callback = self._custom_quantity
             self.add_item(custom)
-        back = discord.ui.Button(label="Trung tâm", emoji=EMOJI["back"], style=discord.ButtonStyle.secondary, row=3)
+
+        # Row 3 — navigation
+        back = discord.ui.Button(
+            label="Trung tâm",
+            emoji=EMOJI.get("home", "🏠"),
+            style=discord.ButtonStyle.secondary,
+            row=3,
+        )
         back.callback = self._back
         self.add_item(back)
+
+        close = discord.ui.Button(
+            label="Khép lại",
+            emoji=EMOJI.get("close", "✖️"),
+            style=discord.ButtonStyle.danger,
+            row=3,
+        )
+        close.callback = self._close
+        self.add_item(close)
 
     def rebuild(self):
         self._build_controls()
@@ -200,14 +232,14 @@ class ShopView(ThemedView):
     def _make_buy(self, qty: int):
         async def callback(interaction: discord.Interaction):
             if not self._guard(interaction):
-                await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+                await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
                 return
             await self.purchase(interaction, qty)
         return callback
 
     async def _custom_quantity(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         await interaction.response.send_modal(ShopQuantityModal(self))
 
@@ -219,16 +251,24 @@ class ShopView(ThemedView):
             result = self.engine.economy.buy(str(interaction.user.id), self.selected_item["id"], qty)
             item = result["item"]
             self.last_purchase_notice = (
-                f"✅ Đã mua **{item['name']} ×{qty}** với giá **{fmt_amount(result['total'])}** linh thạch."
-                f"\nSố dư còn lại: **{fmt_amount(result['player'].spirit_stones)}** linh thạch."
+                f"{EMOJI.get('ok', '✅')} Đã mua **{item['name']} ×{qty}** · **{fmt_amount(result['total'])}** linh thạch."
+                f"\n{EMOJI['spirit_stone']} Còn lại: **{fmt_amount(result['player'].spirit_stones)}**"
             )
             await interaction.response.edit_message(embed=self.build_embed(), view=self)
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
-    async def _back(self, interaction: discord.Interaction):
+    async def _close(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.edit_message(view=None)
+
+    async def _back(self, interaction: discord.Interaction):
+
+        if not self._guard(interaction):
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

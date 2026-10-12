@@ -11,8 +11,8 @@ COLOR_SURFACE = 0x171B2B
 COLOR_CYAN = 0x3AB7BE
 COLOR_PURPLE = 0x8A66D9
 
-BRAND_NAME = "KATO TU TIÊN  •  ĐẠO LỘ MMORPG"
-BRAND_FOOTER = "✦ KATO TU TIÊN  •  ĐẠO LỘ MMORPG  ·  Giao diện tương tác"
+BRAND_NAME = "Tu Tiên"
+BRAND_FOOTER = "— Đạo lộ vô cùng —"
 DEFAULT_TIMEOUT = 300
 
 BUTTON_ROLES = {
@@ -27,7 +27,7 @@ BUTTON_ROLES = {
 # Keep exact-ish phrases first in each role to reduce accidental matches.
 BUTTON_LABELS = {
     "danger": (
-        "bo chay", "tu choi", "huy", "dong", "xoa", "roi tong", "roi bi canh",
+        "bo chay", "rut lui", "tu choi", "huy", "dong", "khep lai", "xoa", "roi tong", "roi bi canh",
         "vo hieu hoa", "tu bo", "xoa thanh vien", "huy loi moi", "giai tan",
         "khai tru", "giang chuc", "nhuong tong chu", "giam", "tu choi dot pha",
     ),
@@ -37,7 +37,7 @@ BUTTON_LABELS = {
         "xin gia nhap", "nhan nhiem vu", "nhan loi moi", "hoc cong phap",
     ),
     "primary": (
-        "tu luyen", "dot pha", "tan cong", "kham pha", "bat dau", "tao tong",
+        "tu luyen", "dot pha", "tan cong", "xuat hanh", "kham pha", "bat dau", "tao tong",
         "tao mat lenh", "thach dau", "noi chuyen", "dung vat pham", "xem chi tiet",
         "cau duyen", "song tu", "san yeu thu", "ho the", "gop suc", "nhap quy tac",
         "thi trien", "chon dao", "tiep tuc", "mo tui", "chuan bi",

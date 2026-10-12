@@ -7,6 +7,7 @@ from game.services.errors import GameError
 from game.rules.cultivation_rules import cultivation_requirement, realm_text
 from ui.embeds import base_embed, error_embed, progress_bar
 from ui.theme.views import ThemedView
+from ui.emoji import EMOJI
 
 
 def _duration(seconds: int) -> str:
@@ -52,7 +53,7 @@ class SecretRealmView(ThemedView):
                 embed.add_field(
                     name=f"{realm['emoji']} {realm['name']} · {state}",
                     value=(f"**Yêu cầu:** {realm['required_realm']} · **Phong cách:** {realm['style']}\n"
-                           f"💎 {realm['stones'][0]:,}–{realm['stones'][1]:,} linh thạch\n"
+                           f"{EMOJI['spirit_stone']} {realm['stones'][0]:,}–{realm['stones'][1]:,} linh thạch\n"
                            f"✨ {realm['cultivation'][0]:,}–{realm['cultivation'][1]:,} tu vi\n"
                            f"*{realm['description']}*"),
                     inline=True,
@@ -77,7 +78,7 @@ class SecretRealmView(ThemedView):
             embed = base_embed(f"{realm['emoji']} {realm['name'].upper()}", desc)
             embed.add_field(
                 name="🎁 Thưởng mỗi chu kỳ",
-                value=(f"💎 **{realm['stones'][0]:,}–{realm['stones'][1]:,}** linh thạch\n"
+                value=(f"{EMOJI['spirit_stone']} **{realm['stones'][0]:,}–{realm['stones'][1]:,}** linh thạch\n"
                        f"✨ **{realm['cultivation'][0]:,}–{realm['cultivation'][1]:,}** tu vi"),
                 inline=True,
             )
@@ -86,7 +87,7 @@ class SecretRealmView(ThemedView):
             room = max(0, requirement - player.cultivation)
             realm_label = realm_text(player.realm_index, player.realm_layer, player.path)
             embed.add_field(
-                name="📜 Hồ sơ tu sĩ",
+                name=f"{EMOJI.get('cultivator', '📜')} Hồ sơ đạo hữu",
                 value=(f"**Cảnh giới:** {realm_label}\n"
                        f"**Linh thạch:** {player.spirit_stones:,}\n"
                        f"**Tu vi:** {player.cultivation:,}/{requirement:,}"),
@@ -101,37 +102,82 @@ class SecretRealmView(ThemedView):
             embed.add_field(name="Số chu kỳ đã nhận", value=f"**{session.get('claims', 0)}**", inline=True)
         if self.last_notice:
             embed.add_field(name="📜 Ghi nhận gần nhất", value=self.last_notice[:1024], inline=False)
-        embed.set_footer(text="BÍ CẢNH TU LUYỆN · Trạng thái được lưu qua restart · KATO TU TIÊN")
+        embed.set_footer(text="Bí Cảnh · trạng thái lưu qua restart · chu kỳ 3 giờ")
         return embed
 
     def _rebuild(self) -> None:
+        """Mobile-first Bí Cảnh panel.
+
+        Row 0 — chọn bí cảnh
+        Row 1 — hành động chính (vào / nhận / rời)
+        Row 3 — điều hướng
+        """
         self.clear_items()
         self.add_item(SecretRealmSelect(self))
         active = bool(self.engine.secret_realm.status(self.user_id).get("session"))
 
-        start = discord.ui.Button(label="Bắt đầu / Chọn", style=discord.ButtonStyle.primary, emoji="🌌", row=1)
+        # Row 1 — primary actions
+        start = discord.ui.Button(
+            label="Vào Bí Cảnh",
+            style=discord.ButtonStyle.primary,
+            emoji=EMOJI.get("secret_realm", "🌌"),
+            row=1,
+            disabled=active,
+        )
         start.callback = self._select_realm
         self.add_item(start)
 
-        claim = discord.ui.Button(label="Nhận thưởng", style=discord.ButtonStyle.success, emoji="🎁", row=1, disabled=not active)
+        claim = discord.ui.Button(
+            label="Nhận thưởng",
+            style=discord.ButtonStyle.success,
+            emoji=EMOJI.get("reward", "🎁"),
+            row=1,
+            disabled=not active,
+        )
         claim.callback = self._claim
         self.add_item(claim)
 
-        leave = discord.ui.Button(label="Rời bí cảnh", style=discord.ButtonStyle.danger, emoji="🚪", row=1, disabled=not active)
+        leave = discord.ui.Button(
+            label="Rời Bí Cảnh",
+            style=discord.ButtonStyle.danger,
+            emoji=EMOJI.get("flee", "🚪"),
+            row=1,
+            disabled=not active,
+        )
         leave.callback = self._leave
         self.add_item(leave)
 
-        refresh = discord.ui.Button(label="Làm mới", style=discord.ButtonStyle.secondary, emoji="🔄", row=1)
+        # Row 3 — navigation
+        refresh = discord.ui.Button(
+            label="Làm mới",
+            style=discord.ButtonStyle.secondary,
+            emoji=EMOJI.get("refresh", "🔄"),
+            row=3,
+        )
         refresh.callback = self._refresh
         self.add_item(refresh)
 
-        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=2)
+        back = discord.ui.Button(
+            label="Trung tâm",
+            style=discord.ButtonStyle.secondary,
+            emoji=EMOJI.get("home", "🏠"),
+            row=3,
+        )
         back.callback = self._back
         self.add_item(back)
 
+        close = discord.ui.Button(
+            label="Khép lại",
+            style=discord.ButtonStyle.danger,
+            emoji=EMOJI.get("close", "✖️"),
+            row=3,
+        )
+        close.callback = self._close
+        self.add_item(close)
+
     async def _select_realm(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             result = self.engine.secret_realm.select(self.user_id, self.realm_key or "")
@@ -143,7 +189,7 @@ class SecretRealmView(ThemedView):
 
     async def _claim(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             result = self.engine.secret_realm.claim(self.user_id)
@@ -160,7 +206,7 @@ class SecretRealmView(ThemedView):
 
     async def _leave(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             result = self.engine.secret_realm.leave(self.user_id)
@@ -176,7 +222,7 @@ class SecretRealmView(ThemedView):
 
     async def _refresh(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.last_notice = None
         status = self.engine.secret_realm.status(self.user_id)
@@ -185,9 +231,16 @@ class SecretRealmView(ThemedView):
         self._rebuild()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
+    async def _close(self, interaction: discord.Interaction):
+        if not self._guard(interaction):
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.edit_message(view=None)
+
     async def _back(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(
@@ -209,11 +262,11 @@ class SecretRealmSelect(discord.ui.Select):
                 emoji="🔒" if locked else realm["emoji"],
                 default=realm["key"] == owner.realm_key,
             ))
-        super().__init__(placeholder="Chọn bí cảnh...", min_values=1, max_values=1, options=options[:25], row=0)
+        super().__init__(placeholder="Chọn Bí Cảnh để luyện khí…", min_values=1, max_values=1, options=options[:25], row=0)
 
     async def callback(self, interaction: discord.Interaction):
         if not self.owner._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         current = self.owner.engine.secret_realm.status(self.owner.user_id).get("session")
         if current and self.values[0] != current["realm_key"]:

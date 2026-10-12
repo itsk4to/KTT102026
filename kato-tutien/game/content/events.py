@@ -74,6 +74,24 @@ EXPLORATION_EVENTS.extend([
     {"key": "vo_tinh_ngo_dao", "weight": 4, "zones": ["yeuthusonmach", "dongphu", "haivuc", "mavuc", "vancotlang", "hukhong"], "cultivation": [120, 300], "insight": 2, "text": "Trong khoảnh khắc sinh tử, ngươi chợt hiểu một phần quy luật vận hành của thiên địa. Tu vi và ngộ tính cùng tăng đôi chút."},
 ])
 
+
+# More region-gated combat encounters. Their realm checks prevent high-tier threats
+# from leaking into early exploration while making late zones feel dangerous.
+EXPLORATION_EVENTS.extend([
+    {"key": "son_mach_huyet_sat", "weight": 4, "zones": ["yeuthusonmach"], "min_realm": 3, "combat": True, "elite": True,
+     "text": "Vết móng vuốt đỏ rực cắt ngang thân cây. Thiết Giáp Địa Long bị kinh động, khí tức hung bạo ép tới!"},
+    {"key": "dongphu_am_khoi_ho_phu", "weight": 3, "zones": ["dongphu"], "min_realm": 4, "combat": True, "elite": True,
+     "text": "Trận văn dưới nền đá sáng lên. Một Âm Khôi Thủ Vệ cầm binh khí cổ bước ra, không cho ngươi tiến sâu hơn."},
+    {"key": "hai_vuc_thuy_toc_trieu_tap", "weight": 3, "zones": ["haivuc"], "min_realm": 7, "combat": True, "elite": True,
+     "text": "Nước biển đột nhiên tối sầm. Một Thủy tộc tinh anh phá sóng lao tới, từng đợt linh áp dội vào hộ thể."},
+    {"key": "ma_vuc_huyet_nguc", "weight": 3, "zones": ["mavuc"], "min_realm": 9, "combat": True, "boss": True,
+     "text": "Huyết vụ tách làm đôi, để lộ khí tức của một Ma Hoàng. Con đường phía trước chỉ còn cách dùng thực lực mở lối."},
+    {"key": "van_cot_long_anh", "weight": 3, "zones": ["vancotlang"], "min_realm": 10, "combat": True, "elite": True,
+     "text": "Long cốt dưới nền lăng mộ rung chuyển. Một Long Tướng Vạn Cốt được âm khí đánh thức, sát ý phủ kín lối đi."},
+    {"key": "hu_khong_diet_gioi", "weight": 2, "zones": ["hukhong"], "min_realm": 12, "combat": True, "boss": True,
+     "text": "Một vết nứt xé toạc tinh không. Dị tượng cấp diệt giới giáng xuống — đây không còn là cuộc săn thông thường."},
+])
+
 CHOICE_EVENTS.extend([
     {
         "key": "thu_vien_tan_tich", "weight": 6, "title": "Thư Viện Tàn Tích", "zones": ["dongphu", "vancotlang", "hukhong"], "min_realm": 3,

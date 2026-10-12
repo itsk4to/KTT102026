@@ -31,11 +31,11 @@ class DaoPathSelect(discord.ui.Select):
             )
             for key, data in DAO_PATHS.items()
         ][:25]
-        super().__init__(placeholder="Chọn con đường Đại Đạo…", options=options, row=0)
+        super().__init__(placeholder="Chọn Đạo Lộ…", options=options, row=0)
 
     async def callback(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.owner.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.owner.selected_key = self.values[0]
         self.owner._build()
@@ -51,28 +51,54 @@ class DaoMenuView(ThemedView):
         self._build()
 
     def _build(self):
+        """Mobile-first Đạo Lộ panel.
+
+        Chưa chọn: Row 0 select · Row 1 xác nhận · Row 3 nav
+        Đã chọn: Row 3 nav only (HUD hiện tầng đạo)
+        """
         self.clear_items()
         info = self.engine.dao.info(self.user_id)
         if not info:
             self.add_item(DaoPathSelect(self))
-            choose = discord.ui.Button(label="Chọn Đạo", style=discord.ButtonStyle.primary, emoji=EMOJI["dao"], row=1, disabled=not self.selected_key)
+            choose = discord.ui.Button(
+                label="Xác nhận Đạo Lộ",
+                style=discord.ButtonStyle.primary,
+                emoji=EMOJI["dao"],
+                row=1,
+                disabled=not self.selected_key,
+            )
             choose.callback = self._choose_selected
             self.add_item(choose)
-        back = discord.ui.Button(label="Trang chính", style=discord.ButtonStyle.secondary, emoji="🏠", row=1)
+
+        back = discord.ui.Button(
+            label="Trung tâm",
+            style=discord.ButtonStyle.secondary,
+            emoji=EMOJI.get("home", "🏠"),
+            row=3,
+        )
         back.callback = self._back
         self.add_item(back)
+
+        close = discord.ui.Button(
+            label="Khép lại",
+            style=discord.ButtonStyle.danger,
+            emoji=EMOJI.get("close", "✖️"),
+            row=3,
+        )
+        close.callback = self._close
+        self.add_item(close)
 
     def build_embed(self) -> discord.Embed:
         info = self.engine.dao.info(self.user_id)
         if not info:
-            e = base_embed(f"{EMOJI['dao']} KHỞI MỞ ĐẠI ĐẠO", "Ngươi hãy chọn một con đường để định hình phong cách tu hành. Lựa chọn này gắn với hồ sơ nhân vật; hãy xem mô tả trước khi xác nhận.")
+            e = base_embed(f"{EMOJI['dao']} KHỞI MỞ ĐẠI ĐẠO", "Chọn một con đường để định hình phong cách tu hành. Lựa chọn gắn với hồ sơ đạo hữu — hãy xem mô tả rồi xác nhận.")
             for key, data in DAO_PATHS.items():
                 e.add_field(name=f"{data.get('emoji', '☯️')} {data['name']}", value=DAO_PATH_DESCRIPTIONS.get(key, data.get("description", "Một con đường lĩnh ngộ riêng biệt.")), inline=True)
             if self.selected_key in DAO_PATHS:
-                e.add_field(name="Đang chọn", value=f"**{DAO_PATHS[self.selected_key]['name']}**\nBấm **Chọn Đạo** để xác nhận.", inline=False)
-            e.set_footer(text="ĐẠI ĐẠO · Chọn trong danh sách rồi xác nhận")
+                e.add_field(name="Đang chọn", value=f"**{DAO_PATHS[self.selected_key]['name']}**\nBấm **Xác nhận Đạo Lộ** để khóa lựa chọn.", inline=False)
+            e.set_footer(text="Đạo Lộ · chọn trong menu rồi xác nhận")
             return e
-        e = base_embed(f"{EMOJI['dao']} {info['dao']['name']}", "*Hành trình lĩnh ngộ Đại Đạo của ngươi.*")
+        e = base_embed(f"{EMOJI['dao']} {info['dao']['name']}", "*Hành trình lĩnh ngộ Đại Đạo của đạo hữu.*")
         e.add_field(name="Tầng Đạo", value=f"**{info['stage_name']}**", inline=True)
         e.add_field(name="Ngộ tính", value=f"**{info['insight']} / {info['next_threshold']}**", inline=True)
         e.add_field(name="Tiến độ lĩnh ngộ", value=f"`{'▰' * min(12, int(info['insight'] * 12 / max(1, info['next_threshold'])))}{'▱' * (12 - min(12, int(info['insight'] * 12 / max(1, info['next_threshold']))))}`", inline=False)
@@ -91,7 +117,7 @@ class DaoMenuView(ThemedView):
 
     async def _choose(self, interaction: discord.Interaction, key: str):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             r = self.engine.dao.choose(self.user_id, key)
@@ -100,9 +126,16 @@ class DaoMenuView(ThemedView):
         except GameError as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
+    async def _close(self, interaction: discord.Interaction):
+        if str(interaction.user.id) != self.user_id:
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
+            return
+        self.stop()
+        await interaction.response.edit_message(view=None)
+
     async def _back(self, interaction: discord.Interaction):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.main_menu_view import MainMenuView, build_main_embed
         await interaction.response.edit_message(embed=build_main_embed(self.engine, self.user_id), view=MainMenuView(self.engine, self.user_id))

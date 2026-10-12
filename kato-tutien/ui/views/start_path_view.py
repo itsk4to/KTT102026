@@ -16,7 +16,7 @@ class PathChoiceView(ThemedView):
 
     async def _choose(self, interaction: discord.Interaction, path: str):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             p = self.engine.players.create(self.user_id, self.display_name, path)
@@ -35,7 +35,7 @@ class PathChoiceView(ThemedView):
     @discord.ui.button(label="Từ chối", style=discord.ButtonStyle.secondary, emoji=EMOJI["reject"], row=1)
     async def reject(self, interaction: discord.Interaction, _button: discord.ui.Button):
         if str(interaction.user.id) != self.user_id:
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.stop()
         await interaction.response.edit_message(embed=base_embed("Khai Đạo", "Ngươi tạm thời chưa bước lên con đường tu hành."), view=None)

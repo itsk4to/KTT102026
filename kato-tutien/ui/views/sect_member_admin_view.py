@@ -57,7 +57,7 @@ class SectMemberAdminView(ThemedView):
         dissolve = discord.ui.Button(label="Giải tán tông", emoji=EMOJI["no"], style=discord.ButtonStyle.danger, row=2)
         dissolve.callback = self._dissolve
         self.add_item(dissolve)
-        back = discord.ui.Button(label="Quay lại", emoji=EMOJI["back"], style=discord.ButtonStyle.secondary, row=3)
+        back = discord.ui.Button(label="Trở về", emoji=EMOJI["back"], style=discord.ButtonStyle.secondary, row=3)
         back.callback = self._back
         self.add_item(back)
 
@@ -72,7 +72,7 @@ class SectMemberAdminView(ThemedView):
 
     async def _select(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         self.selected_id = interaction.data["values"][0]
         self.rebuild()
@@ -91,7 +91,7 @@ class SectMemberAdminView(ThemedView):
 
     async def _change_role(self, interaction: discord.Interaction, *, promote: bool):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             member = self._target_member()
@@ -111,7 +111,7 @@ class SectMemberAdminView(ThemedView):
 
     async def _kick(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             member = self._target_member()
@@ -124,7 +124,7 @@ class SectMemberAdminView(ThemedView):
 
     async def _transfer(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             member = self._target_member()
@@ -139,7 +139,7 @@ class SectMemberAdminView(ThemedView):
 
     async def _dissolve(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         try:
             self.engine.sect.dissolve(self.user_id)
@@ -149,7 +149,7 @@ class SectMemberAdminView(ThemedView):
 
     async def _back(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Giao diện này không thuộc về ngươi.", ephemeral=True)
+            await interaction.response.send_message("Giao diện này không thuộc về đạo hữu.", ephemeral=True)
             return
         from ui.views.sect_view import SectMenuView
         view = SectMenuView(self.engine, self.user_id)

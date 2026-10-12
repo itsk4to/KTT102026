@@ -33,13 +33,13 @@ class CombatSkillSelect(discord.ui.Select):
             ) for s in skills[:25]
         ]
         if not options:
-            options = [discord.SelectOption(label="Chưa có kỹ năng", value="__empty__", emoji=EMOJI["no"])]
+            options = [discord.SelectOption(label="Chưa lĩnh ngộ công pháp nào", value="__empty__", emoji=EMOJI["no"])]
         super().__init__(placeholder="Chọn công pháp để thi triển…", options=options, row=0, disabled=not skills)
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "__empty__":
             await interaction.response.send_message(
-                "Ngươi chưa học công pháp nào dùng được trong chiến đấu. Hãy mua công pháp, sau đó dùng `.hoc <ID>`.",
+                "Đạo hữu chưa lĩnh ngộ công pháp nào dùng được trong chiến đấu. Hãy mua công pháp, sau đó dùng `.hoc <ID>`.",
                 ephemeral=True,
             )
             return
@@ -63,12 +63,12 @@ class CombatItemSelect(discord.ui.Select):
             ) for it in items[:25]
         ]
         if not options:
-            options = [discord.SelectOption(label="Không có vật phẩm hồi phục", value="__empty__", emoji=EMOJI["no"])]
-        super().__init__(placeholder="Chọn vật phẩm hồi phục…", options=options, row=1, disabled=not items)
+            options = [discord.SelectOption(label="Trong túi không còn vật phẩm hồi phục", value="__empty__", emoji=EMOJI["no"])]
+        super().__init__(placeholder="Chọn đan dược / vật phẩm hồi phục…", options=options, row=1, disabled=not items)
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "__empty__":
-            await interaction.response.send_message("Không có vật phẩm dùng được trong trận.", ephemeral=True)
+            await interaction.response.send_message("Trong túi không còn vật phẩm dùng được trong trận.", ephemeral=True)
             return
         await self.owner.perform(interaction, "item", self.values[0])
 
@@ -96,37 +96,66 @@ class CombatView(ThemedView):
         return build_combat_embed(self.engine, self.user_id, encounter)
 
     def rebuild(self):
+        """Mobile combat panel.
+
+        Row 0 — select công pháp (thi triển ngay khi chọn)
+        Row 1 — select đan dược / vật phẩm hồi phục
+        Row 2 — primary: Tấn công · Công pháp (gợi ý)
+        Row 3 — secondary: Dùng đan · Rút lui
+        """
         self.clear_items()
         self.add_item(CombatSkillSelect(self))
         self.add_item(CombatItemSelect(self))
 
-        attack = discord.ui.Button(label="Tấn công", emoji=EMOJI["attack"], style=discord.ButtonStyle.danger, row=2)
+        # Row 2: core actions — large tap targets
+        attack = discord.ui.Button(
+            label="Tấn công",
+            emoji=EMOJI["attack"],
+            style=discord.ButtonStyle.danger,
+            row=2,
+        )
         attack.callback = self._attack
         self.add_item(attack)
 
-        skill = discord.ui.Button(label="Kỹ năng", emoji=EMOJI["skill"], style=discord.ButtonStyle.primary, row=2)
+        skill = discord.ui.Button(
+            label="Công pháp",
+            emoji=EMOJI["skill"],
+            style=discord.ButtonStyle.primary,
+            row=2,
+        )
         skill.callback = self._skill_hint
         self.add_item(skill)
 
-        item = discord.ui.Button(label="Dùng vật phẩm", emoji=EMOJI["item"], style=discord.ButtonStyle.success, row=2)
+        # Row 3: support / escape
+        item = discord.ui.Button(
+            label="Dùng đan",
+            emoji=EMOJI.get("pill", EMOJI["item"]),
+            style=discord.ButtonStyle.success,
+            row=3,
+        )
         item.callback = self._item_hint
         self.add_item(item)
 
-        flee = discord.ui.Button(label="Bỏ chạy", emoji=EMOJI["flee"], style=discord.ButtonStyle.secondary, row=2)
+        flee = discord.ui.Button(
+            label="Rút lui",
+            emoji=EMOJI["flee"],
+            style=discord.ButtonStyle.secondary,
+            row=3,
+        )
         flee.callback = self._flee
         self.add_item(flee)
 
     async def _skill_hint(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Không phải trận của ngươi.", ephemeral=True)
+            await interaction.response.send_message("Đây không phải trận chiến của đạo hữu.", ephemeral=True)
             return
-        await interaction.response.send_message("Chọn công pháp ở menu đầu tiên; chọn xong sẽ thi triển ngay.", ephemeral=True)
+        await interaction.response.send_message("Mở menu **Chọn công pháp** ở hàng trên cùng, chọn xong sẽ thi triển ngay.", ephemeral=True)
 
     async def _item_hint(self, interaction: discord.Interaction):
         if not self._guard(interaction):
-            await interaction.response.send_message("Không phải trận của ngươi.", ephemeral=True)
+            await interaction.response.send_message("Đây không phải trận chiến của đạo hữu.", ephemeral=True)
             return
-        await interaction.response.send_message("Chọn vật phẩm hồi phục ở menu thứ hai; chọn xong sẽ dùng ngay.", ephemeral=True)
+        await interaction.response.send_message("Mở menu **Chọn vật phẩm hồi phục** ở hàng thứ hai, chọn xong sẽ dùng ngay.", ephemeral=True)
 
     async def perform(self, interaction: discord.Interaction, action: str, value: str):
         if action == "skill":
@@ -140,17 +169,17 @@ class CombatView(ThemedView):
 
     async def _execute(self, interaction: discord.Interaction, operation):
         if not self._guard(interaction):
-            await interaction.response.send_message("Không phải trận của ngươi.", ephemeral=True)
+            await interaction.response.send_message("Đây không phải trận chiến của đạo hữu.", ephemeral=True)
             return
         if self._busy:
-            await interaction.response.send_message("Lượt chiến đấu đang được xử lý, chờ một chút nhé.", ephemeral=True)
+            await interaction.response.send_message("Lượt đang được xử lý, đạo hữu hãy chờ một lát.", ephemeral=True)
             return
 
         current = self.engine.combat.get_encounter(self.user_id)
         if not current or current.finished:
             self._busy = True
             await interaction.response.edit_message(
-                embed=error_embed("Trận đấu đã kết thúc. Hãy mở `.khampha` để tiếp tục hành trình."),
+                embed=error_embed("Trận đấu đã kết thúc. Dùng `.khampha` để tiếp tục xuất hành."),
                 view=None,
             )
             return

@@ -95,18 +95,35 @@ class CombatService:
             eligible = [min(pool, key=lambda m: abs(m["min_realm"] - p.realm_index))]
         mon = self.rng.choice(eligible)
         stats = self.battle_stats(p)
-        # The existing realm curve stays intact; area scaling is intentionally mild.
-        zone_scale = {"hoangnguyen": 1.0, "yeuthusonmach": 1.02, "dongphu": 1.04,
-                      "haivuc": 1.06, "mavuc": 1.07, "vancotlang": 1.08, "hukhong": 1.08}.get(zone_key, 1.0)
-        scale = (1.0 + p.realm_index * 0.08) * zone_scale * (1.30 if elite else 1.0)
+        # Exploration should become meaningfully more dangerous by region and tier,
+        # while keeping the low-level starting area approachable.
+        zone_scale = {
+            "hoangnguyen": 1.00,
+            "yeuthusonmach": 1.05,
+            "dongphu": 1.09,
+            "haivuc": 1.13,
+            "mavuc": 1.17,
+            "vancotlang": 1.21,
+            "hukhong": 1.24,
+        }.get(zone_key, 1.0)
+        scale = (1.0 + p.realm_index * 0.085) * zone_scale
+        hp_scale = scale * 1.12
+        combat_scale = scale * 1.08
+        if boss:
+            # Bosses get more staying power and stronger hits, not just a nameplate.
+            hp_scale *= 1.14
+            combat_scale *= 1.10
+        if elite:
+            hp_scale *= 1.35
+            combat_scale *= 1.22
         enemy_name = f"Tinh Anh · {mon['name']}" if elite else mon["name"]
         enc = Encounter(
             player_id=user_id,
             enemy_name=enemy_name,
-            enemy_hp=int(mon["hp"] * scale),
-            enemy_max_hp=int(mon["hp"] * scale),
-            enemy_attack=int(mon["attack"] * scale),
-            enemy_defense=int(mon["defense"] * scale),
+            enemy_hp=max(1, int(mon["hp"] * hp_scale)),
+            enemy_max_hp=max(1, int(mon["hp"] * hp_scale)),
+            enemy_attack=max(1, int(mon["attack"] * combat_scale)),
+            enemy_defense=max(0, int(mon["defense"] * combat_scale)),
             player_hp=min(p.hp, stats["max_hp"]),
             player_max_hp=stats["max_hp"],
             is_boss=boss,
