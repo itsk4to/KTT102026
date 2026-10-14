@@ -14,4 +14,4 @@ To temporarily use regular emoji again, set `KATO_CUSTOM_EMOJI=0` (the opt-out s
 
 ## Emoji key names
 
-Use stable semantic keys such as `spirit_stone`, `cultivator`, `demon`, `attack`, and `shop`. UI modules should refer to `ui.emoji.EMOJI` instead of embedding custom emoji tokens.
+Use stable semantic keys such as `spirit_stone`, `cultivator`, `demon`, `attack`, and `shop`. UI modules should refer to `ui.emoji.EMOJI` instead of embedding custom emoji tokens. The shared embed factory automatically resolves matching Unicode icons in titles, descriptions, fields, combat logs, item descriptions, author and footer text. All `ThemedView` buttons and dropdown options also resolve recognized icons through the same registry. Icons with no suitable supplied custom emoji stay Unicode.

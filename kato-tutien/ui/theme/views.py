@@ -11,6 +11,7 @@ from typing import Any
 import discord
 
 from ui.theme.tokens import BUTTON_EMOJIS, BUTTON_LABELS, DEFAULT_TIMEOUT
+from ui.emoji import resolve_emoji, extract_leading_emoji
 
 
 def _fold_label(value: str) -> str:
@@ -65,16 +66,33 @@ class ThemedView(discord.ui.View):
 
     @staticmethod
     def _theme_item(item) -> None:
-        if not isinstance(item, discord.ui.Button):
+        # All normal game views inherit ThemedView, so both explicit Unicode and
+        # semantic-label icons are resolved through the shared emoji registry.
+        if isinstance(item, discord.ui.Button):
+            if item.style != discord.ButtonStyle.link:
+                label = item.label or ""
+                style = _semantic_style(label)
+                if style is not None:
+                    item.style = style
+                if item.emoji is None:
+                    emoji = _semantic_emoji(label)
+                    if emoji:
+                        item.emoji = emoji
+                    else:
+                        leading = extract_leading_emoji(label)
+                        if leading:
+                            item.emoji, item.label = leading[0], leading[1][:80]
+            if item.emoji is not None:
+                item.emoji = resolve_emoji(item.emoji)
             return
-        if item.style == discord.ButtonStyle.link:
-            return
-        label = item.label or ""
-        style = _semantic_style(label)
-        if style is not None:
-            item.style = style
-        # Keep explicitly set emoji; supply a consistent glyph only when absent.
-        if item.emoji is None:
-            emoji = _semantic_emoji(label)
-            if emoji:
-                item.emoji = emoji
+
+        # Discord select options are separate objects; translate their icons too.
+        options = getattr(item, "options", None)
+        if options:
+            for option in options:
+                if getattr(option, "emoji", None) is not None:
+                    option.emoji = resolve_emoji(option.emoji)
+                else:
+                    leading = extract_leading_emoji(getattr(option, "label", ""))
+                    if leading:
+                        option.emoji, option.label = leading[0], leading[1][:100]

@@ -1,3 +1,17 @@
+## Bản vá bổ sung v3.7.4 — Hồ sơ công khai
+
+- Dùng giá trị dự phòng an toàn cho công/ thủ/ HP khi hồ sơ công khai nhận đối tượng người chơi thiếu các thuộc tính chiến đấu.
+- Điều chỉnh test trang bị để chấp nhận custom emoji do bộ render emoji chung thay thế, đồng thời vẫn xác minh nhãn và nội dung trang bị.
+- Không thay đổi luật gameplay, schema database hoặc dữ liệu người chơi.
+
+## v3.7.4 — Bao phủ Emoji Toàn GUI
+
+- Bổ sung bộ chuyển emoji dùng chung: những emoji Unicode có ánh xạ tương đương sẽ tự dùng custom emoji trong embed, tiêu đề/trường thông tin, author/footer, log chiến đấu và mô tả vật phẩm.
+- `ThemedView` tự chuyển emoji cho nút và lựa chọn dropdown, kể cả icon đã khai báo trực tiếp thay vì dùng registry.
+- Bổ sung key còn thiếu cho Trung tâm, Bí Cảnh, nhiệm vụ, điều hướng, độ hiếm và các hệ thống GUI; ánh xạ chỉ dùng ID emoji đã được cung cấp.
+- Không có custom emoji phù hợp thì vẫn giữ Unicode; `KATO_CUSTOM_EMOJI=0` tắt custom emoji toàn bộ.
+- Không sửa luật gameplay, schema database hoặc dữ liệu người chơi.
+
 ## v3.7.3 — Tích hợp emoji Discord toàn GUI
 
 - Bật custom emoji từ `assets/emojis/server/emojis.json` mặc định; đặt `KATO_CUSTOM_EMOJI=0` để quay về Unicode.

@@ -34,5 +34,5 @@ def test_public_profile_lists_empty_equipment_slots_without_inventory_details():
         spirit_stones=1000, dao_type="", sect_id=None, loadout={},
     )
     embed = public_player_embed({"player": player, "realm": "Luyện Khí"}, combat_stats={})
-    gear = next(field.value for field in embed.fields if field.name == "🛡️ Trang bị đang mặc")
+    gear = next(field.value for field in embed.fields if field.name.endswith("Trang bị đang mặc"))
     assert "Chưa trang bị" in gear

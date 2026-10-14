@@ -61,3 +61,43 @@ def test_custom_emoji_enabled_by_default(monkeypatch):
     assert module.EMOJI["spirit_stone"] == payload["emojis"]["spirit_stone"]
     assert module.EMOJI["attack"] == payload["emojis"]["attack"]
     assert module.EMOJI["victory"] == payload["emojis"]["victory"]
+
+
+def test_legacy_unicode_in_text_is_resolved_through_registry(monkeypatch):
+    monkeypatch.setenv("KATO_CUSTOM_EMOJI", "1")
+    module = _reload_registry()
+    rendered = module.render_emojis("⚔️ Công · 🛡️ Thủ · 💎 Linh thạch")
+    assert "<:attack:" in rendered
+    assert "<:def:" in rendered
+    assert "<:spirit_stone:" in rendered
+    assert "⚔️" not in rendered
+    assert "🛡️" not in rendered
+
+
+def test_unknown_or_unmapped_unicode_is_preserved(monkeypatch):
+    monkeypatch.setenv("KATO_CUSTOM_EMOJI", "1")
+    module = _reload_registry()
+    assert module.render_emojis("🌌 Bí Cảnh · 🏠 Trung tâm") == "🌌 Bí Cảnh · 🏠 Trung tâm"
+    assert module.extract_leading_emoji("⚔️ Tấn công") == (module.EMOJI["attack"], "Tấn công")
+
+
+def test_registry_covers_every_literal_key_used_by_gui():
+    import ast
+    registry = (ROOT / "ui/emoji.py").read_text(encoding="utf-8")
+    tree = ast.parse(registry)
+    registered = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "EMOJI" for t in node.targets) and isinstance(node.value, ast.Dict):
+            registered = {key.value for key in node.value.keys if isinstance(key, ast.Constant)}
+            break
+    used = set()
+    for path in (ROOT / "ui").rglob("*.py"):
+        if path.name == "emoji.py":
+            continue
+        source = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(source):
+            if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name) and node.value.id == "EMOJI" and isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+                used.add(node.slice.value)
+            elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == "EMOJI" and node.func.attr == "get" and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str):
+                used.add(node.args[0].value)
+    assert used <= registered, f"Missing emoji keys: {sorted(used - registered)}"

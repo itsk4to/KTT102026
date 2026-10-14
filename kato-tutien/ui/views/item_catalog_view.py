@@ -75,7 +75,7 @@ class ItemIdBrowserView(ThemedView):
 
     def build_embed(self):
         if not self.category:
-            lines = [f"{_CATEGORY_EMOJI.get(cat, EMOJI["unknown"])} **{cat}** · {len(category_items(cat))} món" for cat in SHOP_ORDER]
+            lines = [f"{_CATEGORY_EMOJI.get(cat, EMOJI['unknown'])} **{cat}** · {len(category_items(cat))} món" for cat in SHOP_ORDER]
             body = (
                 "Chọn danh mục rồi chọn vật phẩm để xem ID chính xác.\n\n"
                 + "\n".join(lines)

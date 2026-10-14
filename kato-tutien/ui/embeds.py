@@ -67,11 +67,7 @@ def player_embed(
     """Player HUD; private currency is opt-in and reserved for the self /info command."""
     p = info["player"]
     path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
-    stats = combat_stats or {
-        "max_hp": getattr(p, "max_hp", 100),
-        "attack": getattr(p, "attack", 10),
-        "defense": getattr(p, "defense", 5),
-    }
+    stats = combat_stats or {"max_hp": p.max_hp, "attack": p.attack, "defense": p.defense}
     effective_max_hp = max(1, int(stats.get("max_hp", p.max_hp)))
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
     hp_ratio = max(0.0, min(1.0, displayed_hp / effective_max_hp))
@@ -109,9 +105,17 @@ def public_player_embed(info: dict, *, combat_stats: dict | None = None) -> disc
     from game.content.items import ITEMS, EQUIP_SLOTS
 
     p = info["player"]
-    stats = combat_stats or {"max_hp": getattr(p, "max_hp", 100), "attack": getattr(p, "attack", 10), "defense": getattr(p, "defense", 5)}
+    stats = combat_stats or {
+        "max_hp": getattr(p, "max_hp", 100),
+        "attack": getattr(p, "attack", 10),
+        "defense": getattr(p, "defense", 5),
+    }
     path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
-    power = int(stats.get("attack", getattr(p, "attack", 10))) * 2 + int(stats.get("defense", getattr(p, "defense", 5))) * 2 + int(stats.get("max_hp", getattr(p, "max_hp", 100))) // 10
+    power = (
+        int(stats.get("attack", getattr(p, "attack", 10))) * 2
+        + int(stats.get("defense", getattr(p, "defense", 5))) * 2
+        + int(stats.get("max_hp", getattr(p, "max_hp", 100))) // 10
+    )
     e = base_embed(
         f"🧑‍🚀 HỒ SƠ CÔNG KHAI · {p.display_name}",
         f"**{info['realm']}**\n{path_name} · *Hồ sơ công khai*",

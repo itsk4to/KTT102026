@@ -114,5 +114,84 @@ EMOJI = {
     "level_up": _icon("level_up", "✨"),
     "victory": _icon("victory", "🏆"),
     "defeat": _icon("defeat", "💀"),
-    "reward": _icon("level_up", "🎁"),
+    "reward": _icon("reward", "🎁"),
+
+    # Frequently referenced GUI keys. When no dedicated custom icon exists,
+    # these keep the proper Unicode glyph rather than silently using a wrong icon.
+    "home": _icon("home", "🏠"),
+    "secret_realm": _icon("secret_realm", "🌌"),
+    "dao_lu": _icon("dao_lu", "💞"),
+    "admin": _icon("admin", "🔐"),
+    "rarity_common": _icon("rarity_common", "⚪"),
+    "rarity_uncommon": _icon("rarity_uncommon", "🟢"),
+    "rarity_rare": _icon("rarity_rare", "🔵"),
+    "rarity_epic": _icon("rarity_epic", "🟣"),
+    "rarity_legendary": _icon("rarity_legendary", "🟠"),
+    "rarity_mythic": _icon("rarity_mythic", "🔴"),
 }
+
+# Map familiar Unicode glyphs used by older screens/content to the semantic
+# registry. It lets legacy embed text, combat logs and item descriptions benefit
+# from the server emoji tree without rewriting game data or changing game rules.
+_UNICODE_SEMANTICS = {
+    "💎": "spirit_stone", "🪙": "spirit_stone",
+    "🧘": "cultivator", "👹": "demon",
+    "❤️": "hp", "❤": "hp", "🗡️": "att", "🗡": "att",
+    "🛡️": "def", "🛡": "def", "⚔️": "attack", "⚔": "attack",
+    "🌀": "skill", "🎒": "item", "🏃": "flee",
+    "📜": "technique", "📖": "technique", "💊": "pill", "🧪": "pill",
+    "🔮": "talisman", "✅": "accept", "☑️": "accept", "❌": "reject",
+    "🌱": "cultivate", "🌩️": "heavenly_tribulation", "⚡️": "heavenly_tribulation", "⚡": "heavenly_tribulation",
+    "💚": "recover", "🩹": "recover", "✨": "level_up",
+    "🏆": "victory", "💀": "defeat", "📦": "item",
+}
+
+
+def resolve_emoji(value: Any) -> Any:
+    """Replace a recognized Unicode glyph/PartialEmoji with its registry token.
+
+    Other values (including unknown Unicode glyphs and existing custom emoji)
+    are returned untouched, which keeps backward compatibility and fallback UI.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        # discord.PartialEmoji exposes .name; don't stringify unknown objects
+        # because that can change the type expected by component constructors.
+        name = getattr(value, "name", None)
+        if isinstance(name, str) and name in _UNICODE_SEMANTICS:
+            return EMOJI[_UNICODE_SEMANTICS[name]]
+        return value
+    if value.startswith("<:") or value.startswith("<a:"):
+        return value
+    key = _UNICODE_SEMANTICS.get(value)
+    return EMOJI[key] if key else value
+
+
+def extract_leading_emoji(text: Any) -> tuple[Any, str] | None:
+    """Return a registered leading glyph as a component icon plus remaining label."""
+    if not isinstance(text, str) or not text:
+        return None
+    for glyph in sorted(_UNICODE_SEMANTICS, key=len, reverse=True):
+        if text.startswith(glyph):
+            rest = text[len(glyph):]
+            if not rest or rest[0].isspace():
+                return resolve_emoji(glyph), rest.lstrip()
+    return None
+
+
+def render_emojis(text: Any) -> Any:
+    """Replace registered Unicode emoji in visible text with custom server emoji.
+
+    This is presentation-only: values without a matching server emoji are left
+    as-is, and gameplay/content data is never mutated.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    # Longer sequences first so variation-selector emoji are not partially matched.
+    for glyph in sorted(_UNICODE_SEMANTICS, key=len, reverse=True):
+        key = _UNICODE_SEMANTICS[glyph]
+        token = EMOJI.get(key, glyph)
+        if token != glyph:
+            text = text.replace(glyph, token)
+    return text

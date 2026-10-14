@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "description": "Custom Discord emoji map for Kato Tu Tiên. Enable with KATO_CUSTOM_EMOJI=1.",
+  "description": "Central custom Discord emoji map. Set KATO_CUSTOM_EMOJI=0 to use Unicode fallback.",
   "emojis": {
     "spirit_stone": "<:spirit_stone:1558880395439640666>",
     "cultivator": "<:cultivator:1558880433364533348>",
@@ -25,7 +25,6 @@
     "level_up": "<:level_up:1558881261614006333>",
     "victory": "<:victory:1558881294455148664>",
     "defeat": "<:defeat:1558881325543592076>",
-
     "cultivation": "<:cultivator:1558880433364533348>",
     "demon_path": "<:demon:1558880480185557003>",
     "faction_tien": "<:cultivator:1558880433364533348>",
@@ -41,6 +40,11 @@
     "armor": "<:def:1558880616098046022>",
     "accessory": "<:item:1558880752073056418>",
     "combat_item": "<:item:1558880752073056418>",
-    "unknown": "<:item:1558880752073056418>"
+    "unknown": "<:item:1558880752073056418>",
+    "reward": "<:level_up:1558881261614006333>",
+    "shop": "<:item:1558880752073056418>",
+    "all": "<:item:1558880752073056418>",
+    "filter": "<:item:1558880752073056418>",
+    "quantity": "<:item:1558880752073056418>"
   }
 }
