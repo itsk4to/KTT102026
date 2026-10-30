@@ -9,10 +9,10 @@ class GameUIReworkTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_version_is_374_everywhere_current(self):
-        self.assertEqual(self.read("VERSION.txt").strip(), "3.7.4")
-        self.assertIn('version = "3.7.4"', self.read("pyproject.toml"))
-
+    def test_version_is_380_everywhere_current(self):
+    self.assertEqual(self.read("VERSION.txt").strip(), "3.8.0")
+    self.assertIn('version = "3.8.0"', self.read("pyproject.toml"))
+    
     def test_theme_factory_has_shared_brand_and_semantic_colors(self):
         tokens = self.read("ui/theme/tokens.py")
         embeds = self.read("ui/theme/embeds.py")
