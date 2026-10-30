@@ -169,6 +169,27 @@ def migrate_15_to_16(db) -> None:
     _set_version(db, 16)
 
 
+def migrate_16_to_17(db) -> None:
+    # Manual Discord moderation history is isolated from in-game admin_audit.
+    db.execute("""CREATE TABLE IF NOT EXISTS moderation_cases (
+        case_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id TEXT NOT NULL,
+        moderator_id TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        target_type TEXT NOT NULL DEFAULT 'user',
+        action TEXT NOT NULL,
+        reason TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER,
+        details TEXT NOT NULL DEFAULT ''
+    )""")
+    db.execute("""CREATE INDEX IF NOT EXISTS idx_moderation_cases_guild_case
+        ON moderation_cases(guild_id, case_id DESC)""")
+    db.execute("""CREATE INDEX IF NOT EXISTS idx_moderation_cases_target_action
+        ON moderation_cases(guild_id, target_id, action, case_id DESC)""")
+    _set_version(db, 17)
+
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
@@ -186,6 +207,7 @@ _MIGRATIONS = {
     13: migrate_13_to_14,
     14: migrate_14_to_15,
     15: migrate_15_to_16,
+    16: migrate_16_to_17,
 }
 
 

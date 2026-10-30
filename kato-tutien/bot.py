@@ -18,6 +18,7 @@ from discord import app_commands
 import config
 from game.engine import GameEngine, GameError
 from ui.commands import CommandContext, COMMAND_LOOKUP, COMMAND_SPECS
+from ui.commands.moderation import register_moderation_commands
 from ui.embeds import base_embed, error_embed, player_embed, public_player_embed
 from ui.views.admin_view import AdminLoginView, AdminView
 from game.security.permissions import is_owner
@@ -33,6 +34,7 @@ tree = app_commands.CommandTree(client)
 
 engine = GameEngine(config.DB_PATH)
 ctx = CommandContext(engine=engine, command_specs=COMMAND_SPECS)
+register_moderation_commands(tree, engine.moderation)
 
 
 @tree.command(name="info", description="Xem hồ sơ riêng hoặc hồ sơ công khai của người chơi")

@@ -1,13 +1,31 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS moderation_cases (
+    case_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    moderator_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    target_type TEXT NOT NULL DEFAULT 'user',
+    action TEXT NOT NULL,
+    reason TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER,
+    details TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_guild_case
+    ON moderation_cases(guild_id, case_id DESC);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_target_action
+    ON moderation_cases(guild_id, target_id, action, case_id DESC);
 
 CREATE TABLE IF NOT EXISTS players (
     user_id TEXT PRIMARY KEY,

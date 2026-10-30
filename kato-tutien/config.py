@@ -12,6 +12,18 @@ TOKEN = env("DISCORD_TOKEN")
 DB_PATH = env("KATO_DB_PATH", "kato_tutien.db")
 OWNER_IDS = {x.strip() for x in env("KATO_OWNER_IDS").split(",") if x.strip()}
 ADMIN_PASSWORD = env("KATO_ADMIN_PASSWORD")
+MOD_ADMIN_ROLE_IDS = {
+    int(value.strip()) for value in env("KATO_MOD_ADMIN_ROLE_IDS").split(",")
+    if value.strip().isdigit() and int(value.strip()) > 0
+}
+MODERATOR_ROLE_IDS = {
+    int(value.strip()) for value in env("KATO_MODERATOR_ROLE_IDS").split(",")
+    if value.strip().isdigit() and int(value.strip()) > 0
+}
+try:
+    MOD_LOG_CHANNEL_ID = int(env("KATO_MOD_LOG_CHANNEL_ID", "0") or "0")
+except ValueError:
+    MOD_LOG_CHANNEL_ID = 0
 CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "1").lower() in {"1", "true", "yes", "on"}
 
 # Gameplay constants

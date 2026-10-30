@@ -1,3 +1,12 @@
+## v3.8.0 — Quản trị máy chủ Discord thủ công
+
+- Tích hợp nhóm Slash Commands `/mod` trên `discord.Client` + `app_commands.CommandTree` hiện tại.
+- Bổ sung ban/unban, kick, timeout/untimeout, warn/xem cảnh cáo, purge, slowmode, lock/unlock và tra cứu case.
+- Phân quyền qua Discord Owner/Admin, role ID cấu hình hoặc quyền quản trị Discord tương ứng; kiểm tra role hierarchy và quyền của bot trước khi xử lý.
+- Tách lịch sử moderation khỏi `admin_audit` của gameplay bằng bảng `moderation_cases` và migration schema 16 → 17.
+- Hỗ trợ kênh log tùy chọn qua `KATO_MOD_LOG_CHANNEL_ID`; không bật tự động quét link hoặc tự động xử phạt.
+- Không thay đổi dữ liệu nhân vật, gameplay hoặc logic kinh tế.
+
 ## Bản vá bổ sung v3.7.4 — Hồ sơ công khai
 
 - Dùng giá trị dự phòng an toàn cho công/ thủ/ HP khi hồ sơ công khai nhận đối tượng người chơi thiếu các thuộc tính chiến đấu.

@@ -52,6 +52,7 @@ from game.services.secret_realm_service import SecretRealmService
 from game.services.player_mission_service import PlayerMissionService
 from game.services.code_service import CodeService
 from game.security.admin_auth import AdminAuth
+from game.moderation.service import ModerationService
 from game.services.errors import GameError
 
 
@@ -116,6 +117,7 @@ class GameEngine:
         self.admin_auth = AdminAuth(db)
         self.admin = AdminService(self._players, self._sects, self._audit, self.admin_auth)
         self.audit = self._audit
+        self.moderation = ModerationService(db)
 
 
 __all__ = ["GameEngine", "GameError"]
