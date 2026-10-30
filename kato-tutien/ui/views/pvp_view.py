@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import discord
 
-from ui.theme.views import ThemedView
+from ui.theme.views import ThemedView, prison_view_interaction_allowed
 from game.content.items import ITEMS
 from game.services.errors import GameError
 from game.utils import fmt_amount
@@ -58,6 +58,8 @@ class PvpChallengeView(ThemedView):
         self.message = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not await prison_view_interaction_allowed(self, interaction):
+            return False
         if str(interaction.user.id) != self.challenge["target_id"]:
             await interaction.response.send_message("Chỉ người được thách đấu mới có thể nhận lời hoặc từ chối.", ephemeral=True)
             return False

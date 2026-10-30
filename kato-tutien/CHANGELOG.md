@@ -1,3 +1,14 @@
+## v3.8.1 — Hợp nhất moderation và Phạt Tù Thiên Đạo
+
+- Giữ nguyên gameplay, nội dung, UI và dữ liệu nền từ Kato Tu Tiên v3.7.4.
+- Hợp nhất gói moderation v3.8.0; các lệnh được đưa ra cấp gốc: `/ban`, `/unban`, `/kick`, `/timeout`, `/untimeout`, `/warn`, `/warnings`, `/purge`, `/slowmode`, `/lock`, `/unlock`, `/logs`, `/case`. Nhóm `/mod ...` không còn được đăng ký.
+- Bổ sung slash `/help`, tái sử dụng `COMMAND_SPECS` và lọc mục quản trị theo quyền người gọi; `.help` vẫn hoạt động.
+- Bổ sung `/phattu`, `/tha_tu`, role tù nhân, kênh lao ngục và khôi phục permission overwrites theo snapshot.
+- `.kthac` ghi đúng 10 linh thạch lao dịch/lượt, kiểm tra kênh, phiên tù, nhân vật, cooldown và ID tin nhắn để chống tính trùng.
+- Hoàn tất tù chuyển qua trạng thái `release_pending`; chỉ chia thưởng sau khi Discord khôi phục quyền thành công. Payout có mã duy nhất, chia đều cho người đã đăng ký, loại trừ mọi tù nhân và người vừa được thả; số dư không chia hết được giữ ở `community_fund`.
+- Thêm migration schema 17 → 18; migration 16 → 17 giữ nguyên moderation cases; không reset dữ liệu người chơi.
+- Cần cấu hình role/kênh tù trong environment trước khi dùng `/phattu`.
+
 ## v3.8.0 — Quản trị máy chủ Discord thủ công
 
 - Tích hợp nhóm Slash Commands `/mod` trên `discord.Client` + `app_commands.CommandTree` hiện tại.

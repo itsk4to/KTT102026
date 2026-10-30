@@ -95,6 +95,13 @@ async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None)
             lines.append(f"**`{spec.usage}`** — {spec.description}{suffix}")
         pages.append(base_embed(f"📖 Cẩm Nang · {len(pages)+1}/{len(pages)+1}", "\n".join(lines)))
 
+    prison_session = (
+        ctx.engine.prison.get_active_session(str(message.guild.id), str(message.author.id))
+        if message.guild is not None else None
+    )
+    if prison_session:
+        await message.reply(embed=pages[0])
+        return
     await message.reply(
         embed=pages[0],
         view=HelpView(pages, ctx.engine, str(message.author.id)),

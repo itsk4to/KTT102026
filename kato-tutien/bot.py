@@ -19,6 +19,7 @@ import config
 from game.engine import GameEngine, GameError
 from ui.commands import CommandContext, COMMAND_LOOKUP, COMMAND_SPECS
 from ui.commands.moderation import register_moderation_commands
+from ui.commands.prison import recover_prison_workflows, handle_prisoner_rejoin
 from ui.embeds import base_embed, error_embed, player_embed, public_player_embed
 from ui.views.admin_view import AdminLoginView, AdminView
 from game.security.permissions import is_owner
@@ -29,12 +30,121 @@ logger = logging.getLogger("kato")
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True  # Used to restore prison status when a member rejoins.
 client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+
+
+class KatoCommandTree(app_commands.CommandTree):
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        guild = interaction.guild
+        try:
+            session = engine.prison.get_active_session_for_user(str(interaction.user.id))
+        except Exception:
+            logger.exception("Could not verify prison state for slash interaction")
+            await interaction.response.send_message(
+                "Không thể xác minh trạng thái lao tù lúc này. Lệnh bị chặn an toàn; hãy thử lại sau.",
+                ephemeral=True,
+            )
+            return False
+        command_name = str((getattr(interaction, "data", None) or {}).get("name", ""))
+        jail_context = bool(
+            session and guild is not None
+            and str(guild.id) == str(session["guild_id"])
+            and interaction.channel_id == config.PRISON_CHANNEL_ID
+        )
+        if session and (command_name != "help" or not jail_context):
+            await interaction.response.send_message(
+                "⛓️ Ngươi đang chịu phạt tù Thiên Đạo. Chỉ được dùng `.tutien`, `.kthac` và `/help` trong kênh lao ngục.",
+                ephemeral=True,
+            )
+            return False
+        return True
+
+
+tree = KatoCommandTree(client)
 
 engine = GameEngine(config.DB_PATH)
-ctx = CommandContext(engine=engine, command_specs=COMMAND_SPECS)
-register_moderation_commands(tree, engine.moderation)
+ctx = CommandContext(engine=engine, command_specs=COMMAND_SPECS, client=client)
+register_moderation_commands(tree, engine.moderation, engine)
+
+
+@tree.command(name="help", description="Cẩm nang lệnh Kato Tu Tiên")
+async def help_slash(interaction: discord.Interaction) -> None:
+    """Mobile-friendly slash help reusing the existing prefix command registry."""
+    from ui.views.help_view import HelpView
+    from ui.embeds import base_embed
+
+    user = interaction.user
+    guild = interaction.guild
+    permissions = getattr(user, "guild_permissions", None)
+    is_admin = bool(
+        guild is not None and (
+            user.id == guild.owner_id
+            or getattr(permissions, "administrator", False)
+            or bool({role.id for role in getattr(user, "roles", [])} & config.MOD_ADMIN_ROLE_IDS)
+            or is_owner(str(user.id))
+        )
+    )
+
+    groups = [
+        ("📖 BẮT ĐẦU & TU LUYỆN", {"start", "cultivation"}),
+        ("🌏 KHÁM PHÁ & THẾ GIỚI", {"explore", "world"}),
+        ("🎒 TÚI & GIAO DỊCH", {"trade"}),
+        ("⚔️ CHIẾN ĐẤU", {"combat"}),
+        ("🏯 TÔNG MÔN, ĐẠO & HỆ THỐNG", {"sect", "dao", "social", "system"}),
+    ]
+    pages = []
+    show_admin_page = False
+    if isinstance(user, discord.Member):
+        permissions_for_help = user.guild_permissions
+        show_admin_page = is_admin or any((
+            permissions_for_help.kick_members, permissions_for_help.ban_members,
+            permissions_for_help.moderate_members, permissions_for_help.manage_messages,
+            permissions_for_help.manage_channels, permissions_for_help.manage_roles,
+        ))
+    total_pages = len(groups) + (1 if show_admin_page else 0)
+    for index, (heading, categories) in enumerate(groups, 1):
+        lines = [f"**{heading}**"]
+        for spec in COMMAND_SPECS:
+            if spec.category not in categories:
+                continue
+            if spec.name == "admin" and not is_admin:
+                continue
+            aliases = [f".{alias}" for alias in spec.aliases if alias != spec.name]
+            alias_text = f" · Bí danh: {', '.join(aliases)}" if aliases else ""
+            lines.append(f"**`{spec.usage}`** — {spec.description}{alias_text}")
+        pages.append(base_embed(f"📘 Cẩm Nang · {index}/{total_pages}", "\n".join(lines)))
+
+    if guild is not None and isinstance(user, discord.Member):
+        perms = user.guild_permissions
+        moderation_lines = []
+        command_permissions = [
+            ("/kick", "kick_members"), ("/ban · /unban", "ban_members"),
+            ("/timeout · /untimeout", "moderate_members"), ("/warn · /warnings · /logs · /case", "manage_messages"),
+            ("/purge", "manage_messages"), ("/slowmode · /lock · /unlock", "manage_channels"),
+            ("/phattu", "admin"),
+        ]
+        for label, permission in command_permissions:
+            has_scope = is_admin if permission == "admin" else getattr(perms, permission, False)
+            if permission == "moderate_members":
+                has_scope = has_scope or perms.manage_messages or perms.kick_members or perms.ban_members
+            if is_admin or has_scope:
+                moderation_lines.append(label)
+        if is_admin:
+            moderation_lines.append("/tha_tu")
+        if moderation_lines:
+            pages.append(base_embed(
+                "🛡️ Cẩm Nang · Quản Trị",
+                "**LỆNH MODERATION CẤP GỐC**\n" + "\n".join(f"• `{item}`" for item in moderation_lines)
+                + "\n\nModerator role không tự cấp toàn bộ quyền; từng lệnh vẫn kiểm tra quyền Discord tương ứng.",
+            ))
+
+    is_prisoner = bool(guild is not None and engine.prison.get_active_session(str(guild.id), str(user.id)))
+    if is_prisoner:
+        await interaction.response.send_message(embed=pages[0], ephemeral=True)
+        return
+    view = HelpView(pages, engine, str(user.id))
+    await interaction.response.send_message(embed=pages[0], view=view, ephemeral=True)
 
 
 @tree.command(name="info", description="Xem hồ sơ riêng hoặc hồ sơ công khai của người chơi")
@@ -82,6 +192,18 @@ async def on_ready() -> None:
         await tree.sync()
     except Exception:
         logger.exception("slash sync failed")
+    try:
+        await recover_prison_workflows(client, engine)
+    except Exception:
+        logger.exception("prison recovery failed during startup")
+
+
+@client.event
+async def on_member_join(member: discord.Member) -> None:
+    try:
+        await handle_prisoner_rejoin(member, client, engine)
+    except Exception:
+        logger.exception("Could not restore prison state for rejoining member %s", member.id)
 
 
 @client.event
@@ -100,16 +222,28 @@ async def on_message(message: discord.Message) -> None:
 
     args = parts[1:]
     try:
-        # Let new players learn/create their character and view the public leaderboard.
-        # All other gameplay commands receive a consistent, actionable onboarding hint.
+        user_id = str(message.author.id)
+        prison_session = engine.prison.get_active_session_for_user(user_id)
+        if prison_session:
+            allowed_prison_commands = {"tutien", "help", "kthac"}
+            is_prison_channel = bool(
+                message.guild is not None
+                and str(message.guild.id) == str(prison_session["guild_id"])
+                and message.channel.id == config.PRISON_CHANNEL_ID
+            )
+            if not is_prison_channel or spec.name not in allowed_prison_commands:
+                await message.reply("⛓️ Ngươi đang chịu phạt tù Thiên Đạo. Chỉ được dùng `.tutien`, `.kthac` và `.help` trong kênh lao ngục.")
+                return
+
+        # A prisoner without a character may still register inside the prison channel.
         public_commands = {"tutien", "help", "menu", "bxh", "admin"}
-        if spec.name not in public_commands and not engine.players.exists(str(message.author.id)):
+        if spec.name not in public_commands and not engine.players.exists(user_id):
             await message.reply(embed=base_embed(
                 "🌱 Hãy Khai Đạo Trước",
                 "Ngươi chưa tạo nhân vật.\n\n"
                 "🧘 Muốn **Tu Tiên**, hãy nhập `.tutien` hoặc `.tamuontutien`.\n"
                 "👹 Muốn **Tu Ma**, cũng nhập `.tutien` rồi chọn nút **Tu Ma**.\n"
-                "Sau khi tạo nhân vật, dùng `.help` để xem hướng dẫn và menu tổng."
+                "Sau khi tạo nhân vật, dùng `.help` để xem hướng dẫn."
             ))
             return
         if spec.takes_args:

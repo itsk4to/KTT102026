@@ -195,3 +195,4 @@ def render_emojis(text: Any) -> Any:
         if token != glyph:
             text = text.replace(glyph, token)
     return text
+

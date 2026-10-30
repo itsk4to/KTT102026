@@ -9,6 +9,7 @@ import unicodedata
 from typing import Any
 
 import discord
+import config
 
 from ui.theme.tokens import BUTTON_EMOJIS, BUTTON_LABELS, DEFAULT_TIMEOUT
 from ui.emoji import resolve_emoji, extract_leading_emoji
@@ -47,6 +48,59 @@ def _semantic_emoji(label: str) -> str | None:
     return None
 
 
+async def prison_view_interaction_allowed(view: Any, interaction: discord.Interaction) -> bool:
+    """Prevent already-posted game panels from bypassing an active prison sentence."""
+    engine = getattr(view, "engine", None)
+    guild = interaction.guild
+    if engine is None:
+        return True
+    try:
+        session = engine.prison.get_active_session_for_user(str(interaction.user.id))
+    except Exception:
+        import logging
+        logging.getLogger("kato.prison").exception("Could not verify prison state for component interaction")
+        await interaction.response.send_message(
+            "Không thể xác minh trạng thái lao tù lúc này. Thao tác bị chặn an toàn; hãy thử lại sau.",
+            ephemeral=True,
+        )
+        return False
+    jail_context = bool(
+        session and guild is not None
+        and str(guild.id) == str(session["guild_id"])
+        and interaction.channel_id == config.PRISON_CHANNEL_ID
+    )
+    if session and view.__class__.__name__ == "PathChoiceView":
+        if not jail_context:
+            await interaction.response.send_message(
+                "Đang chịu phạt tù: chỉ có thể đăng ký `.tutien` trong kênh lao ngục.",
+                ephemeral=True,
+            )
+            return False
+        try:
+            already_registered = engine.players.exists(str(interaction.user.id))
+        except Exception:
+            import logging
+            logging.getLogger("kato.prison").exception("Could not verify prisoner registration state")
+            await interaction.response.send_message(
+                "Không thể xác minh nhân vật lúc này. Thao tác đăng ký bị chặn an toàn; hãy thử lại sau.",
+                ephemeral=True,
+            )
+            return False
+        if already_registered:
+            await interaction.response.send_message(
+                "Nhân vật của ngươi đã được đăng ký. Hãy dùng `.kthac` trong kênh lao ngục để tiếp tục lao dịch.",
+                ephemeral=True,
+            )
+            return False
+    if session and (not jail_context or view.__class__.__name__ != "PathChoiceView"):
+        await interaction.response.send_message(
+            "⛓️ Đang chịu phạt tù: chỉ được thao tác đăng ký `.tutien` trong kênh lao ngục. Các bảng gameplay khác tạm khóa.",
+            ephemeral=True,
+        )
+        return False
+    return True
+
+
 class ThemedView(discord.ui.View):
     """Apply shared game styling to static and dynamically-created buttons."""
 
@@ -54,6 +108,9 @@ class ThemedView(discord.ui.View):
         kwargs.setdefault("timeout", DEFAULT_TIMEOUT)
         super().__init__(*args, **kwargs)
         self.apply_theme()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return await prison_view_interaction_allowed(self, interaction)
 
     def add_item(self, item):
         super().add_item(item)

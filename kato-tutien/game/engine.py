@@ -53,6 +53,7 @@ from game.services.player_mission_service import PlayerMissionService
 from game.services.code_service import CodeService
 from game.security.admin_auth import AdminAuth
 from game.moderation.service import ModerationService
+from game.moderation.prison_service import PrisonService
 from game.services.errors import GameError
 
 
@@ -118,6 +119,7 @@ class GameEngine:
         self.admin = AdminService(self._players, self._sects, self._audit, self.admin_auth)
         self.audit = self._audit
         self.moderation = ModerationService(db)
+        self.prison = PrisonService(db)
 
 
 __all__ = ["GameEngine", "GameError"]

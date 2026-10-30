@@ -1,12 +1,12 @@
-Kato Tu Tiên v3.6.4 — Immersive Game UI Rework
+Kato Tu Tiên v3.8.1 — Moderation & Phạt Tù Thiên Đạo
 
-# Kato Tu Tiên v3.6.4
+# Kato Tu Tiên v3.8.1
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
 > Ưu tiên số 1: code rõ ràng, module nhỏ, dễ đọc, dễ sửa và dễ mở rộng.
 
-## Giao diện MMORPG v3.6.4
+## Giao diện MMORPG — nền v3.7.4, phát hành v3.8.1
 
 - HUD nhân vật, thanh HP/tu vi, bảng chỉ số và điều hướng game được đồng bộ qua `ui/theme/`.
 - Menu chính gọn lại với dropdown hệ thống + nút tắt; màn Nhân vật có action menu.
@@ -89,8 +89,8 @@ Models  = domain data
 
 ### 1. Database migration thật
 
-- Schema version hiện tại: `15`.
-- Migration chạy từng bước, idempotent, có đường nâng cấp 0 → 12.
+- Schema version hiện tại: `18` (từ schema 16 của nền v3.7.4, qua moderation 17 và prison 18).
+- Migration chạy tuần tự và idempotent; không reset dữ liệu người chơi hiện có.
 - DB cũ thiếu known columns được tự sửa bằng `ALTER TABLE` an toàn; migration 9 → 10 bổ sung giá / cái cho chợ.
 - Không còn kiểu chỉ đổi số version rồi giả vờ migration đã xong.
 - Thêm `sect_role_history` để lưu lịch sử chức vụ.
@@ -260,3 +260,42 @@ Các thông số cân bằng hiện tại được ghi chi tiết tại [`docs/E
 - Tỷ lệ tối thiểu tăng từ 5% lên 10%; trần vẫn là 90%.
 - Công thức preview và lần thử thật vẫn dùng cùng một hàm; chỉ số căn cơ, đạo tâm, ngộ tính, đạo giai, thương thế, thiên phú/định mệnh, vật phẩm và bảo hộ vẫn có ảnh hưởng.
 - Không thay đổi logic chiến đấu/khám phá hoặc schema database.
+
+## v3.8.1 — Moderation & Phạt Tù Thiên Đạo
+
+Bản 3.8.1 được xây dựng trên toàn bộ mã nguồn Kato Tu Tiên v3.7.4 và tích hợp gói moderation v3.8.0. Không thay thế hệ thống gameplay cũ. Database được nâng tuần tự từ schema 16 lên 18; hãy sao lưu file SQLite trước khi deploy như với mọi bản cập nhật.
+
+### Cấu hình Discord moderation
+
+- `KATO_MOD_ADMIN_ROLE_IDS`: Role ID có quyền quản trị moderation đầy đủ, phân tách bằng dấu phẩy.
+- `KATO_MODERATOR_ROLE_IDS`: Role ID nhận diện đội Moderator; từng slash command vẫn yêu cầu quyền Discord tương ứng riêng.
+- `KATO_MOD_LOG_CHANNEL_ID`: Kênh log moderation tùy chọn.
+
+Các lệnh moderation được đăng ký ở cấp gốc: `/ban`, `/unban`, `/kick`, `/timeout`, `/untimeout`, `/warn`, `/warnings`, `/purge`, `/slowmode`, `/lock`, `/unlock`, `/logs`, `/case`.
+
+### Cấu hình Phạt Tù Thiên Đạo
+
+Cấu hình trên host (không commit ID/token bí mật):
+
+- `KATO_PRISON_ROLE_ID`: ID role Tù Nhân.
+- `KATO_PRISON_CHANNEL_ID`: ID kênh văn bản lao ngục.
+- `KATO_PRISON_ANNOUNCE_CHANNEL_ID`: ID kênh thông báo mãn hạn tù.
+- `KATO_PRISON_COOLDOWN_SECONDS`: Cooldown giữa các lượt `.kthac` (mặc định 30 giây).
+- `KATO_PRISON_MAX_REQUIRED_STONES`: Chỉ tiêu tối đa cho `/phattu` (mặc định 1.000.000).
+
+Bot cần bật **Server Members Intent** trong Discord Developer Portal và quyền **Manage Roles** và **Manage Channels**; role bot phải cao hơn role Tù Nhân và các role mục tiêu. Dùng một role Tù Nhân chuyên biệt, không gán thủ công cho người chơi. Role/channel ID phải thuộc cùng máy chủ. Kiểm tra cấu hình trong một kênh thử nghiệm trước khi đưa vào server chính.
+
+`/phattu member required_stones reason` có thể áp dụng cả người chưa đăng ký nhân vật. Người chưa đăng ký chỉ có thể dùng `.tutien` để tạo nhân vật ngay trong kênh lao ngục; sau đó dùng `.kthac`. Tù nhân chỉ dùng `.tutien`, `.kthac`, `.help` trong kênh lao ngục; `.kthac` luôn cộng 10 linh thạch lao dịch vào phiên tù, không cộng vào ví cá nhân. Khi đủ chỉ tiêu, bot khôi phục permission overwrites đã chụp trước đó, gỡ role tù và chia tổng lao dịch cho người chơi đã đăng ký nhưng không còn phiên tù đang hoạt động (bao gồm cả người vừa được thả trong sự kiện đó). Phần dư được ghi vào `community_fund`. `/tha_tu` là lệnh đặc xá thủ công dành cho Owner/Admin.
+
+Nếu Discord không thể khôi phục mọi overwrite, phiên tù ở trạng thái chờ xử lý và payout chưa được thực hiện. Kiểm tra log/quyền bot rồi chạy lại `/tha_tu` hoặc restart bot để recovery thử lại.
+
+### Cập nhật từ v3.7.4 lên v3.8.1
+
+1. Dừng bot và sao lưu file SQLite đang dùng (đường dẫn `KATO_DB_PATH`; mặc định `kato_tutien.db`).
+2. Giải nén toàn bộ gói `KatoTuTien-v3.8.1-complete.zip` và cập nhật mã nguồn. Giữ lại file `.env` và database hiện tại; không tạo database mới để thay thế.
+3. Bổ sung các biến `KATO_PRISON_*` trong phần cấu hình phía trên, đồng thời kiểm tra role/kênh thuộc đúng máy chủ Discord.
+4. Cài dependency bằng `python -m pip install -r requirements.txt`.
+5. Khởi động bot. Migration sẽ tự chạy tuần tự từ schema 16 lên 17 rồi 18; không xóa dữ liệu nhân vật.
+6. Trước khi dùng ở máy chủ chính, thử `/phattu`, `.tutien`, `.kthac`, tự động mãn hạn và `/tha_tu` trong máy chủ thử nghiệm.
+
+Không chia sẻ token bot hoặc nội dung `.env`. Nếu migration bị gián đoạn, dừng bot, khôi phục bản sao lưu và kiểm tra log trước khi chạy lại.

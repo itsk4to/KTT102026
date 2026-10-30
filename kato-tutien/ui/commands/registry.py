@@ -16,6 +16,7 @@ from ui.commands.sect import cmd_sect, cmd_sect_create, cmd_sect_apply, cmd_sect
 from ui.commands.admin import cmd_admin
 from ui.commands.dao_lu import cmd_dao_lu, cmd_song_tu
 from ui.commands.quest import cmd_npc, cmd_quest, cmd_world
+from ui.commands.prison import cmd_prison_mine
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("xintong", (), "sect", ".xintong <sect_id>", "Xin gia nhập.", cmd_sect_apply, True),
     CommandSpec("congtong", (), "sect", ".congtong <số>", "Cống hiến.", cmd_sect_contribute, True),
     CommandSpec("roitong", (), "sect", ".roitong", "Rời tông môn.", cmd_sect_leave),
+    CommandSpec("kthac", (), "system", ".kthac", "Khai thác 10 linh thạch lao dịch mỗi lượt trong kênh lao ngục.", cmd_prison_mine),
     CommandSpec("admin", (), "system", ".admin", "Mở bảng quản trị.", cmd_admin),
 )
 

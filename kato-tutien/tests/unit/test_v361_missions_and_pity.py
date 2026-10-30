@@ -154,7 +154,7 @@ def test_successful_exploration_advances_missions_automatically():
     assert missions["weekly_explore"]["progress"] == 1
 
 
-def test_schema_v16_to_v17_migration_keeps_existing_player_data():
+def test_schema_v16_migration_keeps_existing_player_data():
     from game.database.migrations import run_migrations
     from game.database.schema import SCHEMA_VERSION
 
@@ -163,13 +163,36 @@ def test_schema_v16_to_v17_migration_keeps_existing_player_data():
     engine._players.save(player)
     engine.db.execute("UPDATE schema_meta SET value='15' WHERE key='version'")
 
-    assert run_migrations(engine.db) == 17
-
+    assert run_migrations(engine.db) == 18
     loaded = engine.players.get("u1")
     assert loaded.spirit_stones == 4321
     assert loaded.breakthrough_pity == 0
-    assert SCHEMA_VERSION == 17
+    assert SCHEMA_VERSION == 18
+    assert engine.db.fetchone("SELECT 1 FROM player_mission_progress LIMIT 1") is None
 
-    assert engine.db.fetchone(
-        "SELECT 1 FROM player_mission_progress LIMIT 1"
-    ) is None
+
+def test_failure_pity_outweighs_the_injury_penalty_in_next_preview():
+    engine, player = make_engine()
+    player.realm_index = 1
+    player.realm_layer = 1
+    player.cultivation = cultivation_requirement(player.realm_index, player.realm_layer)
+    player.injury = 0
+    # Use a deterministic neutral injury modifier; new characters may receive
+    # Thanh Tâm, whose 0.9 modifier intentionally rounds 5 injury down to 4.
+    player.talent = "Linh Căn"
+    engine._players.save(player)
+    chance_before = engine.cultivation.breakthrough_preview("u1")["chance"]
+    engine.cultivation.rng = FixedRng(0.99)
+    engine.cultivation.breakthrough("u1")
+    after = engine.players.get("u1")
+    chance_after = engine.cultivation.breakthrough_preview("u1")["chance"]
+    assert after.injury == 5
+    assert after.breakthrough_pity == 5
+    assert chance_after > chance_before
+    assert round(chance_after - chance_before, 3) == 0.035
+
+
+def test_injury_penalty_is_bounded_and_does_not_force_five_percent_floor():
+    from game.rules.cultivation_rules import breakthrough_chance
+    chance = breakthrough_chance(root=55, mind=55, insight=55, injury=100, dao_stage=0)
+    assert abs(chance - 0.28) < 1e-9

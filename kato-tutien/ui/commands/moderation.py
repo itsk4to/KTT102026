@@ -1,7 +1,8 @@
 """Manual Discord server moderation slash commands.
 
-Registered as ``/mod ...`` on the existing app_commands.CommandTree. This
-module intentionally contains no automatic message scanning or auto-punishment.
+Commands are registered individually at the root of the existing
+app_commands.CommandTree (for example, /ban and /warn). No automatic message
+scanning or automated moderation is performed.
 """
 from __future__ import annotations
 
@@ -142,8 +143,10 @@ class ModerationGroup(app_commands.Group):
     ) -> None:
         guild = self._guild(interaction)
         actor = self._actor(interaction)
-        if self._is_admin(actor, guild) or self._role_ids(actor) & config.MODERATOR_ROLE_IDS:
+        if self._is_admin(actor, guild):
             return
+        # A moderator role is not a blanket permission grant. Moderators must
+        # also hold the Discord permission required by this specific command.
         actor_permissions = actor.guild_permissions
         if any(getattr(actor_permissions, permission, False) for permission in permissions):
             return
@@ -494,7 +497,7 @@ class ModerationGroup(app_commands.Group):
         latest_lock_state = latest_lock_event["action"] if latest_lock_event else None
         if latest_lock_state == "lock":
             await interaction.response.send_message(
-                f"{channel.mention} đã có case khóa đang hoạt động. Dùng `/mod unlock` trước khi khóa lại.",
+                f"{channel.mention} đã có case khóa đang hoạt động. Dùng `/unlock` trước khi khóa lại.",
                 ephemeral=True,
             )
             return
@@ -595,7 +598,7 @@ class ModerationGroup(app_commands.Group):
         ]
         title = f"Moderation Logs — {member.display_name}" if member else "Moderation Logs"
         embed = discord.Embed(title=title, description="\n".join(lines), color=discord.Color.blurple())
-        embed.set_footer(text="Dùng /mod case để xem chi tiết từng case.")
+        embed.set_footer(text="Dùng /case để xem chi tiết từng case.")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="case", description="Xem chi tiết một moderation case")
@@ -628,6 +631,111 @@ class ModerationGroup(app_commands.Group):
 def register_moderation_commands(
     tree: app_commands.CommandTree,
     service: ModerationService,
+    engine=None,
 ) -> None:
-    """Register ``/mod`` on Kato's existing discord.Client command tree."""
-    tree.add_command(ModerationGroup(service))
+    """Register moderation commands as root-level slash commands."""
+    handler = ModerationGroup(service)
+
+    async def _send_private(interaction: discord.Interaction, message: str) -> None:
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(message, ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
+            else:
+                await interaction.response.send_message(message, ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            logger.exception("Could not send moderation/prison response")
+
+    for command in list(handler.commands):
+        # Group command objects already carry their bound handler and typed
+        # parameters. Clearing the parent exposes each as a root command.
+        command.parent = None
+        command.error(handler.on_error)
+        tree.add_command(command)
+
+    if engine is None:
+        return
+
+    from game.moderation.prison_repository import PrisonError
+    from ui.commands.prison import start_prison, release_prison_for_member
+
+    @tree.command(name="phattu", description="Phạt tù Thiên Đạo và đặt chỉ tiêu lao dịch")
+    @app_commands.describe(
+        member="Người chơi cần phạt tù",
+        required_stones="Tổng linh thạch lao dịch phải khai thác",
+        reason="Lý do phạt tù",
+    )
+    async def phattu(
+        interaction: discord.Interaction,
+        member: discord.Member,
+        required_stones: int,
+        reason: str = "Thiên Đạo định đoạt",
+    ) -> None:
+        try:
+            actor = handler._actor(interaction)
+            guild = handler._guild(interaction)
+            if not handler._is_admin(actor, guild):
+                raise app_commands.AppCommandError("Chỉ Owner/Admin mới được dùng lệnh phạt tù Thiên Đạo.")
+            handler._check_target(interaction, member)
+            if required_stones < 1 or required_stones > config.PRISON_MAX_REQUIRED_STONES:
+                raise PrisonError(
+                    f"Chỉ tiêu phải từ 1 đến {config.PRISON_MAX_REQUIRED_STONES:,} linh thạch."
+                )
+            session = await start_prison(
+                interaction, engine=engine, member=member,
+                required_stones=int(required_stones), reason=handler._reason(reason),
+            )
+            await interaction.response.send_message(
+                f"⛓️ Đã phạt tù {member.mention}.\n"
+                f"Chỉ tiêu: **{int(session['required_stones']):,}** linh thạch.\n"
+                "Mỗi lượt `.kthac` tạo đúng **10 linh thạch lao dịch**. Không cộng vào ví cá nhân.\n"
+                + ("Người chơi chưa có nhân vật: hãy dùng `.tutien` trong kênh lao ngục trước khi khai thác." if not engine.players.exists(str(member.id)) else ""),
+                ephemeral=True, allowed_mentions=discord.AllowedMentions.none(),
+            )
+        except (PrisonError, app_commands.AppCommandError) as exc:
+            await _send_private(interaction, str(exc))
+        except discord.Forbidden:
+            await _send_private(
+                interaction,
+                "Discord từ chối thiết lập role/kênh. Hãy kiểm tra Manage Roles, Manage Channels và thứ tự role bot.",
+            )
+        except discord.HTTPException:
+            logger.exception("Discord API error while starting prison session")
+            await _send_private(interaction, "Discord API gặp lỗi khi áp dụng án tù. Hãy kiểm tra log trước khi thử lại.")
+        except Exception:
+            logger.exception("Unexpected error while starting prison session")
+            await _send_private(interaction, "Lỗi hệ thống khi thiết lập án tù. Hãy kiểm tra log bot trước khi thử lại.")
+
+    @tree.command(name="tha_tu", description="Admin thả tù thủ công và quyết toán quỹ lao dịch")
+    @app_commands.describe(member="Tù nhân cần được thả", reason="Lý do thả tù")
+    async def tha_tu(
+        interaction: discord.Interaction,
+        member: discord.Member,
+        reason: str = "Admin đặc xá",
+    ) -> None:
+        try:
+            guild = handler._guild(interaction)
+            actor = handler._actor(interaction)
+            if not handler._is_admin(actor, guild):
+                raise app_commands.AppCommandError("Chỉ Owner/Admin mới được dùng lệnh thả tù thủ công.")
+            handler._check_target(interaction, member)
+            payout = await release_prison_for_member(guild, interaction.client, engine, member)
+            engine.moderation.record_action(
+                guild_id=str(guild.id), moderator_id=str(actor.id), target_id=str(member.id),
+                target_type="user", action="prison_manual_release", reason=handler._reason(reason),
+                details=json.dumps({"total_stones": payout["total_stones"], "recipient_count": payout["recipient_count"], "remainder": payout["remainder"]}),
+            )
+            await interaction.response.send_message(
+                f"Đã xử lý thả tù cho {member.mention}. Tổng quỹ lao dịch: **{int(payout['total_stones']):,}** linh thạch; "
+                f"{int(payout['recipient_count'])} người nhận; mỗi người **{int(payout['per_player_reward']):,}**.",
+                ephemeral=True, allowed_mentions=discord.AllowedMentions.none(),
+            )
+        except (PrisonError, app_commands.AppCommandError) as exc:
+            await _send_private(interaction, str(exc))
+        except discord.Forbidden:
+            await _send_private(interaction, "Discord từ chối khôi phục quyền tù nhân. Phiên tù vẫn chờ xử lý.")
+        except discord.HTTPException:
+            logger.exception("Discord API error while releasing prisoner")
+            await _send_private(interaction, "Discord API gặp lỗi khi thả tù. Hãy thử lại sau khi kiểm tra log.")
+        except Exception:
+            logger.exception("Unexpected error while releasing prisoner")
+            await _send_private(interaction, "Lỗi hệ thống khi thả tù. Phiên tù được giữ để tránh mất quyền truy cập.")

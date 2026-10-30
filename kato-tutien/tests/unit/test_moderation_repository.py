@@ -9,8 +9,8 @@ from game.moderation.service import ModerationService
 def test_schema_migrates_and_records_a_manual_moderation_case():
     db = Database(":memory:")
     try:
-        assert run_migrations(db) == 17
-        assert SCHEMA_VERSION == 17
+        assert run_migrations(db) == 18
+        assert SCHEMA_VERSION == 18
         service = ModerationService(db)
         case = service.record_action(
             guild_id="guild-1",

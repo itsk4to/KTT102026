@@ -24,6 +24,19 @@ try:
     MOD_LOG_CHANNEL_ID = int(env("KATO_MOD_LOG_CHANNEL_ID", "0") or "0")
 except ValueError:
     MOD_LOG_CHANNEL_ID = 0
+
+def _positive_int_env(name: str, default: int = 0) -> int:
+    try:
+        value = int(env(name, str(default)) or str(default))
+        return value if value > 0 else default
+    except ValueError:
+        return default
+
+PRISON_ROLE_ID = _positive_int_env("KATO_PRISON_ROLE_ID")
+PRISON_CHANNEL_ID = _positive_int_env("KATO_PRISON_CHANNEL_ID")
+PRISON_ANNOUNCE_CHANNEL_ID = _positive_int_env("KATO_PRISON_ANNOUNCE_CHANNEL_ID")
+PRISON_COOLDOWN_SECONDS = _positive_int_env("KATO_PRISON_COOLDOWN_SECONDS", 30)
+PRISON_MAX_REQUIRED_STONES = _positive_int_env("KATO_PRISON_MAX_REQUIRED_STONES", 1000000)
 CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "1").lower() in {"1", "true", "yes", "on"}
 
 # Gameplay constants

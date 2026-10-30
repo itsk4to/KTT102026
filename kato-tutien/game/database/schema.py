@@ -1,7 +1,7 @@
 """Schema definitions and schema-repair helpers."""
 from __future__ import annotations
 
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 
 DDL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -26,6 +26,63 @@ CREATE INDEX IF NOT EXISTS idx_moderation_cases_guild_case
     ON moderation_cases(guild_id, case_id DESC);
 CREATE INDEX IF NOT EXISTS idx_moderation_cases_target_action
     ON moderation_cases(guild_id, target_id, action, case_id DESC);
+
+CREATE TABLE IF NOT EXISTS prison_sessions (
+    session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    actor_id TEXT NOT NULL,
+    required_stones INTEGER NOT NULL CHECK(required_stones > 0),
+    total_stones INTEGER NOT NULL DEFAULT 0 CHECK(total_stones >= 0),
+    reason TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'preparing',
+    permission_snapshot TEXT NOT NULL DEFAULT '{}',
+    payout_id INTEGER,
+    created_at INTEGER NOT NULL,
+    last_mined_at INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER NOT NULL DEFAULT 0,
+    announcement_sent_at INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prison_one_open_session
+    ON prison_sessions(user_id)
+    WHERE status IN ('preparing','active','release_pending');
+CREATE INDEX IF NOT EXISTS idx_prison_status ON prison_sessions(status,session_id);
+
+CREATE TABLE IF NOT EXISTS prison_mining_events (
+    event_id TEXT PRIMARY KEY,
+    session_id INTEGER NOT NULL,
+    amount INTEGER NOT NULL CHECK(amount = 10),
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(session_id) REFERENCES prison_sessions(session_id)
+);
+CREATE INDEX IF NOT EXISTS idx_prison_mining_session
+    ON prison_mining_events(session_id,created_at);
+
+CREATE TABLE IF NOT EXISTS prison_payouts (
+    payout_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL UNIQUE,
+    guild_id TEXT NOT NULL,
+    prisoner_id TEXT NOT NULL,
+    total_stones INTEGER NOT NULL,
+    recipient_count INTEGER NOT NULL,
+    per_player_reward INTEGER NOT NULL,
+    remainder INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(session_id) REFERENCES prison_sessions(session_id)
+);
+CREATE TABLE IF NOT EXISTS prison_payout_items (
+    payout_id INTEGER NOT NULL,
+    user_id TEXT NOT NULL,
+    amount INTEGER NOT NULL,
+    PRIMARY KEY(payout_id,user_id),
+    FOREIGN KEY(payout_id) REFERENCES prison_payouts(payout_id)
+);
+CREATE TABLE IF NOT EXISTS community_fund (
+    fund_id INTEGER PRIMARY KEY CHECK(fund_id=1),
+    spirit_stones INTEGER NOT NULL DEFAULT 0 CHECK(spirit_stones >= 0)
+);
+INSERT OR IGNORE INTO community_fund(fund_id,spirit_stones) VALUES(1,0);
 
 CREATE TABLE IF NOT EXISTS players (
     user_id TEXT PRIMARY KEY,

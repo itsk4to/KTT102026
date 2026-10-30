@@ -190,6 +190,39 @@ def migrate_16_to_17(db) -> None:
     _set_version(db, 17)
 
 
+def migrate_17_to_18(db) -> None:
+    # Prison, mining events, and community payouts. All DDL is idempotent.
+    db.execute("""CREATE TABLE IF NOT EXISTS prison_sessions (
+        session_id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id TEXT NOT NULL,
+        user_id TEXT NOT NULL, actor_id TEXT NOT NULL, required_stones INTEGER NOT NULL CHECK(required_stones > 0),
+        total_stones INTEGER NOT NULL DEFAULT 0 CHECK(total_stones >= 0), reason TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'preparing', permission_snapshot TEXT NOT NULL DEFAULT '{}',
+        payout_id INTEGER, created_at INTEGER NOT NULL, last_mined_at INTEGER NOT NULL DEFAULT 0,
+        completed_at INTEGER NOT NULL DEFAULT 0, announcement_sent_at INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT NOT NULL DEFAULT ''
+    )""")
+    db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_prison_one_open_session ON prison_sessions(user_id) WHERE status IN ('preparing','active','release_pending')")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_prison_status ON prison_sessions(status,session_id)")
+    db.execute("""CREATE TABLE IF NOT EXISTS prison_mining_events (
+        event_id TEXT PRIMARY KEY, session_id INTEGER NOT NULL, amount INTEGER NOT NULL CHECK(amount=10),
+        created_at INTEGER NOT NULL, FOREIGN KEY(session_id) REFERENCES prison_sessions(session_id)
+    )""")
+    db.execute("CREATE INDEX IF NOT EXISTS idx_prison_mining_session ON prison_mining_events(session_id,created_at)")
+    db.execute("""CREATE TABLE IF NOT EXISTS prison_payouts (
+        payout_id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INTEGER NOT NULL UNIQUE,
+        guild_id TEXT NOT NULL, prisoner_id TEXT NOT NULL, total_stones INTEGER NOT NULL,
+        recipient_count INTEGER NOT NULL, per_player_reward INTEGER NOT NULL, remainder INTEGER NOT NULL,
+        created_at INTEGER NOT NULL, FOREIGN KEY(session_id) REFERENCES prison_sessions(session_id)
+    )""")
+    db.execute("""CREATE TABLE IF NOT EXISTS prison_payout_items (
+        payout_id INTEGER NOT NULL, user_id TEXT NOT NULL, amount INTEGER NOT NULL,
+        PRIMARY KEY(payout_id,user_id), FOREIGN KEY(payout_id) REFERENCES prison_payouts(payout_id)
+    )""")
+    db.execute("CREATE TABLE IF NOT EXISTS community_fund (fund_id INTEGER PRIMARY KEY CHECK(fund_id=1), spirit_stones INTEGER NOT NULL DEFAULT 0 CHECK(spirit_stones>=0))")
+    db.execute("INSERT OR IGNORE INTO community_fund(fund_id,spirit_stones) VALUES(1,0)")
+    _set_version(db, 18)
+
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
@@ -208,6 +241,7 @@ _MIGRATIONS = {
     14: migrate_14_to_15,
     15: migrate_15_to_16,
     16: migrate_16_to_17,
+    17: migrate_17_to_18,
 }
 
 

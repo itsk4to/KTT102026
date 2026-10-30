@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import ast
 import unittest
@@ -10,9 +9,9 @@ class GameUIReworkTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_version_is_380_everywhere_current(self):
-        self.assertEqual(self.read("VERSION.txt").strip(), "3.8.0")
-        self.assertIn('version = "3.8.0"', self.read("pyproject.toml"))
+    def test_version_is_381_everywhere_current(self):
+        self.assertEqual(self.read("VERSION.txt").strip(), "3.8.1")
+        self.assertIn('version = "3.8.1"', self.read("pyproject.toml"))
 
     def test_theme_factory_has_shared_brand_and_semantic_colors(self):
         tokens = self.read("ui/theme/tokens.py")
@@ -69,24 +68,12 @@ class GameUIReworkTests(unittest.TestCase):
 
     def test_ui_python_sources_parse(self):
         targets = [
-            "ui/theme/tokens.py",
-            "ui/theme/embeds.py",
-            "ui/theme/components.py",
-            "ui/theme/views.py",
-            "ui/embeds.py",
-            "ui/views/main_menu_view.py",
-            "ui/views/player_view.py",
-            "ui/views/shop_view.py",
-            "ui/views/inventory_view.py",
-            "ui/views/mission_view.py",
-            "ui/views/secret_realm_view.py",
-            "ui/views/exploration_view.py",
-            "ui/views/market_view.py",
-            "ui/views/world_view.py",
-            "ui/views/dao_view.py",
-            "ui/views/combat_view.py",
+            "ui/theme/tokens.py", "ui/theme/embeds.py", "ui/theme/components.py", "ui/theme/views.py",
+            "ui/embeds.py", "ui/views/main_menu_view.py", "ui/views/player_view.py",
+            "ui/views/shop_view.py", "ui/views/inventory_view.py", "ui/views/mission_view.py",
+            "ui/views/secret_realm_view.py", "ui/views/exploration_view.py", "ui/views/market_view.py",
+            "ui/views/world_view.py", "ui/views/dao_view.py", "ui/views/combat_view.py",
         ]
-
         for relative in targets:
             with self.subTest(file=relative):
                 ast.parse(self.read(relative), filename=relative)
