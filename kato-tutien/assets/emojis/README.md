@@ -1,17 +1,9 @@
 # Emoji assets
 
-The bot uses the configured server custom emoji by default, with Unicode fallbacks when custom emoji are disabled or unavailable.
+Bot mặc định dùng **Unicode emoji** (💎 🧘 ⚔️ …) — không phụ thuộc emoji server.
 
-Custom server emoji are isolated in `server/emojis.json`; custom emoji strings are deliberately not embedded in Python modules.
+- Mapping hiển thị: `ui/emoji.py` (`EMOJI` dict)
+- Custom Discord emoji (tùy chọn): `server/emojis.json`
+- Bật custom: đặt `KATO_CUSTOM_EMOJI=1` và điền token `<:name:id>` hợp lệ vào `server/emojis.json`
 
-## Configure custom server emoji
-
-1. Confirm the emoji IDs in `server/emojis.json` belong to the server where the bot runs and the bot can access them.
-2. Custom emojis are enabled by default; set `KATO_CUSTOM_EMOJI=1` explicitly if your host overrides the setting.
-3. Restart the bot.
-
-To temporarily use regular emoji again, set `KATO_CUSTOM_EMOJI=0` (the opt-out setting) and restart. Unknown or invalid custom entries automatically fall back to Unicode.
-
-## Emoji key names
-
-Use stable semantic keys such as `spirit_stone`, `cultivator`, `demon`, `attack`, and `shop`. UI modules should refer to `ui.emoji.EMOJI` instead of embedding custom emoji tokens. The shared embed factory automatically resolves matching Unicode icons in titles, descriptions, fields, combat logs, item descriptions, author and footer text. All `ThemedView` buttons and dropdown options also resolve recognized icons through the same registry. Icons with no suitable supplied custom emoji stay Unicode.
+UI modules nên dùng `ui.emoji.EMOJI[...]` thay vì hard-code token custom.

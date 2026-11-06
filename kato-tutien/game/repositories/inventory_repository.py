@@ -23,28 +23,34 @@ class InventoryRepository:
         return [ItemStack(item_id=r["item_id"], quantity=int(r["quantity"])) for r in rows]
 
     def add(self, user_id: str, item_id: str, qty: int = 1) -> int:
-        current = self.get_count(user_id, item_id)
-        new = current + qty
+        """Atomically add qty to a stack. Returns the new quantity."""
+        qty = int(qty)
+        if qty < 1:
+            raise ValueError("qty must be >= 1")
         self.db.execute(
             """INSERT INTO inventory(user_id, item_id, quantity) VALUES(?,?,?)
-               ON CONFLICT(user_id, item_id) DO UPDATE SET quantity=excluded.quantity""",
-            (user_id, item_id, new),
+               ON CONFLICT(user_id, item_id) DO UPDATE
+               SET quantity = inventory.quantity + excluded.quantity""",
+            (user_id, item_id, qty),
         )
-        return new
+        return self.get_count(user_id, item_id)
 
     def remove(self, user_id: str, item_id: str, qty: int = 1) -> bool:
-        current = self.get_count(user_id, item_id)
-        if current < qty:
+        """Atomically remove qty. Returns False if the stack is insufficient."""
+        qty = int(qty)
+        if qty < 1:
             return False
-        new = current - qty
-        if new <= 0:
-            self.db.execute(
-                "DELETE FROM inventory WHERE user_id=? AND item_id=?",
-                (user_id, item_id),
-            )
-        else:
-            self.db.execute(
-                "UPDATE inventory SET quantity=? WHERE user_id=? AND item_id=?",
-                (new, user_id, item_id),
-            )
+        cur = self.db.execute(
+            """UPDATE inventory
+               SET quantity = quantity - ?
+               WHERE user_id=? AND item_id=? AND quantity >= ?""",
+            (qty, user_id, item_id, qty),
+        )
+        if cur.rowcount != 1:
+            return False
+        # Drop empty stacks so list_items stays clean.
+        self.db.execute(
+            "DELETE FROM inventory WHERE user_id=? AND item_id=? AND quantity<=0",
+            (user_id, item_id),
+        )
         return True

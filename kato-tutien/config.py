@@ -37,7 +37,7 @@ PRISON_CHANNEL_ID = _positive_int_env("KATO_PRISON_CHANNEL_ID")
 PRISON_ANNOUNCE_CHANNEL_ID = _positive_int_env("KATO_PRISON_ANNOUNCE_CHANNEL_ID")
 PRISON_COOLDOWN_SECONDS = _positive_int_env("KATO_PRISON_COOLDOWN_SECONDS", 30)
 PRISON_MAX_REQUIRED_STONES = _positive_int_env("KATO_PRISON_MAX_REQUIRED_STONES", 1000000)
-CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "1").lower() in {"1", "true", "yes", "on"}
+CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "0").lower() in {"1", "true", "yes", "on"}
 
 # Gameplay constants
 CULTIVATE_COOLDOWN = 25

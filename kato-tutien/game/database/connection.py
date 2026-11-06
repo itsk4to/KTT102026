@@ -48,12 +48,16 @@ class Database:
 
     @contextmanager
     def transaction(self) -> Iterator["Database"]:
-        """Run multiple repository operations as one atomic transaction."""
+        """Run multiple repository operations as one atomic transaction.
+
+        Uses BEGIN IMMEDIATE so concurrent writers take the reserved lock up
+        front instead of racing on the first write (deferred BEGIN).
+        """
         with self._lock:
             outermost = self._transaction_depth == 0
             self._transaction_depth += 1
             if outermost:
-                self.conn.execute("BEGIN")
+                self.conn.execute("BEGIN IMMEDIATE")
             try:
                 yield self
             except Exception:

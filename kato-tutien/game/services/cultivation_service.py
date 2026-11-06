@@ -34,27 +34,28 @@ class CultivationService:
         return p
 
     def cultivate(self, user_id: str) -> dict:
-        p = self._require(user_id)
-        now = int(time.time())
-        remain = CULTIVATE_COOLDOWN - (now - p.last_cultivate)
-        if remain > 0:
-            raise GameError(f"Tu luyện còn chờ **{remain}s**.")
-        recovery = max(0, int(p.breakthrough_recovery_until) - now)
-        if recovery > 0:
-            raise GameError(f"Đang hồi phục sau thất bại đột phá. Còn **{self._format_duration(recovery)}** mới có thể tiếp tục tu luyện.")
-        if is_max_realm(p.realm_index, p.realm_layer):
-            raise GameError("Đã đạt cảnh giới tối thượng.")
-        room = headroom(p.cultivation, p.realm_index, p.realm_layer)
-        if room <= 0:
-            raise GameError("Tu vi đã đầy. Hãy **đột phá**.")
-        gain = min(room, int(cultivate_gain(p.root, p.insight, p.luck) * float(talent_mod(p.talent, "cultivation", 1.0)) * float(destiny_mod(p.destiny, "cultivation", 1.0))))
-        p.cultivation += gain
-        if p.dao_type:
-            p.dao_insight += 1
-            from game.rules.dao_rules import stage_from_insight
-            p.dao_stage = stage_from_insight(p.dao_insight)
-        p.last_cultivate = now
-        self.players.save(p)
+        with self.players.transaction():
+            p = self._require(user_id)
+            now = int(time.time())
+            remain = CULTIVATE_COOLDOWN - (now - p.last_cultivate)
+            if remain > 0:
+                raise GameError(f"Tu luyện còn chờ **{remain}s**.")
+            recovery = max(0, int(p.breakthrough_recovery_until) - now)
+            if recovery > 0:
+                raise GameError(f"Đang hồi phục sau thất bại đột phá. Còn **{self._format_duration(recovery)}** mới có thể tiếp tục tu luyện.")
+            if is_max_realm(p.realm_index, p.realm_layer):
+                raise GameError("Đã đạt cảnh giới tối thượng.")
+            room = headroom(p.cultivation, p.realm_index, p.realm_layer)
+            if room <= 0:
+                raise GameError("Tu vi đã đầy. Hãy **đột phá**.")
+            gain = min(room, int(cultivate_gain(p.root, p.insight, p.luck) * float(talent_mod(p.talent, "cultivation", 1.0)) * float(destiny_mod(p.destiny, "cultivation", 1.0))))
+            p.cultivation += gain
+            if p.dao_type:
+                p.dao_insight += 1
+                from game.rules.dao_rules import stage_from_insight
+                p.dao_stage = stage_from_insight(p.dao_insight)
+            p.last_cultivate = now
+            self.players.save(p)
         if getattr(self, "missions", None) is not None:
             self.missions.track_action(user_id, "cultivate", 1)
         if getattr(self, "sect_tower", None) is not None:
@@ -210,7 +211,8 @@ class CultivationService:
                     p.cultivation = 0
                     p.max_hp += 20 + p.root // 10
                     # Unlike a normal breakthrough, Cửu Lôi Kiếp does not refill HP.
-                    p.hp = min(old_hp - thunder_result["total_damage"], p.max_hp)
+                    # Clamp to [1, max_hp] so residual damage never leaves invalid HP.
+                    p.hp = max(1, min(int(old_hp - thunder_result["total_damage"]), int(p.max_hp)))
                     p.attack += 3 + p.insight // 20
                     p.defense += 2 + p.root // 25
                     self.players.add_history(user_id, "breakthrough", realm_text(p.realm_index, p.realm_layer, p.path))
@@ -273,21 +275,22 @@ class CultivationService:
         return f"{secs} giây"
 
     def claim_daily(self, user_id: str) -> dict:
-        p = self._require(user_id)
-        now = int(time.time())
-        if now - p.last_daily < DAILY_COOLDOWN:
-            remain = DAILY_COOLDOWN - (now - p.last_daily)
-            raise GameError(f"Đã nhận thưởng hôm nay. Còn **{remain // 3600} giờ**.")
-        # streak
-        if now - p.last_daily < DAILY_COOLDOWN * 2:
-            p.daily_streak += 1
-        else:
-            p.daily_streak = 1
-        reward = 500 + min(p.daily_streak, 30) * 50 + p.realm_index * 100
-        p.spirit_stones += reward
-        p.last_daily = now
-        self.players.save(p)
-        return {"stones": reward, "streak": p.daily_streak, "player": p}
+        with self.players.transaction():
+            p = self._require(user_id)
+            now = int(time.time())
+            if now - p.last_daily < DAILY_COOLDOWN:
+                remain = DAILY_COOLDOWN - (now - p.last_daily)
+                raise GameError(f"Đã nhận thưởng hôm nay. Còn **{remain // 3600} giờ**.")
+            # streak
+            if now - p.last_daily < DAILY_COOLDOWN * 2:
+                p.daily_streak += 1
+            else:
+                p.daily_streak = 1
+            reward = 500 + min(p.daily_streak, 30) * 50 + p.realm_index * 100
+            p.spirit_stones += reward
+            p.last_daily = now
+            self.players.save(p)
+            return {"stones": reward, "streak": p.daily_streak, "player": p}
 
     def face_tribulation(self, user_id: str) -> dict:
         p = self._require(user_id)

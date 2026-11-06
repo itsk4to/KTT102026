@@ -286,8 +286,10 @@ class EconomyService:
     # ----- Market -----
     def market_list(self, user_id: str, item_id: str, qty: int, price: int) -> dict:
         with self.players.transaction():
-            if qty < 1 or price < 1:
-                raise GameError("Số lượng và giá phải > 0.")
+            if qty < 1 or qty > 999:
+                raise GameError("Số lượng đăng bán phải từ 1 đến 999.")
+            if price < 1 or price > 10_000_000:
+                raise GameError("Đơn giá phải từ 1 đến 10.000.000 linh thạch.")
             item = ITEMS.get(item_id)
             if not item or not item.get("marketable"):
                 raise GameError("Vật phẩm không thể đăng bán.")
@@ -311,9 +313,10 @@ class EconomyService:
 
     def market_buy(self, buyer_id: str, listing_id: int) -> dict:
         with self.players.transaction():
+            # Validate first (keep listing id stable on soft failures), then claim.
             listing = self.market.get(listing_id)
             if not listing:
-                raise GameError("Tin đăng không tồn tại.")
+                raise GameError("Tin đăng không tồn tại hoặc đã được giao dịch.")
             if listing.seller_id == buyer_id:
                 raise GameError("Không thể tự mua tin của mình.")
             buyer = self._require(buyer_id)
@@ -322,29 +325,32 @@ class EconomyService:
                 raise GameError(f"Không đủ linh thạch. Cần **{total}**.")
             seller = self.players.get(listing.seller_id)
             if not seller:
-                raise GameError("Người bán không còn tồn tại.")
+                raise GameError("Người bán không còn tồn tại. Giao dịch bị hủy.")
+            # Atomic claim — loses the race if another buyer already took it.
+            claimed = self.market.claim(listing_id)
+            if not claimed:
+                raise GameError("Tin đăng không tồn tại hoặc đã được giao dịch.")
             gain = seller_gain(total)
             tax = tax_amount(total)
             buyer.spirit_stones -= total
             seller.spirit_stones += gain
-            self._inventory.add(buyer_id, listing.item_id, listing.quantity)
-            self.market.delete(listing_id)
+            self._inventory.add(buyer_id, claimed.item_id, claimed.quantity)
             self.players.save(buyer)
             self.players.save(seller)
             return {
-                "item_id": listing.item_id, "qty": listing.quantity,
+                "item_id": claimed.item_id, "qty": claimed.quantity,
                 "total": total, "seller_gain": gain, "tax": tax, "player": buyer,
             }
 
     def market_cancel(self, user_id: str, listing_id: int) -> dict:
         with self.players.transaction():
-            listing = self.market.get(listing_id)
+            listing = self.market.claim_owned(listing_id, user_id)
             if not listing:
+                existing = self.market.get(listing_id)
+                if existing and existing.seller_id != user_id:
+                    raise GameError("Không phải tin của ngươi.")
                 raise GameError("Tin đăng không tồn tại.")
-            if listing.seller_id != user_id:
-                raise GameError("Không phải tin của ngươi.")
             self._inventory.add(user_id, listing.item_id, listing.quantity)
-            self.market.delete(listing_id)
             return {"item_id": listing.item_id, "qty": listing.quantity}
 
     def transfer(self, from_id: str, to_id: str, amount: int) -> dict:

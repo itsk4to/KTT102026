@@ -6,10 +6,11 @@ import re
 from pathlib import Path
 from typing import Any
 
-# Custom Discord emoji are enabled by default. Set KATO_CUSTOM_EMOJI=0 to
-# use the Unicode fallback throughout the UI.
+# Unicode icons are the default. Set KATO_CUSTOM_EMOJI=1 only when the
+# server has uploaded custom emoji and assets/emojis/server/emojis.json
+# contains real <:name:id> tokens.
 _TRUE_VALUES = {"1", "true", "yes", "on"}
-_CUSTOM_ENABLED = os.getenv("KATO_CUSTOM_EMOJI", "1").strip().lower() in _TRUE_VALUES
+_CUSTOM_ENABLED = os.getenv("KATO_CUSTOM_EMOJI", "0").strip().lower() in _TRUE_VALUES
 _CUSTOM_EMOJI_RE = re.compile(r"<a?:[A-Za-z0-9_~]+:[0-9]{15,}>\Z")
 _CUSTOM_EMOJI_FILE = (
     Path(__file__).resolve().parents[1]

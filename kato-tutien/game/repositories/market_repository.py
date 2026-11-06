@@ -27,5 +27,37 @@ class MarketRepository:
         )
         return int(cur.lastrowid)
 
-    def delete(self, listing_id: int) -> None:
-        self.db.execute("DELETE FROM market_listings WHERE id=?", (listing_id,))
+    def delete(self, listing_id: int) -> bool:
+        """Delete by id. Returns True only when a row was actually removed."""
+        cur = self.db.execute("DELETE FROM market_listings WHERE id=?", (listing_id,))
+        return cur.rowcount == 1
+
+    def claim(self, listing_id: int) -> MarketListing | None:
+        """Atomically take ownership of a listing for purchase/cancel.
+
+        SELECT + DELETE under the same write transaction / process lock.
+        Returns None if the listing is already gone (prevents double-buy).
+        """
+        row = self.db.fetchone("SELECT * FROM market_listings WHERE id=?", (listing_id,))
+        if not row:
+            return None
+        cur = self.db.execute("DELETE FROM market_listings WHERE id=?", (listing_id,))
+        if cur.rowcount != 1:
+            return None
+        return MarketListing.from_row(row)
+
+    def claim_owned(self, listing_id: int, seller_id: str) -> MarketListing | None:
+        """Claim a listing only if it still belongs to seller_id."""
+        row = self.db.fetchone(
+            "SELECT * FROM market_listings WHERE id=? AND seller_id=?",
+            (listing_id, seller_id),
+        )
+        if not row:
+            return None
+        cur = self.db.execute(
+            "DELETE FROM market_listings WHERE id=? AND seller_id=?",
+            (listing_id, seller_id),
+        )
+        if cur.rowcount != 1:
+            return None
+        return MarketListing.from_row(row)

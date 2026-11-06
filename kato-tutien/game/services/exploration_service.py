@@ -240,23 +240,24 @@ class ExplorationService:
             result["discovery"] = self.players.add_discovery(user_id, effect["discover"])
 
     def hunt(self, user_id: str) -> dict:
-        p = self._require(user_id)
-        active_encounter = self.combat.get_encounter(user_id)
-        if active_encounter and not active_encounter.finished:
-            raise GameError("Ngươi đang trong một trận đấu. Hãy tiếp tục trận hiện tại trước khi săn trận mới.")
-        now = int(time.time())
-        remain = HUNT_COOLDOWN - (now - p.last_hunt)
-        if remain > 0:
-            raise GameError(f"Săn còn chờ **{remain}s**.")
-        p.last_hunt = now
-        self.players.save(p)
-        from game.content.monsters import BOSS_MONSTERS
-        zone_key = p.explore_zone
-        eligible_bosses = [
-            b for b in BOSS_MONSTERS
-            if p.realm_index >= b["min_realm"]
-            and (not b.get("zones") or zone_key in b["zones"])
-        ]
-        boss = bool(eligible_bosses) and self.rng.random() < min(0.15, 0.05 + p.fate * 0.001)
-        enc = self.combat.start_encounter(user_id, boss=boss, zone_key=zone_key)
-        return {"encounter": enc, "player": p, "realm": realm_text(p.realm_index, p.realm_layer, p.path)}
+        with self.players.transaction():
+            p = self._require(user_id)
+            active_encounter = self.combat.get_encounter(user_id)
+            if active_encounter and not active_encounter.finished:
+                raise GameError("Ngươi đang trong một trận đấu. Hãy tiếp tục trận hiện tại trước khi săn trận mới.")
+            now = int(time.time())
+            remain = HUNT_COOLDOWN - (now - p.last_hunt)
+            if remain > 0:
+                raise GameError(f"Săn còn chờ **{remain}s**.")
+            p.last_hunt = now
+            self.players.save(p)
+            from game.content.monsters import BOSS_MONSTERS
+            zone_key = p.explore_zone
+            eligible_bosses = [
+                b for b in BOSS_MONSTERS
+                if p.realm_index >= b["min_realm"]
+                and (not b.get("zones") or zone_key in b["zones"])
+            ]
+            boss = bool(eligible_bosses) and self.rng.random() < min(0.15, 0.05 + p.fate * 0.001)
+            enc = self.combat.start_encounter(user_id, boss=boss, zone_key=zone_key)
+            return {"encounter": enc, "player": p, "realm": realm_text(p.realm_index, p.realm_layer, p.path)}
