@@ -7,7 +7,7 @@ on:
         description: "Tên ZIP trong repo itsk4to/File-Update"
         required: true
         type: string
-        default: "KTT102026_V3.8.2_full.zip"
+        default: "KTT102026_V3.8.3.zip"
 
 permissions:
   contents: write
