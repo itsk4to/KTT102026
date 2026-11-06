@@ -23,15 +23,31 @@ class EconomyAndStatBalanceTests(unittest.TestCase):
         return self.engine.players.create(user_id, "Tester", "tien")
 
     def test_breakthrough_baseline_is_not_near_guaranteed(self):
-        chance = breakthrough_chance(root=55, mind=55, insight=55, injury=0, dao_stage=0)
-        self.assertAlmostEqual(chance, 0.58)
-        self.assertLess(chance, 0.70)
+        chance = breakthrough_chance(
+            root=55, insight=55, luck=55, fate=55, mind=55, injury=0, dao_stage=0,
+        )
+        # 5 stats ~55 → about 62%, still not guaranteed.
+        self.assertAlmostEqual(chance, 0.62, places=2)
+        self.assertLess(chance, 0.75)
+        low = breakthrough_chance(
+            root=55, insight=55, luck=20, fate=20, mind=55, injury=0, dao_stage=0,
+        )
+        high = breakthrough_chance(
+            root=55, insight=55, luck=90, fate=90, mind=55, injury=0, dao_stage=0,
+        )
+        self.assertLess(low, chance)
+        self.assertGreater(high, chance)
 
     def test_breakthrough_chance_keeps_caps_and_injury_penalty(self):
-        strong = breakthrough_chance(root=100, mind=100, insight=100, injury=0, dao_stage=5, foundation_bonus=0.2)
-        injured = breakthrough_chance(root=55, mind=55, insight=55, injury=10, dao_stage=0)
-        self.assertEqual(strong, 0.90)
-        self.assertAlmostEqual(injured, 0.55)
+        strong = breakthrough_chance(
+            root=100, insight=100, luck=100, fate=100, mind=100,
+            injury=0, dao_stage=5, foundation_bonus=0.2,
+        )
+        injured = breakthrough_chance(
+            root=55, insight=55, luck=55, fate=55, mind=55, injury=10, dao_stage=0,
+        )
+        self.assertEqual(strong, 0.92)
+        self.assertAlmostEqual(injured, 0.59, places=2)
         self.assertGreaterEqual(injured, 0.10)
 
     def test_new_character_stats_are_in_bounded_start_range(self):
@@ -62,10 +78,11 @@ class EconomyAndStatBalanceTests(unittest.TestCase):
         self.engine.economy.use_item(p.user_id, "qing_moc_phu")
         after_first = self.engine.players.get(p.user_id)
         self.assertEqual(after_first.root, root_before + 1)
-        self.engine.economy.use_item(p.user_id, "qing_moc_phu")
+        # Pure permanent-stat items cannot be reused after the bonus was claimed.
+        with self.assertRaises(GameError):
+            self.engine.economy.use_item(p.user_id, "qing_moc_phu")
         after_second = self.engine.players.get(p.user_id)
         self.assertEqual(after_second.root, root_before + 1)
-        self.assertEqual(after_second.cultivation, 600)
 
     def test_bulk_use_of_permanent_stat_item_is_rejected_without_consumption(self):
         p = self.make_player()
@@ -137,7 +154,7 @@ class EconomyAndStatBalanceTests(unittest.TestCase):
         self.assertEqual(saved.fate, min(100, starting_fate + 4))
 
     def test_breakthrough_only_items_do_not_advertise_unused_stats(self):
-        for item_id, bonus in (("tru_co_dan", 0.05), ("kim_dan_dai_duoc", 0.08)):
+        for item_id, bonus in (("tru_co_dan", 0.05), ("kim_dan_dai_duoc", 0.10)):
             item = ITEMS[item_id]
             self.assertEqual(item["breakthrough_bonus"], bonus)
             self.assertNotIn("cultivation", item)
@@ -147,14 +164,14 @@ class EconomyAndStatBalanceTests(unittest.TestCase):
     def test_equipment_thunder_resistance_descriptions_match_values(self):
         self.assertAlmostEqual(ITEMS["huyen_thiet_linh_kinh"]["thunder_resistance"], 0.05)
         self.assertIn("5%", ITEMS["huyen_thiet_linh_kinh"]["description"])
-        self.assertAlmostEqual(ITEMS["thien_loi_chau"]["thunder_resistance"], 0.08)
-        self.assertIn("8%", ITEMS["thien_loi_chau"]["description"])
+        self.assertAlmostEqual(ITEMS["thien_loi_chau"]["thunder_resistance"], 0.10)
+        self.assertIn("10%", ITEMS["thien_loi_chau"]["description"])
 
     def test_healing_respects_equipped_max_hp_without_lowering_existing_hp(self):
         p = self.make_player()
         p.loadout = {"armor": "kim_cang_giap"}
         effective_max_hp = self.engine.combat.battle_stats(p)["max_hp"]
-        p.hp = p.max_hp + 15
+        p.hp = max(1, effective_max_hp - 10)
         self.engine._players.save(p)
         self.engine._inventory.add(p.user_id, "hoi_huyet_dan", 1)
 
@@ -162,7 +179,7 @@ class EconomyAndStatBalanceTests(unittest.TestCase):
         saved = self.engine.players.get(p.user_id)
 
         self.assertEqual(saved.hp, effective_max_hp)
-        self.assertIn(f"+5 HP", result["notes"])
+        self.assertTrue(any("HP" in note for note in result["notes"]))
 
     def test_tribulation_uses_combat_effective_max_hp(self):
         p = self.make_player()

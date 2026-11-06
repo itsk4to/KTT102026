@@ -62,22 +62,40 @@ def soft_cap_stat(current: int, requested: int, hard_cap: int = 100) -> int:
 def breakthrough_chance(
     *,
     root: int,
-    mind: int,
     insight: int,
-    injury: int,
-    dao_stage: int,
+    luck: int,
+    fate: int,
+    mind: int,
+    injury: int = 0,
+    dao_stage: int = 0,
     foundation_bonus: float = 0.0,
 ) -> float:
-    # Typical new characters (stats around 55) begin near 58–60%, not at the
-    # old 90%+ ceiling. Good stats, Dao stages and preparation still matter.
-    base = 0.25 + root * 0.0025 + mind * 0.002 + insight * 0.0015 + dao_stage * 0.02
-    base += foundation_bonus
+    """Tỉ lệ đột phá từ đủ 5 chỉ số gốc của nhân vật.
+
+    1. root    — Căn cơ
+    2. insight — Ngộ tính
+    3. luck    — Vận khí
+    4. fate    — Mệnh số
+    5. mind    — Đạo tâm
+
+    dao_stage / foundation_bonus / injury vẫn điều chỉnh thêm.
+    """
+    # Nhân vật mới (5 chỉ số ~55) khoảng 60%. Mỗi chỉ số đều kéo tỉ lệ.
+    base = (
+        0.18
+        + max(0, int(root)) * 0.0020      # Căn cơ
+        + max(0, int(luck)) * 0.0018      # Vận khí
+        + max(0, int(mind)) * 0.0016      # Đạo tâm
+        + max(0, int(insight)) * 0.0014   # Ngộ tính
+        + max(0, int(fate)) * 0.0012      # Mệnh số
+        + max(0, int(dao_stage)) * 0.018
+    )
+    base += float(foundation_bonus)
     # Injury matters, but must not cancel pity one-for-one after every failure.
     # At 0.003 per injury point, +5 pity offsets the +5 injury from a normal
-    # failure and still yields a net +3.5 percentage points toward recovery.
-    # Severe injury remains meaningful (up to a 30pp penalty at injury 100).
+    # failure and still yields a net gain toward recovery.
     base -= max(0, min(100, int(injury))) * 0.003
-    return max(0.10, min(0.90, base))
+    return max(0.10, min(0.92, base))
 
 
 def cultivate_gain(root: int, insight: int, luck: int, talent_mult: float = 1.0) -> int:

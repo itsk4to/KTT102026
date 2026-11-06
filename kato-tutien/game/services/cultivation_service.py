@@ -72,8 +72,9 @@ class CultivationService:
         p = self._require(user_id)
         req = cultivation_requirement(p.realm_index, p.realm_layer)
         chance = breakthrough_chance(
-            root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)) + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
+            root=p.root, insight=p.insight, luck=p.luck, fate=p.fate, mind=p.mind,
+            injury=p.injury, dao_stage=p.dao_stage,
+            foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)) + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
         )
         recovery = max(0, int(p.breakthrough_recovery_until) - int(time.time()))
         needs_thunder = requires_nine_thunder_tribulation(p.realm_index, p.realm_layer)
@@ -178,8 +179,9 @@ class CultivationService:
         if needs_thunder and p.hp <= 0:
             raise GameError("Khí huyết đã cạn. Hãy hồi phục HP trước khi mở Cửu Lôi Kiếp.")
         chance = breakthrough_chance(
-            root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)) + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
+            root=p.root, insight=p.insight, luck=p.luck, fate=p.fate, mind=p.mind,
+            injury=p.injury, dao_stage=p.dao_stage,
+            foundation_bonus=foundation_bonus + float(talent_mod(p.talent, "breakthrough", 0.0)) + float(destiny_mod(p.destiny, "breakthrough", 0.0)) + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
         )
         breakthrough_roll_success = self.rng.random() < chance
         success = breakthrough_roll_success
@@ -307,8 +309,9 @@ class CultivationService:
         if p.cultivation < req:
             raise GameError("Tu vi chưa đủ để ứng kiếp.")
         chance = breakthrough_chance(
-            root=p.root, mind=p.mind, insight=p.insight,
-            injury=p.injury, dao_stage=p.dao_stage, foundation_bonus=0.1 + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
+            root=p.root, insight=p.insight, luck=p.luck, fate=p.fate, mind=p.mind,
+            injury=p.injury, dao_stage=p.dao_stage,
+            foundation_bonus=0.1 + min(20, max(0, int(p.breakthrough_pity))) / 100.0,
         )
         success = self.rng.random() < chance
         pity_before = min(20, max(0, int(p.breakthrough_pity)))

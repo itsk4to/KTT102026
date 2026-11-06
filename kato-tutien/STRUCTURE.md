@@ -1,201 +1,32 @@
-# Kato Tu Tiên v3.4.0 — Canonical Architecture Tree
+# Kato Tu Tiên — Architecture Tree (v3.8.5)
 
 ```text
-KatoTuTien-v3.4.0/
-├── bot.py
-├── config.py
-├── VERSION.txt
-├── pyproject.toml
-├── requirements.txt
-├── requirements-dev.txt
-├── README.md
-├── STRUCTURE.md
-├── CHANGELOG.md
-├── .env.example
+kato-tutien/
+├── bot.py / config.py / VERSION.txt
+├── docs/
+│   ├── CONTENT_TREE.md      ← cập nhật content theo mục
+│   ├── ITEM_DESIGN.md       ← nguyên tắc vật phẩm có chủ đích
+│   └── …
 ├── game/
-│   ├── engine.py
-│   ├── models/
-│   │   ├── player.py
-│   │   ├── sect.py
-│   │   ├── item.py
-│   │   ├── combat.py
-│   │   ├── world.py
-│   │   └── economy.py
-│   ├── services/
-│   │   ├── player_service.py
-│   │   ├── cultivation_service.py
-│   │   ├── breakthrough_service.py
-│   │   ├── dao_service.py
-│   │   ├── dao_lu_service.py
-│   │   ├── combat_service.py
-│   │   ├── exploration_service.py
-│   │   ├── fate_service.py
-│   │   ├── reputation_service.py
-│   │   ├── npc_service.py
-│   │   ├── quest_service.py
-│   │   ├── sect_service.py
-│   │   ├── sect_tower_service.py
-│   │   ├── economy_service.py
-│   │   ├── world_service.py
-│   │   ├── death_service.py
-│   │   ├── heavenly_dao_service.py
-│   │   ├── code_service.py
-│   │   ├── admin_service.py
-│   │   └── errors.py
-│   ├── repositories/
-│   │   ├── player_repository.py
-│   │   ├── inventory_repository.py
-│   │   ├── market_repository.py
-│   │   ├── sect_repository.py
-│   │   ├── quest_repository.py
-│   │   ├── npc_repository.py
-│   │   ├── world_repository.py
-│   │   ├── exploration_repository.py
-│   │   ├── dao_lu_repository.py
-│   │   ├── code_repository.py
-│   │   ├── heavenly_dao_repository.py
-│   │   ├── mission_repository.py
-│   │   └── audit_repository.py
-│   ├── rules/
-│   │   ├── cultivation_rules.py
-│   │   ├── breakthrough_rules.py
-│   │   ├── combat_rules.py
-│   │   ├── dao_rules.py
-│   │   ├── sect_rules.py
-│   │   ├── economy_rules.py
-│   │   └── death_rules.py
 │   ├── content/
-│   │   ├── realms.py
-│   │   ├── dao_paths.py
-│   │   ├── talents.py
-│   │   ├── items.py
-│   │   ├── pills.py
-│   │   ├── talismans.py
-│   │   ├── artifacts.py
-│   │   ├── techniques.py
-│   │   ├── monsters.py
-│   │   ├── zones.py
-│   │   ├── dungeons.py
-│   │   ├── events.py
-│   │   ├── quests.py
-│   │   ├── npcs.py
-│   │   ├── sects_content.py
-│   │   ├── towers.py
-│   │   └── world_events.py
-│   ├── economy/
-│   │   ├── currency.py
-│   │   ├── crafting.py
-│   │   ├── npc_shop.py
-│   │   ├── player_market.py
-│   │   └── auction.py
-│   ├── security/
-│   │   ├── permissions.py
-│   │   └── admin_auth.py
-│   └── database/
-│       ├── connection.py
-│       ├── schema.py
-│       └── migrations.py
-├── assets/
-│   └── emojis/
-│       ├── README.md
-│       └── server/
-│           ├── README.md
-│           └── emojis.json
-├── ui/
-│   ├── theme/
-│   │   ├── tokens.py
-│   │   ├── embeds.py
-│   │   ├── components.py
-│   │   ├── views.py
-│   │   └── README.md
-│   ├── emoji.py
-│   ├── colors.py
-│   ├── embeds.py
-│   ├── menus.py
-│   ├── buttons.py
-│   ├── selects.py
-│   ├── commands/
-│   │   ├── core.py
-│   │   ├── cultivation.py
-│   │   ├── exploration.py
-│   │   ├── quest.py
-│   │   ├── economy.py
-│   │   ├── dao.py
-│   │   ├── dao_lu.py
-│   │   ├── sect.py
-│   │   ├── admin.py
-│   │   ├── context.py
-│   │   └── registry.py
-│   └── views/
-│       ├── main_menu_view.py
-│       ├── player_view.py
-│       ├── cultivation_view.py
-│       ├── breakthrough_view.py
-│       ├── inventory_view.py
-│       ├── combat_view.py
-│       ├── exploration_view.py
-│       ├── quest_view.py
-│       ├── npc_view.py
-│       ├── sect_view.py
-│       ├── sect_management_view.py
-│       ├── sect_member_admin_view.py
-│       ├── shop_view.py
-│       ├── market_view.py
-│       ├── dao_view.py
-│       ├── dao_lu_view.py
-│       ├── world_view.py
-│       ├── start_path_view.py
-│       └── admin_view.py
-└── tests/
-    └── unit/
+│   │   ├── items/           ← vật phẩm (tách module)
+│   │   │   ├── _schema.py
+│   │   │   ├── pills.py
+│   │   │   ├── talismans.py
+│   │   │   ├── equipment.py
+│   │   │   ├── techniques.py
+│   │   │   └── combat_items.py
+│   │   ├── breakthrough/    ← role item đột phá / tra cứu
+│   │   ├── realms.py zones.py monsters.py events.py …
+│   │   └── techniques.py    ← STATUS_EFFECTS / GACHA (combat system)
+│   ├── rules/               ← pure formulas (breakthrough_chance, …)
+│   ├── services/            ← use-cases
+│   ├── repositories/ models/ database/
+│   └── moderation/ economy/ security/
+└── ui/                      ← Discord presentation
 ```
 
-## Layer boundary
-
-```text
-Discord command/view
-        ↓
-Service / use-case
-        ↓
-Rules / pure gameplay logic
-        ↓
-Repository / persistence boundary
-        ↓
-Database
-```
-
-`game/content/` chỉ chứa dữ liệu tĩnh. `game/models/` chỉ mô tả state. `game/engine.py` chỉ compose/facade, không chứa Discord UI và không chứa SQL.
-
-Các file `*_gui.py` cũ (`player_gui.py`, `dao_gui.py`, `npc_gui.py`, `exploration_gui.py`, `quest_gui.py`, `sect_gui.py`, `world_gui.py`, `gui_navigation.py`) chỉ còn là compatibility shims để code cũ không vỡ; code mới phải dùng file canonical trong `ui/views/`.
-
-
-## UI Theme (v3.5.8)
-
-`ui/theme/` là cây presentation riêng, nằm cạnh `ui/commands/` và `ui/views/`. Nó sở hữu design tokens, embed factory, component builders và quy ước bố cục; không chứa business logic.
-
-
-## Bí Cảnh Tu Luyện (v3.5.8)
-
-- `game/content/secret_realms.py`: bốn bí cảnh, cảnh giới yêu cầu và dải thưởng.
-- `game/repositories/secret_realm_repository.py`: persistence cho chu kỳ bí cảnh.
-- `game/services/secret_realm_service.py`: lựa chọn, thời gian 3 giờ, nhận thưởng một lần và rời bí cảnh.
-- `ui/views/secret_realm_view.py`: GUI riêng; `.bicanh` / `.bc` và Trung Tâm cùng mở view.
-- SQLite schema 16 lưu phiên bí cảnh, phiên Admin, điểm bảo hộ đột phá và tiến độ nhiệm vụ Khởi hành/Ngày/Tuần; migration giữ nguyên dữ liệu cũ. Sau khi bot restart, tiến trình nhiệm vụ và điểm bảo hộ vẫn còn trong DB.
-
-
-## Khám Phá Mở Rộng (v3.5.8)
-
-- `game/content/events.py`: sự kiện tức thời, sự kiện lựa chọn và rào cảnh giới/vùng.
-- `game/content/monsters.py`: bestiary theo khu vực, 27 quái thường và 13 boss.
-- `game/content/zones.py`: bảy vùng khám phá, bao gồm Vạn Cốt Lăng và Hư Không Cổ Giới.
-- `game/services/exploration_service.py`: lọc sự kiện theo khu/cảnh giới và khởi tạo encounter phù hợp.
-- `game/services/combat_service.py`: ưu tiên sinh vật bản địa và hệ số tinh anh/boss.
-- `ui/views/exploration_view.py`: preview dấu vết quái/boss trước khi khám phá.
-
-## Nhiệm vụ thưởng & Bảo hộ đột phá (v3.6.1)
-
-- `game/content/recurring_missions.py`: định nghĩa 3 nhiệm vụ Khởi hành, 3 nhiệm vụ ngày và 3 nhiệm vụ tuần; mục tiêu/phần thưởng cấu hình tách riêng.
-- `game/repositories/player_mission_repository.py`: lưu tiến độ và cờ đã nhận trong SQLite theo `user_id + mission_id + period_key`.
-- `game/services/player_mission_service.py`: tự ghi tiến độ sau hành động thành công, reset theo giờ Việt Nam và chống nhận thưởng trùng trong transaction.
-- `ui/views/mission_view.py`: GUI chọn nhiệm vụ, theo dõi tiến độ và nhận thưởng; mở bằng `.nhiemvu thuong` hoặc nút trong Nhật Ký Nhiệm Vụ.
-- `players.breakthrough_pity`: bảo hộ tăng 5 điểm phần trăm mỗi lần thất bại, tối đa 20; thành công reset về 0. Cột mới được thêm bằng migration 15 → 16.
+Cập nhật từng mục:
+- Đan / bùa / trang bị / công pháp → `game/content/items/<module>.py`
+- Tỉ lệ đột phá → `game/rules/cultivation_rules.py`
+- Flow đột phá → `game/services/cultivation_service.py` + `breakthrough_service.py`

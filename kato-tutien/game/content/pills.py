@@ -1,2 +1,5 @@
+"""Legacy path — đan dược nằm trong game.content.items.pills."""
+from game.content.items.pills import PILLS
 from game.content.items import ITEMS
-PILLS={k:v for k,v in ITEMS.items() if v.get("category")=="Đan dược"}
+
+__all__ = ["PILLS", "ITEMS"]

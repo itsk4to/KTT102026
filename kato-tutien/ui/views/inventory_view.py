@@ -387,6 +387,18 @@ class InventoryView(ThemedView):
         self.rebuild()
         await interaction.response.edit_message(embed=self.build_embed("Túi đồ đã được làm mới."), view=self)
 
+    async def _home_callback(self, interaction: discord.Interaction) -> None:
+        if not self._guard(interaction):
+            await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)
+            return
+        from ui.views.main_menu_view import MainMenuView, build_main_embed
+
+        self.stop()
+        await interaction.response.edit_message(
+            embed=build_main_embed(self.engine, self.user_id),
+            view=MainMenuView(self.engine, self.user_id),
+        )
+
     async def _close_callback(self, interaction: discord.Interaction) -> None:
         if not self._guard(interaction):
             await interaction.response.send_message("Túi Càn Khôn này không thuộc về đạo hữu.", ephemeral=True)

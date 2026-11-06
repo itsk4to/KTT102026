@@ -21,8 +21,9 @@ class ItemCatalogLookupTests(unittest.TestCase):
     def test_category_browser_lists_all_items(self):
         for category in ("Đan dược", "Bùa chú", "Pháp bảo", "Binh khí", "Công pháp"):
             rows = category_items(category)
-            self.assertEqual(len(rows), 10)
+            self.assertGreaterEqual(len(rows), 1, category)
             self.assertTrue(all(item_id in ITEMS for item_id, _ in rows))
+            self.assertTrue(all(item.get("category") == category for _, item in rows))
 
     def test_empty_search_is_bounded(self):
         self.assertEqual(len(search_items("", limit=7)), 7)

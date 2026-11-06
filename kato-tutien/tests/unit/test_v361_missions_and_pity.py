@@ -194,5 +194,8 @@ def test_failure_pity_outweighs_the_injury_penalty_in_next_preview():
 
 def test_injury_penalty_is_bounded_and_does_not_force_five_percent_floor():
     from game.rules.cultivation_rules import breakthrough_chance
-    chance = breakthrough_chance(root=55, mind=55, insight=55, injury=100, dao_stage=0)
-    assert abs(chance - 0.28) < 1e-9
+    chance = breakthrough_chance(
+        root=55, insight=55, luck=55, fate=55, mind=55, injury=100, dao_stage=0,
+    )
+    # Baseline 0.62; injury 100 removes 0.30 → 0.32
+    assert abs(chance - 0.32) < 1e-9

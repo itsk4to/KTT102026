@@ -1,12 +1,12 @@
-Kato Tu Tiên v3.8.2 — Moderation & Phạt Tù Thiên Đạo
+Kato Tu Tiên v3.8.4 — Moderation & Phạt Tù Thiên Đạo
 
-# Kato Tu Tiên v3.8.2
+# Kato Tu Tiên v3.8.4
 
 Discord cultivation MMORPG — **clean architecture rework + safety hardening**.
 
 > Ưu tiên số 1: code rõ ràng, module nhỏ, dễ đọc, dễ sửa và dễ mở rộng.
 
-## Giao diện MMORPG — nền v3.7.4, phát hành v3.8.2
+## Giao diện MMORPG — nền v3.7.4, phát hành v3.8.4
 
 - HUD nhân vật, thanh HP/tu vi, bảng chỉ số và điều hướng game được đồng bộ qua `ui/theme/`.
 - Menu chính gọn lại với dropdown hệ thống + nút tắt; màn Nhân vật có action menu.
@@ -261,9 +261,9 @@ Các thông số cân bằng hiện tại được ghi chi tiết tại [`docs/E
 - Công thức preview và lần thử thật vẫn dùng cùng một hàm; chỉ số căn cơ, đạo tâm, ngộ tính, đạo giai, thương thế, thiên phú/định mệnh, vật phẩm và bảo hộ vẫn có ảnh hưởng.
 - Không thay đổi logic chiến đấu/khám phá hoặc schema database.
 
-## v3.8.2 — Moderation & Phạt Tù Thiên Đạo
+## v3.8.4 — Moderation & Phạt Tù Thiên Đạo
 
-Bản 3.8.2 được xây dựng trên toàn bộ mã nguồn Kato Tu Tiên v3.7.4 và tích hợp gói moderation v3.8.0. Không thay thế hệ thống gameplay cũ. Database được nâng tuần tự từ schema 16 lên 18; hãy sao lưu file SQLite trước khi deploy như với mọi bản cập nhật.
+Bản 3.8.2 được xây dựng trên toàn bộ mã nguồn Kato Tu Tiên v3.7.4 và tích hợp gói moderation v3.8.4. Không thay thế hệ thống gameplay cũ. Database được nâng tuần tự từ schema 16 lên 18; hãy sao lưu file SQLite trước khi deploy như với mọi bản cập nhật.
 
 ### Cấu hình Discord moderation
 
@@ -289,10 +289,10 @@ Bot cần bật **Server Members Intent** trong Discord Developer Portal và quy
 
 Nếu Discord không thể khôi phục mọi overwrite, phiên tù ở trạng thái chờ xử lý và payout chưa được thực hiện. Kiểm tra log/quyền bot rồi chạy lại `/tha_tu` hoặc restart bot để recovery thử lại.
 
-### Cập nhật từ v3.7.4 lên v3.8.2
+### Cập nhật từ v3.7.4 lên v3.8.4
 
 1. Dừng bot và sao lưu file SQLite đang dùng (đường dẫn `KATO_DB_PATH`; mặc định `kato_tutien.db`).
-2. Giải nén toàn bộ gói `KatoTuTien-v3.8.2-complete.zip` và cập nhật mã nguồn. Giữ lại file `.env` và database hiện tại; không tạo database mới để thay thế.
+2. Giải nén toàn bộ gói `KatoTuTien-v3.8.4-complete.zip` và cập nhật mã nguồn. Giữ lại file `.env` và database hiện tại; không tạo database mới để thay thế.
 3. Bổ sung các biến `KATO_PRISON_*` trong phần cấu hình phía trên, đồng thời kiểm tra role/kênh thuộc đúng máy chủ Discord.
 4. Cài dependency bằng `python -m pip install -r requirements.txt`.
 5. Khởi động bot. Migration sẽ tự chạy tuần tự từ schema 16 lên 17 rồi 18; không xóa dữ liệu nhân vật.
