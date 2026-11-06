@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           unzip -t "$RUNNER_TEMP/ktt-update.zip"
 
-      # 5. Extract safely and remove wrapper folders
+      # 5. Extract safely and resolve duplicate paths
       - name: Extract update safely
         shell: bash
         run: |
@@ -193,19 +193,23 @@ jobs:
                   ):
                       strip_root = candidate
 
-              extracted = set()
+              # Chọn file theo đường dẫn đã chuẩn hóa.
+              # Ưu tiên file bên trong kato-tutien/.
+              selected = {}
 
               for info, parts in files:
+                  relative = parts
 
-                  # Bỏ lớp KTT102026-main hoặc thư mục project tương tự.
-                  if strip_root and parts[0] == strip_root:
-                      relative = parts[1:]
-                  else:
-                      relative = parts
-
-                  # Bỏ tiếp lớp kato-tutien nếu có.
-                  if relative and relative[0].lower() == "kato-tutien":
+                  # Bỏ thư mục bọc ngoài.
+                  if strip_root and relative[0].lower() == strip_root.lower():
                       relative = relative[1:]
+
+                  # File thuộc project được ưu tiên.
+                  if relative and relative[0].lower() == "kato-tutien":
+                      priority = 2
+                      relative = relative[1:]
+                  else:
+                      priority = 1
 
                   if not relative:
                       continue
@@ -214,25 +218,44 @@ jobs:
                       print(f"SKIP protected: {info.filename}")
                       continue
 
-                  relative_path = Path(*relative)
-                  normalized = relative_path.as_posix()
+                  normalized = PurePosixPath(*relative).as_posix()
+                  previous = selected.get(normalized)
 
-                  if normalized in extracted:
-                      raise RuntimeError(
-                          f"ZIP chứa file trùng lặp: {normalized}"
-                      )
+                  if previous is not None:
+                      old_priority, old_info = previous
 
-                  extracted.add(normalized)
+                      if priority == old_priority:
+                          raise RuntimeError(
+                              f"ZIP trùng file cùng mức ưu tiên: {normalized}"
+                          )
 
+                      if priority < old_priority:
+                          print(f"SKIP duplicate: {info.filename}")
+                          continue
+
+                      print(f"Ưu tiên file project: {info.filename}")
+
+                  selected[normalized] = (priority, info)
+
+              if not selected:
+                  raise RuntimeError("Không có file hợp lệ để cập nhật.")
+
+              # Giải nén các file đã chọn.
+              extracted = set()
+
+              for normalized, (_, info) in selected.items():
+                  relative_path = Path(*PurePosixPath(normalized).parts)
                   target = temp / relative_path
+
                   target.parent.mkdir(parents=True, exist_ok=True)
 
                   with z.open(info) as source:
                       with target.open("wb") as output:
                           shutil.copyfileobj(source, output)
 
-              if not extracted:
-                  raise RuntimeError("Không có file hợp lệ để cập nhật.")
+                  extracted.add(normalized)
+
+              print(f"Đã chọn {len(extracted)} file.")
 
           # Overlay: thêm và ghi đè, không xóa file cũ.
           copied = 0
