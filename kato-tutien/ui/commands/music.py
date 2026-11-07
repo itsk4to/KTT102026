@@ -138,3 +138,28 @@ async def cmd_queue(ctx, message: discord.Message, args: list[str] | None = None
         await message.reply(embed=base_embed("🎵 Hàng chờ", "Trống."))
         return
     await message.reply(embed=base_embed("🎵 Hàng chờ", "\n".join(lines)))
+
+
+async def cmd_tts(ctx, message: discord.Message, args: list[str] | None = None) -> None:
+    """`.tts <văn bản>` — đọc chữ trong kênh thoại."""
+    if not args:
+        await message.reply(embed=error_embed("Cách dùng: `.tts <văn bản cần đọc>`"))
+        return
+    channel = await _require_voice_member(message)
+    if channel is None:
+        return
+    assert message.guild is not None
+    text = " ".join(args).strip()
+    status = await message.reply(embed=base_embed("TTS", "Đang đọc…"))
+    try:
+        from ui.music.tts import speak_in_channel, DEFAULT_VOICE
+        player = music_manager.player(message.guild.id)
+        vc = await player.connect(channel)
+        await speak_in_channel(vc, text, voice_name=DEFAULT_VOICE)
+    except Exception as exc:
+        await status.edit(embed=error_embed(str(exc)))
+        return
+    preview = text.replace("\n", " ")
+    if len(preview) > 80:
+        preview = preview[:80] + "…"
+    await status.edit(embed=success_embed("TTS", f"Đã đọc: *{preview}*"))

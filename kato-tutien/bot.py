@@ -235,7 +235,14 @@ def _register_utility_slash_commands() -> None:
         except Exception as exc:
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
             return
-        await interaction.response.send_message(embed=success_embed("Đã vào kênh", f"Join **{channel.name}**."), ephemeral=True)
+        await interaction.response.send_message(
+            embed=success_embed(
+                "Treo phòng",
+                f"Bot đã vào **{channel.name}** và ở yên (không phát gì).\n"
+                "Dùng `.tts lời nói` để đọc chữ, `/play` để mở nhạc, `/leave` để rời.",
+            ),
+            ephemeral=True,
+        )
 
     @tree.command(name="leave", description="Bot rời kênh thoại")
     async def slash_leave(interaction: discord.Interaction) -> None:
@@ -323,6 +330,8 @@ def _register_utility_slash_commands() -> None:
             await interaction.response.send_message(embed=base_embed("🎵 Hàng chờ", "Trống."), ephemeral=True)
             return
         await interaction.response.send_message(embed=base_embed("🎵 Hàng chờ", "\n".join(lines)))
+
+
 
     @tree.command(name="kthac", description="Khai thác linh thạch lao dịch trong kênh lao ngục")
     async def slash_kthac(interaction: discord.Interaction) -> None:

@@ -17,7 +17,7 @@ from ui.commands.admin import cmd_admin
 from ui.commands.dao_lu import cmd_dao_lu, cmd_song_tu
 from ui.commands.quest import cmd_npc, cmd_quest, cmd_world
 from ui.commands.prison import cmd_prison_mine
-from ui.commands.music import cmd_join, cmd_leave, cmd_play, cmd_skip, cmd_stop, cmd_queue
+from ui.commands.music import cmd_join, cmd_leave, cmd_play, cmd_skip, cmd_stop, cmd_queue, cmd_tts
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("skip", ("boqua", "next"), "music", "/skip", "Bỏ qua bài đang phát.", cmd_skip, False, False),
     CommandSpec("stop", ("dungnhac",), "music", "/stop", "Dừng nhạc và xóa hàng chờ.", cmd_stop, False, False),
     CommandSpec("queue", ("hangcho", "q"), "music", "/queue", "Xem hàng chờ nhạc.", cmd_queue, False, False),
+    CommandSpec("tts", (), "music", ".tts <văn bản>", "Đọc chữ trong kênh thoại (TTS tiếng Việt).", cmd_tts, True, True),
     CommandSpec("kthac", (), "system", "/kthac", "Khai thác 10 linh thạch lao dịch mỗi lượt trong kênh lao ngục.", cmd_prison_mine, False, False),
     CommandSpec("admin", (), "system", "/admin", "Mở bảng quản trị.", cmd_admin, False, False),
 )
