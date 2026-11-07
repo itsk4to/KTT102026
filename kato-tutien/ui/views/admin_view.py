@@ -244,6 +244,20 @@ class AdminView(ThemedView):
             await interaction.response.send_message(embed=error_embed(str(exc)), ephemeral=True)
 
     @discord.ui.button(label="Khép lại", style=discord.ButtonStyle.danger, emoji="✖️", row=3)
+    @discord.ui.button(label="Cấu hình máy chủ", style=discord.ButtonStyle.primary, row=2)
+    async def server_settings(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
+        self._check(interaction)
+        if interaction.guild is None:
+            await interaction.response.send_message("Chỉ dùng trong máy chủ.", ephemeral=True)
+            return
+        from ui.views.admin_settings_view import AdminSettingsView, build_settings_embed
+        view = AdminSettingsView(self.engine, self.actor_id, interaction.guild.id)
+        await interaction.response.send_message(
+            embed=build_settings_embed(self.engine, interaction.guild),
+            view=view,
+            ephemeral=True,
+        )
+
     async def close(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         try:
             self._check(interaction)

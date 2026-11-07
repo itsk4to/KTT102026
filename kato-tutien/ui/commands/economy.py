@@ -33,7 +33,8 @@ async def cmd_inventory(ctx, message: discord.Message, args: list[str] | None = 
         user_id = str(message.author.id)
         items = ctx.engine.economy.inventory(user_id)
         if not items:
-            await message.reply(embed=base_embed(f"{EMOJI['item']} Túi đồ", "Túi đồ đang trống."))
+            from ui import copy as T
+        await message.reply(embed=base_embed(f"{EMOJI['item']} Túi Càn Khôn", T.BAG_EMPTY))
             return
         await message.reply(
             embed=inventory_embed(items),

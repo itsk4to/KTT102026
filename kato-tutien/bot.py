@@ -24,6 +24,8 @@ from ui.embeds import base_embed, error_embed, player_embed, public_player_embed
 from ui.views.admin_view import AdminLoginView, AdminView
 from game.security.permissions import is_owner
 from game.version import VERSION
+from game.moderation.guild_settings import resolve_prison_settings
+from ui.voice_presence import start_voice_presence, connect_voice_channel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("kato")
@@ -31,6 +33,7 @@ logger = logging.getLogger("kato")
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True  # Used to restore prison status when a member rejoins.
+intents.voice_states = True  # Keep 24/7 voice presence stable.
 client = discord.Client(intents=intents)
 
 
@@ -47,10 +50,14 @@ class KatoCommandTree(app_commands.CommandTree):
             )
             return False
         command_name = str((getattr(interaction, "data", None) or {}).get("name", ""))
+        prison_channel_id = 0
+        if session and guild is not None:
+            prison_channel_id = int(resolve_prison_settings(engine.db, guild.id)["prison_channel_id"] or 0)
         jail_context = bool(
             session and guild is not None
             and str(guild.id) == str(session["guild_id"])
-            and interaction.channel_id == config.PRISON_CHANNEL_ID
+            and prison_channel_id
+            and interaction.channel_id == prison_channel_id
         )
         if session and (command_name != "help" or not jail_context):
             await interaction.response.send_message(
@@ -196,6 +203,11 @@ async def on_ready() -> None:
         await recover_prison_workflows(client, engine)
     except Exception:
         logger.exception("prison recovery failed during startup")
+    try:
+        start_voice_presence(client)
+        await connect_voice_channel(client)
+    except Exception:
+        logger.exception("voice presence startup failed")
 
 
 @client.event
@@ -226,10 +238,12 @@ async def on_message(message: discord.Message) -> None:
         prison_session = engine.prison.get_active_session_for_user(user_id)
         if prison_session:
             allowed_prison_commands = {"tutien", "help", "kthac"}
+            prison_channel_id = int(resolve_prison_settings(engine.db, message.guild.id)["prison_channel_id"] or 0) if message.guild else 0
             is_prison_channel = bool(
                 message.guild is not None
                 and str(message.guild.id) == str(prison_session["guild_id"])
-                and message.channel.id == config.PRISON_CHANNEL_ID
+                and prison_channel_id
+                and message.channel.id == prison_channel_id
             )
             if not is_prison_channel or spec.name not in allowed_prison_commands:
                 await message.reply("⛓️ Ngươi đang chịu phạt tù Thiên Đạo. Chỉ được dùng `.tutien`, `.kthac` và `.help` trong kênh lao ngục.")

@@ -53,12 +53,14 @@ class MainMenuView(ThemedView):
         self.clear_items()
         self.add_item(MainMenuSelect(self))
 
+        from ui import copy as T
+
         # Row 1: 4 primary actions — large tap targets on phone
         primary = (
-            ("Đạo hữu", "player", "cultivator", "primary"),
-            ("Xuất hành", "explore", "explore", "primary"),
-            ("Túi Càn Khôn", "inventory", "item", "primary"),
-            ("Tiên Phường", "shop", "shop", "primary"),
+            (T.BTN_PROFILE, "player", "cultivator", "primary"),
+            (T.BTN_EXPLORE, "explore", "explore", "primary"),
+            (T.BTN_BAG, "inventory", "item", "primary"),
+            (T.BTN_SHOP, "shop", "shop", "primary"),
         )
         for label, action, icon_key, role in primary:
             self.add_item(themed_button(
@@ -71,10 +73,10 @@ class MainMenuView(ThemedView):
 
         # Row 2: journey — secondary systems
         journey = (
-            ("Bí Cảnh", "secret_realm", EMOJI.get("secret_realm", "🌌")),
-            ("Sứ mệnh", "quest", EMOJI["technique"]),
-            ("Tông Môn", "sect", EMOJI["sect"]),
-            ("Đạo Lữ", "dao_lu", EMOJI.get("dao", "💞")),
+            (T.BTN_SECRET, "secret_realm", EMOJI.get("secret_realm", "🌌")),
+            (T.BTN_QUEST, "quest", EMOJI["technique"]),
+            (T.BTN_SECT, "sect", EMOJI["sect"]),
+            (T.BTN_DAO_LU, "dao_lu", EMOJI.get("dao", "💞")),
         )
         for label, action, icon in journey:
             self.add_item(themed_button(
@@ -87,28 +89,28 @@ class MainMenuView(ThemedView):
 
         # Row 3: utility bar — always last row for thumb reach
         self.add_item(themed_button(
-            "Thiên Bảng",
+            T.BTN_BOARD,
             role="navigation",
             emoji=EMOJI.get("victory", "🏆"),
             row=3,
             callback=self._button_callback("leaderboard"),
         ))
         self.add_item(themed_button(
-            "Thiên Hạ",
+            T.BTN_WORLD,
             role="navigation",
             emoji=EMOJI.get("explore", "🌍"),
             row=3,
             callback=self._button_callback("world"),
         ))
         self.add_item(themed_button(
-            "Làm mới",
+            T.BTN_REFRESH,
             role="navigation",
             emoji=EMOJI.get("refresh", "🔄"),
             row=3,
             callback=self._refresh_callback,
         ))
         self.add_item(themed_button(
-            "Khép lại",
+            T.BTN_CLOSE,
             role="danger",
             emoji=EMOJI.get("close", "✖️"),
             row=3,
@@ -192,22 +194,10 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
     except Exception:
         p = None
 
+    from ui import copy as T
+
     if not p:
-        embed = base_embed(
-            "✦ CỔNG KHAI ĐẠO",
-            "Chào mừng đạo hữu đến với **Kato Tu Tiên**.\n\n"
-            "*Hãy chọn con đường đầu tiên; đạo lộ tu hành sẽ mở ra ngay sau đó.*",
-        )
-        embed.add_field(
-            name="🌱 BƯỚC 01 · CHỌN ĐẠO",
-            value="**`.tutien`** · Bước vào Tiên Đạo\n**`.tamuontutien`** · Bước vào Ma Đạo",
-            inline=False,
-        )
-        embed.add_field(
-            name="🧭 BƯỚC 02 · MỞ TRUNG TÂM",
-            value="Sau khi lập căn cơ, dùng `.menu` hoặc `.tutien` để mở toàn bộ đạo lộ bằng giao diện.",
-            inline=False,
-        )
+        embed = base_embed(T.HUB_GUEST_TITLE, T.HUB_GUEST_BODY)
         return embed
 
     realm = realm_text(p.realm_index, p.realm_layer, p.path)
@@ -218,21 +208,21 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
     )
     description = (
         f"**{p.display_name}** · {path_label}\n"
-        "*Chạm nút bên dưới hoặc mở menu để tiếp tục đạo lộ.*\n\n"
-        f"{EMOJI['cultivate']} `.tu`  ·  {EMOJI['breakthrough']} `.dp`  ·  "
-        f"{EMOJI['heavenly_tribulation']} `.tk`  ·  {EMOJI.get('dao', '💞')} `.dl`"
+        f"{T.HUB_HINT}\n\n"
+        f"{EMOJI['cultivate']} `.tu` tĩnh tọa  ·  {EMOJI['breakthrough']} `.dotpha` đột phá  ·  "
+        f"{EMOJI['heavenly_tribulation']} `.thienkiep`  ·  {EMOJI.get('dao', '💞')} `.daolu`"
     )
-    embed = base_embed("✦ TRUNG TÂM ĐẠO LỘ", description)
-    embed.set_author(name=f"HỒ SƠ ĐẠO HỮU · {p.display_name.upper()[:180]}")
-    embed.add_field(name=f"{EMOJI['cultivator']} CẢNH GIỚI", value=f"**{realm}**", inline=True)
+    embed = base_embed(T.HUB_TITLE, description)
+    embed.set_author(name=f"Đạo hữu · {p.display_name[:180]}")
+    embed.add_field(name=f"{EMOJI['cultivator']} Cảnh giới", value=f"**{realm}**", inline=True)
     combat_stats = engine.combat.battle_stats(p)
     effective_max_hp = max(1, int(combat_stats.get("max_hp", p.max_hp)))
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
     hp_ratio = max(0.0, min(1.0, displayed_hp / effective_max_hp))
     hp_bar = progress_bar(displayed_hp, effective_max_hp, size=8)
     embed.add_field(
-        name=f"{EMOJI['hp']} THỂ TRẠNG",
-        value=f"{hp_bar} **{hp_ratio:.0%}**\n**{displayed_hp:,} / {effective_max_hp:,} HP**",
+        name=f"{EMOJI['hp']} Khí huyết",
+        value=f"{hp_bar} **{hp_ratio:.0%}**\n**{displayed_hp:,} / {effective_max_hp:,}**",
         inline=True,
     )
     try:
@@ -245,31 +235,30 @@ def build_main_embed(engine, user_id: str) -> discord.Embed:
             f"**{fmt_amount(current)} / {fmt_amount(required)}** · {progress_pct:.0%}"
         )
         if preview.get("recovery_remaining", 0) > 0:
-            progress_text += f"\n{EMOJI.get('recover', '🩹')} Đang hồi phục · còn **{preview['recovery_remaining']}s**"
+            progress_text += f"\n{EMOJI.get('recover', '🩹')} Thân thể đang hồi phục · còn **{preview['recovery_remaining']}s**"
         elif preview.get("ready"):
-            progress_text += f"\n{EMOJI.get('breakthrough', '✨')} Đã đủ tu vi để xem điều kiện đột phá."
-        embed.add_field(name=f"{EMOJI['cultivate']} TIẾN ĐỘ TU VI", value=progress_text, inline=False)
+            progress_text += f"\n{EMOJI.get('breakthrough', '✨')} Tu vi đã đầy — có thể thử **đột phá**."
+        embed.add_field(name=f"{EMOJI['cultivate']} Tu vi", value=progress_text, inline=False)
     except Exception:
-        # Dashboard navigation must remain usable even if preview data is unavailable.
-        embed.add_field(name="🌱 TU VI HIỆN TẠI", value=f"**{fmt_amount(p.cultivation)}**", inline=False)
+        embed.add_field(name="Tu vi", value=f"**{fmt_amount(p.cultivation)}**", inline=False)
     embed.add_field(
-        name="⚔️ CHỈ SỐ CHIẾN ĐẤU",
-        value=f"Công　**{int(combat_stats['attack']):,}**\nThủ　**{int(combat_stats['defense']):,}**",
+        name="Chiến lực",
+        value=f"Công **{int(combat_stats['attack']):,}**\nThủ **{int(combat_stats['defense']):,}**",
         inline=True,
     )
     embed.add_field(
-        name="🌱 THIÊN PHÚ",
-        value=f"Căn cơ　**{p.root}**\nNgộ tính　**{p.insight}**",
+        name="Căn cơ · Ngộ tính",
+        value=f"Căn cơ **{p.root}**\nNgộ tính **{p.insight}**",
         inline=True,
     )
-    dao_name = DAO_PATHS.get(p.dao_type, {}).get("name", p.dao_type) if p.dao_type else "Chưa khai Đạo"
-    embed.add_field(name="☯️ ĐẠO TÂM", value=f"**{dao_name}**", inline=True)
+    dao_name = DAO_PATHS.get(p.dao_type, {}).get("name", p.dao_type) if p.dao_type else "Chưa cầu đạo"
+    embed.add_field(name="Đạo quả", value=f"**{dao_name}**", inline=True)
     embed.add_field(
-        name="🧭 BẢNG ĐIỀU HƯỚNG",
+        name="Lối vào",
         value=(
-            "**Lối tắt** · Nhân vật · Khám phá · Túi Càn Khôn · Tiên Phường\n"
-            "**Hành trình** · Bí cảnh · Nhiệm vụ · Tông môn · Đạo lữ\n"
-            "**Hệ thống khác** · chọn trong menu danh sách phía trên"
+            "**Thường ngày** · Đạo Hữu · Xuất Hành · Túi Càn Khôn · Tiên Phường\n"
+            "**Hành trình** · Bí Cảnh · Sứ Mệnh · Tông Môn · Đạo Lữ\n"
+            "**Thiên hạ** · chọn thêm từ danh sách phía trên"
         ),
         inline=False,
     )

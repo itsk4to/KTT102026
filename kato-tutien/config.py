@@ -38,6 +38,9 @@ PRISON_ANNOUNCE_CHANNEL_ID = _positive_int_env("KATO_PRISON_ANNOUNCE_CHANNEL_ID"
 PRISON_COOLDOWN_SECONDS = _positive_int_env("KATO_PRISON_COOLDOWN_SECONDS", 30)
 PRISON_MAX_REQUIRED_STONES = _positive_int_env("KATO_PRISON_MAX_REQUIRED_STONES", 1000000)
 CUSTOM_EMOJI = env("KATO_CUSTOM_EMOJI", "0").lower() in {"1", "true", "yes", "on"}
+# Voice 24/7 — đặt ID kênh thoại để bot tự vào và giữ kết nối.
+VOICE_CHANNEL_ID = _positive_int_env("KATO_VOICE_CHANNEL_ID")
+VOICE_SELF_DEAF = env("KATO_VOICE_SELF_DEAF", "1").lower() in {"1", "true", "yes", "on"}
 
 # Gameplay constants
 CULTIVATE_COOLDOWN = 25

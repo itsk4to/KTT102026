@@ -19,52 +19,47 @@ def progress_bar(current: int, maximum: int, size: int = 10) -> str:
     return "▰" * filled + "▱" * (size - filled)
 
 
-def cultivation_embed(result: dict, *, action: str = "Tu luyện") -> discord.Embed:
+def cultivation_embed(result: dict, *, action: str = "Tĩnh tọa") -> discord.Embed:
+    from ui import copy as T
     p = result["player"]
     current = int(result.get("cultivation", p.cultivation))
     maximum = int(result.get("requirement", max(current, 1)))
-    e = base_embed(f"{EMOJI['cultivate']} {action}", f"**{result.get('realm', 'Tu sĩ')}**")
+    e = base_embed(f"{EMOJI['cultivate']} {T.CULTIVATE_TITLE}", f"**{result.get('realm', 'Tu sĩ')}**")
     e.add_field(name="Tu vi", value=f"{progress_bar(current, maximum)}\n**{fmt_amount(current)}** / {fmt_amount(maximum)}", inline=False)
     if result.get("gain") is not None:
-        e.add_field(name="Thu hoạch", value=f"+{fmt_amount(result['gain'])} tu vi", inline=True)
+        e.add_field(name="Linh khí thu được", value=f"+{fmt_amount(result['gain'])} tu vi", inline=True)
     e.add_field(name="Cảnh giới", value=result.get("realm", "—"), inline=True)
     return e
 
 
 def cultivation_preview_embed(preview: dict) -> discord.Embed:
+    from ui import copy as T
     current = int(preview["cultivation"])
     maximum = int(preview["requirement"])
     if preview.get("recovery_remaining", 0) > 0:
-        status = f"{EMOJI.get('recover', '🩹')} Đang hồi phục · còn **{preview['recovery_remaining']}s**"
+        status = f"{EMOJI.get('recover', '🩹')} {T.BREAKTHROUGH_RECOVERY.format(time=str(preview['recovery_remaining']) + 's')}"
     else:
-        status = "✅ Đủ tu vi" if preview["ready"] else "⏳ Chưa đủ tu vi"
-    e = base_embed(f"{EMOJI['breakthrough']} Đột phá", f"**{preview['realm']}**\n{status}")
+        status = f"{EMOJI.get('ok', '✅')} {T.BREAKTHROUGH_READY}" if preview["ready"] else f"⏳ {T.BREAKTHROUGH_NOT_READY}"
+    e = base_embed(f"{EMOJI['breakthrough']} {T.BREAKTHROUGH_TITLE}", f"**{preview['realm']}**\n{status}")
     e.add_field(name="Tu vi", value=f"{progress_bar(current, maximum)}\n{fmt_amount(current)} / {fmt_amount(maximum)}", inline=False)
-    e.add_field(name="Tỷ lệ", value=f"{preview['chance']:.0%}", inline=True)
+    e.add_field(name="Tỉ lệ thành công", value=f"{preview['chance']:.0%}", inline=True)
     pity_points = max(0, min(20, int(preview.get("pity_points", 0))))
-    e.add_field(name="Bảo hộ tích lũy", value=f"+{pity_points} điểm phần trăm\nThất bại +5 · tối đa +20", inline=True)
+    e.add_field(name=T.PITY_LABEL, value=f"+{pity_points} điểm\n{T.PITY_HINT}", inline=True)
     if preview.get("needs_tribulation"):
-        e.add_field(name="Thiên kiếp", value="Cần Ứng Thiên Kiếp", inline=True)
+        e.add_field(name="Thiên kiếp", value="Cần **Ứng Thiên Kiếp** (`.thienkiep`)", inline=True)
     if preview.get("needs_thunder_tribulation"):
-        e.add_field(
-            name="⚡ Cửu Lôi Kiếp",
-            value=(
-                "Đột phá đại cảnh giới từ Kim Đan trở đi sẽ chịu **9 tia sét**. "
-                "Mỗi tia mạnh hơn tia trước; hãy chuẩn bị **Lôi Kiếp Đan**, "
-                "**Cửu Lôi Hộ Thân Phù** hoặc pháp bảo có kháng lôi."
-            ),
-            inline=False,
-        )
-        e.add_field(name="Khí huyết trước kiếp", value=f"{preview.get('current_hp', 0)}/{preview.get('max_hp', 0)} HP", inline=True)
+        e.add_field(name=f"⚡ {T.THUNDER_TITLE}", value=T.THUNDER_HINT, inline=False)
+        e.add_field(name="Khí huyết trước kiếp", value=f"{preview.get('current_hp', 0)}/{preview.get('max_hp', 0)}", inline=True)
         resistance = float(preview.get("thunder_equipment_resistance", 0.0))
-        e.add_field(name="Kháng lôi từ pháp bảo", value=f"{resistance:.0%}", inline=True)
+        e.add_field(name="Kháng lôi (pháp bảo)", value=f"{resistance:.0%}", inline=True)
     return e
 
 
 def player_embed(
     info: dict, *, combat_stats: dict | None = None, show_currency: bool = False
 ) -> discord.Embed:
-    """Player HUD; private currency is opt-in and reserved for the self /info command."""
+    """Hồ sơ đạo hữu — chỉ số thân thể và chiến lực."""
+    from ui import copy as T
     p = info["player"]
     path_name = f"{EMOJI['faction_tien']} Tiên Đạo" if p.path == "tien" else f"{EMOJI['faction_ma']} Ma Đạo"
     stats = combat_stats or {"max_hp": p.max_hp, "attack": p.attack, "defense": p.defense}
@@ -72,29 +67,32 @@ def player_embed(
     displayed_hp = min(max(0, int(p.hp)), effective_max_hp)
     hp_ratio = max(0.0, min(1.0, displayed_hp / effective_max_hp))
 
-    e = base_embed(f"🧑‍🚀 HỒ SƠ TU SĨ · {p.display_name}", f"**{info['realm']}**\n{path_name}  ·  *Hồ sơ nhân vật / chỉ số thực chiến*")
-    e.add_field(name="🌌 Cảnh giới", value=f"**{info['realm']}**", inline=True)
+    e = base_embed(
+        T.PROFILE_TITLE.format(name=p.display_name),
+        T.PROFILE_SUB.format(realm=info["realm"], path=path_name),
+    )
+    e.add_field(name="Cảnh giới", value=f"**{info['realm']}**", inline=True)
     if show_currency:
-        e.add_field(name="🪙 Linh thạch", value=f"**{fmt_amount(p.spirit_stones)}**", inline=True)
-    e.add_field(name="☯️ Đạo lộ", value=f"**{p.dao_type or 'Chưa khai Đạo'}**", inline=True)
+        e.add_field(name="Linh thạch", value=f"**{fmt_amount(p.spirit_stones)}**", inline=True)
+    e.add_field(name="Đạo quả", value=f"**{p.dao_type or 'Chưa cầu đạo'}**", inline=True)
     e.add_field(
-        name="❤️ Khí huyết",
-        value=f"`{progress_bar(displayed_hp, effective_max_hp, 10)}` **{hp_ratio:.0%}**\n{displayed_hp:,} / {effective_max_hp:,} HP",
+        name="Khí huyết",
+        value=f"`{progress_bar(displayed_hp, effective_max_hp, 10)}` **{hp_ratio:.0%}**\n{displayed_hp:,} / {effective_max_hp:,}",
         inline=False,
     )
     e.add_field(
-        name="⚔️ Chiến lực thực tế",
+        name="Chiến lực",
         value=f"{EMOJI['att']} Công **{int(stats.get('attack', p.attack)):,}**\n{EMOJI['def']} Thủ **{int(stats.get('defense', p.defense)):,}**",
         inline=True,
     )
     e.add_field(
-        name="🌱 Thiên phú",
+        name="Căn cơ · Ngộ tính",
         value=f"Căn cơ **{p.root}**\nNgộ tính **{p.insight}**",
         inline=True,
     )
     e.add_field(
-        name="✨ Tu vi hiện tại",
-        value=f"**{fmt_amount(p.cultivation)}**\n*Tiếp tục tu luyện để tích lũy đạo hạnh.*",
+        name="Tu vi",
+        value=f"**{fmt_amount(p.cultivation)}**\n*Tĩnh tọa (`.tu`) để tích lũy thêm.*",
         inline=True,
     )
     return e
@@ -283,14 +281,14 @@ def inventory_embed(
     visible = items[start:start + page_size]
 
     description = (
-        f"**TÚI CÀN KHÔN**  ·  {category}\n"
+        f"**Túi Càn Khôn**  ·  {category}\n"
         f"{len(items)} loại vật phẩm  ·  Tổng cộng **{total_quantity:,}** món\n"
-        "*Chọn danh mục → chọn món → xem chỉ số → thao tác.*"
+        "*Chọn loại → chọn món → xem rõ → dùng hoặc trang bị.*"
     )
     if notice:
         description = f"{notice}\n\n{description}"
 
-    embed = base_embed(f"{EMOJI['item']} TÚI CÀN KHÔN", description)
+    embed = base_embed(f"{EMOJI['item']} Túi Càn Khôn", description)
 
     if selected:
         icon = inventory_item_icon(selected)
@@ -318,9 +316,9 @@ def inventory_embed(
         embed.add_field(name=f"📦 Danh sách · {start + 1}–{start + len(visible)}", value="\n".join(lines)[:1024], inline=False)
 
     if max_page > 0:
-        footer = f"TÚI CÀN KHÔN · Trang {page + 1}/{max_page + 1} · Chọn loại → chọn món → thao tác"
+        footer = f"Túi Càn Khôn · Trang {page + 1}/{max_page + 1} · Chọn loại → chọn món → thao tác"
     else:
-        footer = "TÚI CÀN KHÔN · Chọn loại → chọn món → thao tác nhanh"
+        footer = "Túi Càn Khôn · Chọn loại → chọn món → thao tác nhanh"
     embed.set_footer(text=footer)
     return embed
 

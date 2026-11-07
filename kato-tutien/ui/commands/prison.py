@@ -8,6 +8,10 @@ from typing import Any
 import discord
 
 import config
+from game.moderation.guild_settings import resolve_prison_settings
+
+def _prison_settings(engine, guild_id) -> dict:
+    return resolve_prison_settings(engine.db, guild_id)
 from game.moderation.prison_repository import PrisonError
 
 logger = logging.getLogger("kato.prison")
@@ -82,28 +86,38 @@ async def _restore_permissions(
         )
 
 
-async def _reapply_restrictions_safely(guild: discord.Guild, member: discord.Member) -> None:
+async def _reapply_restrictions_safely(guild: discord.Guild, member: discord.Member, engine) -> None:
     """Fail closed if release restored only some member overwrites."""
     try:
+        channel_id = int(resolve_prison_settings(engine.db, guild.id)["prison_channel_id"] or 0)
+        if not channel_id:
+            return
         await _apply_prison_restrictions(
-            guild, member, config.PRISON_CHANNEL_ID, "Khôi phục giới hạn sau thao tác thả tù lỗi"
+            guild, member, channel_id, "Khôi phục giới hạn sau thao tác thả tù lỗi"
         )
     except Exception:
         logger.exception("Unable to reapply prison restrictions in guild %s", guild.id)
 
 
-async def _configured_entities(guild: discord.Guild) -> tuple[discord.Role, discord.TextChannel, discord.TextChannel | None]:
-    if not config.PRISON_ROLE_ID or not config.PRISON_CHANNEL_ID:
-        raise PrisonError("Thiếu cấu hình KATO_PRISON_ROLE_ID hoặc KATO_PRISON_CHANNEL_ID.")
-    role = guild.get_role(config.PRISON_ROLE_ID)
-    prison_channel = guild.get_channel(config.PRISON_CHANNEL_ID)
-    announce_channel = guild.get_channel(config.PRISON_ANNOUNCE_CHANNEL_ID) if config.PRISON_ANNOUNCE_CHANNEL_ID else None
+async def _configured_entities(guild: discord.Guild, engine) -> tuple[discord.Role, discord.TextChannel, discord.TextChannel, dict]:
+    settings = resolve_prison_settings(engine.db, guild.id)
+    role_id = int(settings["prison_role_id"] or 0)
+    channel_id = int(settings["prison_channel_id"] or 0)
+    announce_id = int(settings["prison_announce_channel_id"] or 0)
+    if not role_id or not channel_id:
+        raise PrisonError(
+            "Chưa cấu hình lao ngục. Admin mở **Cấu hình máy chủ** (`.admin` → Cấu hình) "
+            "hoặc `/thiendao caidat` để chọn role và kênh trong Discord."
+        )
+    role = guild.get_role(role_id)
+    prison_channel = guild.get_channel(channel_id)
+    announce_channel = guild.get_channel(announce_id) if announce_id else None
     if role is None:
-        raise PrisonError("Không tìm thấy role tù nhân. Hãy kiểm tra KATO_PRISON_ROLE_ID.")
+        raise PrisonError("Không tìm thấy role tù nhân. Hãy chọn lại role trong Cấu hình máy chủ.")
     if not isinstance(prison_channel, discord.TextChannel):
-        raise PrisonError("Không tìm thấy kênh văn bản lao ngục. Hãy kiểm tra KATO_PRISON_CHANNEL_ID.")
+        raise PrisonError("Không tìm thấy kênh lao ngục. Hãy chọn kênh text trong Cấu hình máy chủ.")
     if not isinstance(announce_channel, discord.TextChannel):
-        raise PrisonError("Hãy cấu hình KATO_PRISON_ANNOUNCE_CHANNEL_ID bằng ID một kênh văn bản.")
+        raise PrisonError("Chưa chọn kênh thông báo mãn hạn. Hãy cấu hình trong Cấu hình máy chủ.")
     bot_member = guild.me
     if bot_member is None:
         raise PrisonError("Không xác định được thành viên bot trong máy chủ.")
@@ -113,7 +127,7 @@ async def _configured_entities(guild: discord.Guild) -> tuple[discord.Role, disc
         raise PrisonError("Bot cần quyền View Channel và Send Messages trong kênh lao ngục.")
     if not announce_permissions.view_channel or not announce_permissions.send_messages:
         raise PrisonError("Bot cần quyền View Channel và Send Messages trong kênh thông báo mãn hạn tù.")
-    return role, prison_channel, announce_channel
+    return role, prison_channel, announce_channel, settings
 
 
 async def _release_session(guild: discord.Guild, client: discord.Client, engine, session: dict[str, Any]) -> dict[str, Any]:
@@ -126,9 +140,10 @@ async def _release_session(guild: discord.Guild, client: discord.Client, engine,
     else:
         if fresh["status"] != "release_pending":
             raise PrisonError("Phiên tù chưa ở trạng thái chờ thả.")
-        role = guild.get_role(int(config.PRISON_ROLE_ID)) if config.PRISON_ROLE_ID else None
+        settings = resolve_prison_settings(engine.db, guild.id)
+        role = guild.get_role(int(settings["prison_role_id"])) if settings["prison_role_id"] else None
         if role is None:
-            raise PrisonError("Không tìm thấy role tù nhân; chưa thể thả tù an toàn.")
+            raise PrisonError("Không tìm thấy role tù nhân; chưa thể thả tù an toàn. Kiểm tra Cấu hình máy chủ.")
         bot_member = guild.me
         if bot_member is None or not bot_member.guild_permissions.manage_roles or not bot_member.guild_permissions.manage_channels:
             raise PrisonError("Bot cần quyền Manage Roles và Manage Channels để khôi phục quyền tù nhân.")
@@ -148,7 +163,7 @@ async def _release_session(guild: discord.Guild, client: discord.Client, engine,
             if role in member.roles:
                 await member.remove_roles(role, reason="Kato Prison | Hoàn thành lao dịch")
         except Exception:
-            await _reapply_restrictions_safely(guild, member)
+            await _reapply_restrictions_safely(guild, member, engine)
             logger.exception("Prison release Discord step failed for session %s", fresh["session_id"])
             raise PrisonError("Discord chưa khôi phục đủ quyền. Phiên tù vẫn được giữ ở trạng thái chờ xử lý; có thể thử lại.")
         try:
@@ -158,7 +173,7 @@ async def _release_session(guild: discord.Guild, client: discord.Client, engine,
             # the jail restriction and role before leaving the session pending.
             try:
                 await _apply_prison_restrictions(
-                    guild, member, config.PRISON_CHANNEL_ID,
+                    guild, member, int(settings["prison_channel_id"]),
                     "Khôi phục giới hạn do quyết toán lao dịch chưa hoàn tất",
                 )
                 if role not in member.roles:
@@ -173,11 +188,12 @@ async def _release_session(guild: discord.Guild, client: discord.Client, engine,
     # Announcement is deliberately separate from the DB payout transaction.
     # The payout itself is idempotent even if sending an announcement needs retry.
     completed = engine.prison.get_session(int(fresh["session_id"])) or fresh
-    if not int(completed.get("announcement_sent_at") or 0) and config.PRISON_ANNOUNCE_CHANNEL_ID:
-        channel = guild.get_channel(config.PRISON_ANNOUNCE_CHANNEL_ID)
+    announce_id = int(resolve_prison_settings(engine.db, guild.id)["prison_announce_channel_id"] or 0)
+    if not int(completed.get("announcement_sent_at") or 0) and announce_id:
+        channel = guild.get_channel(announce_id)
         if channel is None:
             try:
-                channel = await client.fetch_channel(config.PRISON_ANNOUNCE_CHANNEL_ID)
+                channel = await client.fetch_channel(announce_id)
             except (discord.Forbidden, discord.NotFound, discord.HTTPException):
                 logger.exception("Could not fetch prison announcement channel")
                 return payout
@@ -214,7 +230,7 @@ async def start_prison(
     guild = interaction.guild
     if guild is None:
         raise PrisonError("Lệnh phạt tù chỉ dùng trong máy chủ Discord.")
-    role, prison_channel, _ = await _configured_entities(guild)
+    role, prison_channel, _, settings = await _configured_entities(guild, engine)
     bot_member = guild.me
     if bot_member is None or not bot_member.guild_permissions.manage_roles or not bot_member.guild_permissions.manage_channels:
         raise PrisonError("Bot cần quyền Manage Roles và Manage Channels trước khi phạt tù.")
@@ -279,9 +295,12 @@ async def recover_prison_workflows(client: discord.Client, engine) -> None:
     """Retry interrupted setup rollbacks and releases after a bot restart."""
     for session in engine.prison.get_preparing_sessions():
         guild = client.get_guild(int(session["guild_id"]))
-        if guild is None or not config.PRISON_ROLE_ID:
+        if guild is None:
             continue
-        role = guild.get_role(config.PRISON_ROLE_ID)
+        settings = resolve_prison_settings(engine.db, guild.id)
+        if not settings["prison_role_id"]:
+            continue
+        role = guild.get_role(int(settings["prison_role_id"]))
         if role is None:
             continue
         snapshot = engine.prison.permission_snapshot(session)
@@ -336,7 +355,7 @@ async def handle_prisoner_rejoin(member: discord.Member, client: discord.Client,
     if session["status"] in ("preparing", "release_pending"):
         await recover_prison_workflows(client, engine)
         return
-    role, prison_channel, _ = await _configured_entities(member.guild)
+    role, prison_channel, _, settings = await _configured_entities(member.guild, engine)
     bot_member = member.guild.me
     if bot_member is None or not bot_member.guild_permissions.manage_roles or not bot_member.guild_permissions.manage_channels:
         raise PrisonError("Bot thiếu Manage Roles hoặc Manage Channels để khôi phục trạng thái tù.")
@@ -355,13 +374,14 @@ async def cmd_prison_mine(ctx, message: discord.Message, args: list[str] | None 
         await message.reply(embed=error_embed("Lệnh này chỉ dùng trong máy chủ lao ngục."))
         return
     try:
+        settings = resolve_prison_settings(ctx.engine.db, message.guild.id)
         result = ctx.engine.prison.mine(
             guild_id=str(message.guild.id),
             user_id=str(message.author.id),
             channel_id=str(message.channel.id),
-            expected_channel_id=str(config.PRISON_CHANNEL_ID),
+            expected_channel_id=str(settings["prison_channel_id"]),
             event_id=str(message.id),
-            cooldown_seconds=config.PRISON_COOLDOWN_SECONDS,
+            cooldown_seconds=int(settings["prison_cooldown_seconds"]),
         )
     except PrisonError as exc:
         await message.reply(embed=error_embed(str(exc)))

@@ -11,6 +11,7 @@ class ModerationService:
     """Thin service facade; Discord API calls remain in the UI adapter."""
 
     def __init__(self, db: Database):
+        self.db = db
         self.repository = ModerationRepository(db)
 
     def record_action(self, **case_data: Any) -> dict[str, Any]:

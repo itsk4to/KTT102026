@@ -223,6 +223,18 @@ def migrate_17_to_18(db) -> None:
     _set_version(db, 18)
 
 
+def migrate_18_to_19(db) -> None:
+    db.execute(
+        """CREATE TABLE IF NOT EXISTS guild_settings (
+            guild_id TEXT NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            PRIMARY KEY (guild_id, key)
+        )"""
+    )
+    _set_version(db, 19)
+
+
 _MIGRATIONS = {
     0: migrate_0_to_1,
     1: migrate_1_to_2,
@@ -242,6 +254,7 @@ _MIGRATIONS = {
     15: migrate_15_to_16,
     16: migrate_16_to_17,
     17: migrate_17_to_18,
+    18: migrate_18_to_19,
 }
 
 

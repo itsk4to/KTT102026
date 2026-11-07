@@ -17,8 +17,9 @@ async def cmd_create(ctx, message: discord.Message, args: list[str] | None = Non
             await message.reply(embed=error_embed(str(e)))
         return
     from ui.views.start_path_view import PathChoiceView
+    from ui import copy as T
     await message.reply(
-        embed=base_embed("Khai Đạo", "Ngươi đứng trước ngã rẽ đầu tiên. Chọn con đường muốn bước lên."),
+        embed=base_embed(T.PATH_TITLE, T.PATH_BODY),
         view=PathChoiceView(ctx.engine, str(message.author.id), message.author.display_name),
     )
 
@@ -35,10 +36,12 @@ async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None)
     """Show a paginated help guide, keeping every embed under Discord limits."""
     from ui.views.help_view import HelpView
 
+    from ui import copy as T
+
     category_pages = [
-        (f"{EMOJI.get('technique', '📖')} Cẩm Nang · 1/3", "BƯỚC ĐẦU & TU LUYỆN", {"start", "cultivation", "explore", "world"}),
-        (f"{EMOJI.get('item', '📖')} Cẩm Nang · 2/3", "TÚI, GIAO DỊCH & CHIẾN ĐẤU", {"trade", "combat"}),
-        (f"{EMOJI.get('sect', '📖')} Cẩm Nang · 3/3", "TÔNG MÔN, ĐẠO & HỆ THỐNG", {"sect", "dao", "social", "system"}),
+        (f"{EMOJI.get('technique', '📖')} {T.HELP_WELCOME_TITLE} · 1/3", "KHAI ĐẠO · TU LUYỆN · XUẤT HÀNH", {"start", "cultivation", "explore", "world"}),
+        (f"{EMOJI.get('item', '📖')} {T.HELP_WELCOME_TITLE} · 2/3", "TÚI CÀN KHÔN · GIAO DỊCH · CHIẾN ĐẤU", {"trade", "combat"}),
+        (f"{EMOJI.get('sect', '📖')} {T.HELP_WELCOME_TITLE} · 3/3", "TÔNG MÔN · ĐẠO QUẢ · HỆ THỐNG", {"sect", "dao", "social", "system"}),
     ]
     pages = []
     rendered_names: set[str] = set()
@@ -46,42 +49,28 @@ async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None)
     for page_index, (title, heading, categories) in enumerate(category_pages):
         lines: list[str] = []
         if page_index == 0:
-            lines.extend([
-                f"**Chào mừng đạo hữu đến Kato Tu Tiên!**",
-                "Có thể gõ lệnh nhanh **hoặc** mở `.menu` rồi chạm nút trên giao diện.",
-                "",
-                f"**{EMOJI.get('cultivate', '🌱')} LỘ TRÌNH NGƯỜI MỚI (5 BƯỚC)**",
-                f"1. `{EMOJI.get('cultivator', '🧘')}` **`.tutien`** — chọn **Tiên Đạo** hoặc **Ma Đạo**.",
-                f"2. **`.menu`** — mở **Trung tâm** (HUD + mọi hệ thống).",
-                f"3. **`.tu`** — tu luyện tích lũy tu vi · **`.daily`** điểm danh.",
-                f"4. **`.dotpha`** khi đủ tu vi · **`.tk`** nếu cần thiên kiếp.",
-                f"5. **`.khampha`** xuất hành · **`.bicanh`** bí cảnh 3 giờ · **`.shop`** / **`.tui`**.",
-                "",
-                "*Gợi ý:* trên điện thoại hãy dùng **nút** trong `.menu` thay vì nhớ hết lệnh.",
-                "",
-            ])
+            lines.extend([T.HELP_WELCOME, ""])
         lines.append(f"**{heading}**")
         for spec in ctx.command_specs:
             if spec.category not in categories or spec.name in rendered_names:
                 continue
             rendered_names.add(spec.name)
             aliases = [f".{alias}" for alias in spec.aliases if alias != spec.name]
-            alias_text = f" · *Bí danh:* {', '.join(aliases)}" if aliases else ""
+            alias_text = f" · *cũng gọi:* {', '.join(aliases)}" if aliases else ""
             lines.append(f"**`{spec.usage}`** — {spec.description}{alias_text}")
 
         if page_index == 2:
             lines.extend([
                 "",
                 f"**{EMOJI.get('cultivator', '💞')} ĐẠO LỮ & SONG TU**",
-                "`.ketduyen @đạo_hữu` gửi cầu duyên (đối phương phải đồng ý). "
-                "`.daolu` mở giao diện · `.songtu` cả hai nhận tu vi (hồi 60 phút/cặp).",
+                "`.ketduyen @đạo_hữu` gửi lời cầu duyên (đối phương phải nhận). "
+                "`.daolu` xem duyên phận · `.songtu` cùng nhau tăng tu vi (mỗi cặp 60 phút một lần).",
                 "",
-                f"**{EMOJI.get('ok', '✅')} MẸO NHANH**",
-                "• `.menu` = Trung tâm game (nên dùng trước).",
-                "• `.help` = cẩm nang này (lật trang bằng nút **Trước / Sau**).",
-                "• `.bxh tien` / `.bxh ma` — Thiên Bảng theo phe.",
-                "• `.vatpham <tên|ID>` — tra vật phẩm (chấp nhận không dấu).",
-                "• `.thao` tháo hết trang bị · `.thao <ô>` tháo một ô.",
+                f"**{EMOJI.get('ok', '✅')} LỜI KHUYÊN**",
+                "• Vào **`.menu`** trước — mọi cửa ải đều ở đó.",
+                "• **`.help`** để xem lại cẩm nang (nút Trước / Sau).",
+                "• **`.bxh tien`** / **`.bxh ma`** — Thiên Bảng theo đạo lộ.",
+                "• **`.vatpham <tên>`** — tra đan dược, pháp bảo (không dấu cũng được).",
             ])
         pages.append(base_embed(title, "\n".join(lines)))
 
@@ -109,7 +98,7 @@ async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None)
 
 
 async def cmd_info(ctx, message: discord.Message, args: list[str] | None = None) -> None:
-    """`.info` sends own details by DM; `.info @player` shows a safe public card."""
+    """`.info` — hồ sơ riêng chỉ người gọi thấy trong kênh; `.info @player` công khai."""
     try:
         target_id = None
         if args:
@@ -120,7 +109,10 @@ async def cmd_info(ctx, message: discord.Message, args: list[str] | None = None)
             elif args[0].isdigit():
                 target_id = args[0]
             else:
-                await message.reply(embed=error_embed("Hãy dùng `.info` để xem hồ sơ riêng hoặc `.info @player` để xem hồ sơ công khai."))
+                await message.reply(embed=error_embed(
+                    "Dùng **`.info`** để xem hồ sơ riêng (chỉ mình thấy), "
+                    "hoặc **`.info @đạo_hữu`** để xem hồ sơ công khai."
+                ))
                 return
 
         if target_id:
@@ -130,15 +122,40 @@ async def cmd_info(ctx, message: discord.Message, args: list[str] | None = None)
             return
 
         info = ctx.engine.players.info_text(str(message.author.id))
-        embed = player_embed(info, combat_stats=ctx.engine.combat.battle_stats(info["player"]), show_currency=True)
-        try:
-            await message.author.send(embed=embed)
-        except discord.Forbidden:
-            await message.reply(embed=error_embed("Mình không thể gửi tin nhắn riêng cho bạn. Hãy bật DM từ thành viên máy chủ hoặc dùng lệnh slash `/info` để xem hồ sơ riêng."))
-            return
-        await message.reply("📩 Mình đã gửi hồ sơ riêng qua DM.", mention_author=False)
+        embed = player_embed(
+            info,
+            combat_stats=ctx.engine.combat.battle_stats(info["player"]),
+            show_currency=True,
+        )
+        # Prefix commands cannot be truly ephemeral. Offer one-tap private reveal
+        # so only the command user sees the full hồ sơ in this channel.
+        view = _PrivateInfoView(str(message.author.id), embed)
+        await message.reply(
+            content="Hồ sơ riêng đã sẵn sàng — **chỉ đạo hữu** mở được (chạm nút bên dưới).",
+            view=view,
+            mention_author=False,
+        )
     except GameError as e:
         await message.reply(embed=error_embed(str(e)))
+
+
+class _PrivateInfoView(discord.ui.View):
+    """One-tap reveal: hồ sơ gửi ephemeral trong đúng kênh đang đứng."""
+
+    def __init__(self, owner_id: str, embed: discord.Embed, timeout: float = 120):
+        super().__init__(timeout=timeout)
+        self.owner_id = owner_id
+        self.embed = embed
+
+    @discord.ui.button(label="Xem hồ sơ riêng", style=discord.ButtonStyle.primary, emoji="📜")
+    async def reveal(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
+        if str(interaction.user.id) != self.owner_id:
+            await interaction.response.send_message(
+                "Hồ sơ này không thuộc về đạo hữu.",
+                ephemeral=True,
+            )
+            return
+        await interaction.response.send_message(embed=self.embed, ephemeral=True)
 
 async def cmd_leaderboard(ctx, message: discord.Message, args: list[str] | None = None) -> None:
     path = args[0].lower() if args and args[0].lower() in ("tien", "ma") else None

@@ -16,6 +16,7 @@ import discord
 from discord import app_commands
 
 import config
+from game.moderation.guild_settings import resolve_mod_log_channel_id, resolve_prison_settings
 from game.moderation.service import ModerationService
 from game.security.permissions import is_owner
 
@@ -199,7 +200,8 @@ class ModerationGroup(app_commands.Group):
         )
 
     async def _post_log(self, interaction: discord.Interaction, case: dict[str, Any]) -> None:
-        channel_id = config.MOD_LOG_CHANNEL_ID
+        guild_id = interaction.guild_id or 0
+        channel_id = resolve_mod_log_channel_id(self.service.db, guild_id) if guild_id else 0
         if not channel_id:
             return
         client = interaction.client
@@ -656,6 +658,7 @@ def register_moderation_commands(
         return
 
     from game.moderation.prison_repository import PrisonError
+    # caidat registered below with prison commands
     from ui.commands.prison import start_prison, release_prison_for_member
 
     @tree.command(name="phattu", description="Phạt tù Thiên Đạo và đặt chỉ tiêu lao dịch")
@@ -676,9 +679,10 @@ def register_moderation_commands(
             if not handler._is_admin(actor, guild):
                 raise app_commands.AppCommandError("Chỉ Owner/Admin mới được dùng lệnh phạt tù Thiên Đạo.")
             handler._check_target(interaction, member)
-            if required_stones < 1 or required_stones > config.PRISON_MAX_REQUIRED_STONES:
+            max_stones = int(resolve_prison_settings(engine.db, guild.id)["prison_max_required_stones"])
+            if required_stones < 1 or required_stones > max_stones:
                 raise PrisonError(
-                    f"Chỉ tiêu phải từ 1 đến {config.PRISON_MAX_REQUIRED_STONES:,} linh thạch."
+                    f"Chỉ tiêu phải từ 1 đến {max_stones:,} linh thạch."
                 )
             session = await start_prison(
                 interaction, engine=engine, member=member,
@@ -739,3 +743,23 @@ def register_moderation_commands(
         except Exception:
             logger.exception("Unexpected error while releasing prisoner")
             await _send_private(interaction, "Lỗi hệ thống khi thả tù. Phiên tù được giữ để tránh mất quyền truy cập.")
+
+    @tree.command(name="caidat", description="Cấu hình Thiên Đạo / lao ngục: chọn role & kênh trong Discord")
+    async def caidat(interaction: discord.Interaction) -> None:
+        try:
+            actor = handler._actor(interaction)
+            guild = handler._guild(interaction)
+            if not handler._is_admin(actor, guild):
+                raise app_commands.AppCommandError("Chỉ Owner/Admin mới được mở cấu hình máy chủ.")
+            from ui.views.admin_settings_view import AdminSettingsView, build_settings_embed
+            view = AdminSettingsView(engine, str(actor.id), guild.id)
+            await interaction.response.send_message(
+                embed=build_settings_embed(engine, guild),
+                view=view,
+                ephemeral=True,
+            )
+        except app_commands.AppCommandError as exc:
+            await _send_private(interaction, str(exc))
+        except Exception:
+            logger.exception("caidat failed")
+            await _send_private(interaction, "Không mở được bảng cấu hình. Kiểm tra log bot.")

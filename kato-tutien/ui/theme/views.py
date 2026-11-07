@@ -10,6 +10,7 @@ from typing import Any
 
 import discord
 import config
+from game.moderation.guild_settings import resolve_prison_settings
 
 from ui.theme.tokens import BUTTON_EMOJIS, BUTTON_LABELS, DEFAULT_TIMEOUT
 from ui.emoji import resolve_emoji, extract_leading_emoji
@@ -64,10 +65,17 @@ async def prison_view_interaction_allowed(view: Any, interaction: discord.Intera
             ephemeral=True,
         )
         return False
+    prison_channel_id = 0
+    if session and guild is not None and engine is not None:
+        try:
+            prison_channel_id = int(resolve_prison_settings(engine.db, guild.id)["prison_channel_id"] or 0)
+        except Exception:
+            prison_channel_id = int(getattr(config, "PRISON_CHANNEL_ID", 0) or 0)
     jail_context = bool(
         session and guild is not None
         and str(guild.id) == str(session["guild_id"])
-        and interaction.channel_id == config.PRISON_CHANNEL_ID
+        and prison_channel_id
+        and interaction.channel_id == prison_channel_id
     )
     if session and view.__class__.__name__ == "PathChoiceView":
         if not jail_context:
