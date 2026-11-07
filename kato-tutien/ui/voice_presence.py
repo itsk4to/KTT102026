@@ -48,7 +48,7 @@ async def connect_voice_channel(client: discord.Client) -> discord.VoiceClient |
                 pass
 
     try:
-        vc = await channel.connect(reconnect=True, self_deaf=self_deaf)
+        vc = await channel.connect(reconnect=True, self_deaf=self_deaf, self_mute=False)
         logger.info("Joined voice channel %s (%s)", channel.name, channel.id)
         return vc
     except Exception:

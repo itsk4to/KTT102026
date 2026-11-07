@@ -56,6 +56,9 @@ class PrisonService:
     def mark_announcement_sent(self, session_id: int) -> None:
         self.repository.mark_announcement_sent(session_id)
 
+    def close_stale_preparing(self, max_age_seconds: int = 600) -> int:
+        return self.repository.close_stale_preparing(max_age_seconds=max_age_seconds)
+
 
     def get_unannounced_completed(self) -> list[dict[str, Any]]:
         return self.repository.get_unannounced_completed()

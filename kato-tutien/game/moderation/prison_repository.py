@@ -21,7 +21,15 @@ class PrisonRepository:
         timestamp = int(time.time()) if now is None else int(now)
         active = self.get_active_session_for_user(str(user_id))
         if active:
-            raise PrisonError("Người chơi này đang có phiên tù chưa hoàn tất.")
+            # Stuck "preparing" (bot crash mid-setup) older than 10 minutes → auto-fail so admin can re-jail
+            if active.get("status") == "preparing" and timestamp - int(active.get("created_at") or 0) >= 600:
+                self.mark_failed(int(active["session_id"]), "Phiên preparing quá hạn — tự đóng để tránh trùng data.")
+            else:
+                raise PrisonError(
+                    f"Người chơi này đang có phiên tù chưa hoàn tất "
+                    f"(#{active['session_id']}, trạng thái `{active['status']}`). "
+                    f"Dùng `/tha_tu` nếu cần thả thủ công."
+                )
         try:
             cur = self.db.execute(
                 """INSERT INTO prison_sessions
@@ -239,6 +247,18 @@ class PrisonRepository:
             "SELECT * FROM prison_payout_items WHERE payout_id=? ORDER BY user_id", (int(payout_id),)
         )
         return [dict(row) for row in rows]
+
+    def close_stale_preparing(self, max_age_seconds: int = 600, now: int | None = None) -> int:
+        timestamp = int(time.time()) if now is None else int(now)
+        rows = self.db.fetchall(
+            "SELECT session_id, created_at FROM prison_sessions WHERE status='preparing'"
+        )
+        closed = 0
+        for row in rows:
+            if timestamp - int(row["created_at"] or 0) >= int(max_age_seconds):
+                self.mark_failed(int(row["session_id"]), "Auto-close preparing quá hạn")
+                closed += 1
+        return closed
 
     def mark_announcement_sent(self, session_id: int, now: int | None = None) -> None:
         timestamp = int(time.time()) if now is None else int(now)

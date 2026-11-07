@@ -84,7 +84,7 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("stop", ("dungnhac",), "music", "/stop", "Dừng nhạc và xóa hàng chờ.", cmd_stop, False, False),
     CommandSpec("queue", ("hangcho", "q"), "music", "/queue", "Xem hàng chờ nhạc.", cmd_queue, False, False),
     CommandSpec("tts", (), "music", ".tts <văn bản>", "Đọc chữ trong kênh thoại (TTS tiếng Việt).", cmd_tts, True, True),
-    CommandSpec("kthac", (), "system", "/kthac", "Khai thác 10 linh thạch lao dịch mỗi lượt trong kênh lao ngục.", cmd_prison_mine, False, False),
+    CommandSpec("kthac", (), "system", ".kthac", "Khai thác 10 linh thạch lao dịch mỗi lượt trong kênh lao ngục.", cmd_prison_mine, False, True),
     CommandSpec("admin", (), "system", "/admin", "Mở bảng quản trị.", cmd_admin, False, False),
 )
 

@@ -68,7 +68,22 @@ async def speak_in_channel(
 
     try:
         from ui.music.ffmpeg_util import get_ffmpeg_executable
-        source = discord.FFmpegPCMAudio(path, executable=get_ffmpeg_executable())
+        from ui.music.player import _make_audio_source
+        executable = get_ffmpeg_executable()
+        # Local mp3 from edge-tts — Opus preferred
+        try:
+            source = discord.FFmpegOpusAudio(
+                path,
+                executable=executable,
+                options="-vn",
+                bitrate=96,
+            )
+        except Exception:
+            source = discord.FFmpegPCMAudio(
+                path,
+                executable=executable,
+                options="-vn -ac 2 -ar 48000 -f s16le",
+            )
         voice.play(source, after=_after)
     except Exception:
         Path(path).unlink(missing_ok=True)

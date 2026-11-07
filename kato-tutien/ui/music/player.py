@@ -23,8 +23,10 @@ YTDL_OPTS = {
     "geo_bypass": True,
 }
 
+# Discord voice expects 48kHz stereo. Prefer Opus path (FFmpegOpusAudio).
 FFMPEG_BEFORE = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -nostdin"
-FFMPEG_OPTIONS = "-vn -ac 2 -ar 48000"
+FFMPEG_OPUS_OPTIONS = "-vn"
+FFMPEG_PCM_OPTIONS = "-vn -ac 2 -ar 48000 -f s16le"
 
 
 @dataclass
@@ -80,6 +82,27 @@ async def resolve_track(query: str, requester_id: int) -> Track:
     )
 
 
+
+def _make_audio_source(url_or_path: str, executable: str):
+    """Prefer Opus (native Discord codec); fall back to PCM 48k stereo."""
+    try:
+        return discord.FFmpegOpusAudio(
+            url_or_path,
+            executable=executable,
+            before_options=FFMPEG_BEFORE,
+            options=FFMPEG_OPUS_OPTIONS,
+            bitrate=128,
+        )
+    except Exception as opus_err:
+        logger.warning("FFmpegOpusAudio failed (%s); falling back to PCM", opus_err)
+        return discord.FFmpegPCMAudio(
+            url_or_path,
+            executable=executable,
+            before_options=FFMPEG_BEFORE,
+            options=FFMPEG_PCM_OPTIONS,
+        )
+
+
 class GuildMusicPlayer:
     def __init__(self, guild_id: int):
         self.guild_id = guild_id
@@ -101,7 +124,7 @@ class GuildMusicPlayer:
                 await vc.move_to(channel)
             self.voice = vc
             return vc
-        self.voice = await channel.connect(reconnect=True, self_deaf=True)
+        self.voice = await channel.connect(reconnect=True, self_deaf=False, self_mute=False)
         return self.voice
 
     async def enqueue(self, track: Track) -> int:
@@ -149,13 +172,15 @@ class GuildMusicPlayer:
         try:
             from ui.music.ffmpeg_util import get_ffmpeg_executable
             executable = get_ffmpeg_executable()
-            source = discord.FFmpegPCMAudio(
-                track.url,
-                executable=executable,
-                before_options=FFMPEG_BEFORE,
-                options=FFMPEG_OPTIONS,
-            )
-            self.voice.play(source, after=lambda err: self._on_track_end(err))
+            source = _make_audio_source(track.url, executable)
+            # Ensure volume is audible
+            source = discord.PCMVolumeTransformer(source, volume=1.0) if isinstance(source, discord.PCMAudio) else source
+            # FFmpegOpusAudio is not PCM — play directly
+            if isinstance(source, discord.PCMVolumeTransformer):
+                self.voice.play(source, after=lambda err: self._on_track_end(err))
+            else:
+                self.voice.play(source, after=lambda err: self._on_track_end(err))
+            logger.info("Playing %s via %s", track.title, type(source).__name__)
         except Exception:
             logger.exception("Failed to start track %s", track.title)
             self.current = None

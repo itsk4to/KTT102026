@@ -25,14 +25,34 @@ def _member_overwrite_payload(channel: Any, member: discord.Member) -> dict[str,
     return {"allow": int(allow.value), "deny": int(deny.value)}
 
 
-def _capture_permissions(guild: discord.Guild, member: discord.Member, role: discord.Role) -> dict[str, Any]:
-    """Snapshot member-specific overwrites so other prisoners never affect each other."""
-    snapshots: dict[str, Any] = {}
-    for channel in guild.channels:
-        if not hasattr(channel, "set_permissions"):
+def _removable_roles(guild: discord.Guild, member: discord.Member, prison_role: discord.Role) -> list[discord.Role]:
+    """Roles that can be safely removed (not @everyone, not managed, below bot top role)."""
+    bot = guild.me
+    top = bot.top_role if bot else None
+    out: list[discord.Role] = []
+    for role in member.roles:
+        if role.is_default():
             continue
-        snapshots[str(channel.id)] = _member_overwrite_payload(channel, member)
-    return {"role_id": role.id, "member_id": member.id, "channels": snapshots}
+        if role.managed:
+            continue
+        if role.id == prison_role.id:
+            continue
+        if top is not None and role >= top:
+            continue
+        out.append(role)
+    return out
+
+
+def _capture_permissions(guild: discord.Guild, member: discord.Member, role: discord.Role) -> dict[str, Any]:
+    """Snapshot roles to restore after release. Keeps empty channels for backward compatibility."""
+    roles = [r.id for r in _removable_roles(guild, member, role)]
+    return {
+        "role_id": role.id,
+        "member_id": member.id,
+        "roles": roles,
+        "channels": {},  # legacy field — no longer rewriting channel overwrites
+        "mode": "roles",
+    }
 
 
 def _permission_from_payload(value: dict[str, int] | None) -> discord.PermissionOverwrite | None:
@@ -43,40 +63,56 @@ def _permission_from_payload(value: dict[str, int] | None) -> discord.Permission
     return discord.PermissionOverwrite.from_pair(allow, deny)
 
 
-async def _apply_prison_restrictions(
-    guild: discord.Guild, member: discord.Member, prison_channel_id: int, reason: str
+async def _strip_roles_and_jail(
+    guild: discord.Guild,
+    member: discord.Member,
+    prison_role: discord.Role,
+    snapshot: dict[str, Any],
+    reason: str,
 ) -> None:
-    # Member-specific overwrites are necessary: another role's channel allow
-    # must not override the prisoner's restriction. The shared prison role is
-    # used as a marker and is deliberately not modified per-session.
-    for channel in guild.channels:
-        if not hasattr(channel, "set_permissions"):
-            continue
-        overwrite = channel.overwrites_for(member)
-        if channel.id == prison_channel_id:
-            overwrite.view_channel = True
-            overwrite.send_messages = True
-            overwrite.read_message_history = True
-            overwrite.add_reactions = False
-        else:
-            overwrite.view_channel = False
-            overwrite.send_messages = False
-            overwrite.add_reactions = False
-            overwrite.connect = False
-            overwrite.speak = False
-        await channel.set_permissions(member, overwrite=overwrite, reason=f"Kato Prison | {reason[:350]}")
+    """Remove saved roles and grant the configured prison role."""
+    role_ids = snapshot.get("roles") or []
+    to_remove = [r for r in member.roles if r.id in set(int(x) for x in role_ids)]
+    if to_remove:
+        await member.remove_roles(*to_remove, reason=f"Kato Prison | Tước role | {reason[:280]}")
+    if prison_role not in member.roles:
+        await member.add_roles(prison_role, reason=f"Kato Prison | {reason[:350]}")
 
 
 async def _restore_permissions(
     guild: discord.Guild, member: discord.Member, snapshot: dict[str, Any]
 ) -> None:
+    """Restore pre-prison roles and remove prison role. Supports legacy channel snapshots."""
+    mode = snapshot.get("mode") or ("roles" if snapshot.get("roles") is not None else "channels")
+    prison_role_id = int(snapshot.get("role_id") or 0)
+    prison_role = guild.get_role(prison_role_id) if prison_role_id else None
+
+    if mode == "roles" or snapshot.get("roles") is not None:
+        if prison_role is not None and prison_role in member.roles:
+            await member.remove_roles(prison_role, reason="Kato Prison | Thả tù — gỡ role tù")
+        restore_ids = [int(x) for x in (snapshot.get("roles") or [])]
+        to_add: list[discord.Role] = []
+        bot = guild.me
+        top = bot.top_role if bot else None
+        for rid in restore_ids:
+            role = guild.get_role(rid)
+            if role is None or role.managed or role.is_default():
+                continue
+            if top is not None and role >= top:
+                continue
+            if role not in member.roles:
+                to_add.append(role)
+        if to_add:
+            await member.add_roles(*to_add, reason="Kato Prison | Thả tù — trả lại role cũ")
+        return
+
+    # Legacy: channel overwrite restore
     channels = snapshot.get("channels", {})
     if not isinstance(channels, dict):
         raise RuntimeError("Snapshot quyền kênh bị hỏng; không thể khôi phục an toàn.")
     for channel_id, value in channels.items():
         channel = guild.get_channel(int(channel_id))
         if channel is None or not hasattr(channel, "set_permissions"):
-            # A deleted channel has no remaining permissions to restore.
             continue
         overwrite = _permission_from_payload(value)
         await channel.set_permissions(
@@ -84,19 +120,22 @@ async def _restore_permissions(
             overwrite=overwrite,
             reason="Kato Prison | Khôi phục quyền thành viên trước khi phạt tù",
         )
+    if prison_role is not None and prison_role in member.roles:
+        await member.remove_roles(prison_role, reason="Kato Prison | Thả tù — gỡ role tù")
 
 
 async def _reapply_restrictions_safely(guild: discord.Guild, member: discord.Member, engine) -> None:
-    """Fail closed if release restored only some member overwrites."""
+    """Re-apply prison role if release failed mid-way."""
     try:
-        channel_id = int(resolve_prison_settings(engine.db, guild.id)["prison_channel_id"] or 0)
-        if not channel_id:
+        settings = resolve_prison_settings(engine.db, guild.id)
+        role_id = int(settings["prison_role_id"] or 0)
+        role = guild.get_role(role_id) if role_id else None
+        if role is None:
             return
-        await _apply_prison_restrictions(
-            guild, member, channel_id, "Khôi phục giới hạn sau thao tác thả tù lỗi"
-        )
+        if role not in member.roles:
+            await member.add_roles(role, reason="Kato Prison | Khôi phục role tù sau lỗi thả")
     except Exception:
-        logger.exception("Unable to reapply prison restrictions in guild %s", guild.id)
+        logger.exception("Unable to reapply prison role in guild %s", guild.id)
 
 
 async def _configured_entities(guild: discord.Guild, engine) -> tuple[discord.Role, discord.TextChannel, discord.TextChannel, dict]:
@@ -145,11 +184,11 @@ async def _release_session(guild: discord.Guild, client: discord.Client, engine,
         if role is None:
             raise PrisonError("Không tìm thấy role tù nhân; chưa thể thả tù an toàn. Kiểm tra Cấu hình máy chủ.")
         bot_member = guild.me
-        if bot_member is None or not bot_member.guild_permissions.manage_roles or not bot_member.guild_permissions.manage_channels:
-            raise PrisonError("Bot cần quyền Manage Roles và Manage Channels để khôi phục quyền tù nhân.")
+        if bot_member is None or not bot_member.guild_permissions.manage_roles:
+            raise PrisonError("Bot cần quyền Manage Roles để khôi phục role tù nhân.")
         snapshot = engine.prison.permission_snapshot(fresh)
-        if not snapshot or "channels" not in snapshot:
-            raise PrisonError("Thiếu snapshot quyền trước khi phạt tù; bot từ chối tự mở kênh.")
+        if not snapshot or ("roles" not in snapshot and "channels" not in snapshot):
+            raise PrisonError("Thiếu snapshot role trước khi phạt tù; bot từ chối thả tù tự động.")
         member = guild.get_member(int(fresh["user_id"]))
         if member is None:
             try:
@@ -232,8 +271,8 @@ async def start_prison(
         raise PrisonError("Lệnh phạt tù chỉ dùng trong máy chủ Discord.")
     role, prison_channel, _, settings = await _configured_entities(guild, engine)
     bot_member = guild.me
-    if bot_member is None or not bot_member.guild_permissions.manage_roles or not bot_member.guild_permissions.manage_channels:
-        raise PrisonError("Bot cần quyền Manage Roles và Manage Channels trước khi phạt tù.")
+    if bot_member is None or not bot_member.guild_permissions.manage_roles:
+        raise PrisonError("Bot cần quyền Manage Roles trước khi phạt tù.")
     if role >= bot_member.top_role:
         raise PrisonError("Role bot phải nằm cao hơn role Tù Nhân trong Server Settings.")
     if role in member.roles:
@@ -245,11 +284,8 @@ async def start_prison(
     session_id = int(session["session_id"])
     snapshot = _capture_permissions(guild, member, role)
     engine.prison.set_permission_snapshot(session_id, snapshot)
-    role_added = False
     try:
-        await member.add_roles(role, reason=f"Kato Prison | {reason[:350]}")
-        role_added = True
-        await _apply_prison_restrictions(guild, member, prison_channel.id, reason)
+        await _strip_roles_and_jail(guild, member, role, snapshot, reason)
         engine.prison.activate(session_id)
     except Exception as exc:
         rollback_ok = True
@@ -257,16 +293,13 @@ async def start_prison(
             await _restore_permissions(guild, member, snapshot)
         except Exception:
             rollback_ok = False
-            logger.exception("Prison setup rollback could not restore all overwrites")
-        if role_added:
-            try:
-                await member.remove_roles(role, reason="Kato Prison | Rollback thiết lập thất bại")
-            except Exception:
-                rollback_ok = False
-                logger.exception("Prison setup rollback could not remove prisoner role")
+            logger.exception("Prison setup rollback could not restore roles")
         if rollback_ok:
             engine.prison.mark_failed(session_id, str(exc))
-        raise PrisonError("Không thể thiết lập quyền lao ngục. Bot đã thử hoàn tác; kiểm tra log và quyền Discord trước khi thử lại.") from exc
+        raise PrisonError(
+            "Không thể tước role / cấp role tù. Bot đã thử hoàn tác; "
+            "kiểm tra thứ tự role bot cao hơn role tù và quyền Manage Roles."
+        ) from exc
 
     engine.moderation.record_action(
         guild_id=str(guild.id), moderator_id=str(interaction.user.id), target_id=str(member.id),
@@ -292,6 +325,11 @@ async def release_completed_prison(guild: discord.Guild, client: discord.Client,
 
 
 async def recover_prison_workflows(client: discord.Client, engine) -> None:
+    try:
+        engine.prison.close_stale_preparing(600)
+    except Exception:
+        logger.exception("close_stale_preparing failed")
+
     """Retry interrupted setup rollbacks and releases after a bot restart."""
     for session in engine.prison.get_preparing_sessions():
         guild = client.get_guild(int(session["guild_id"]))
@@ -304,11 +342,11 @@ async def recover_prison_workflows(client: discord.Client, engine) -> None:
         if role is None:
             continue
         snapshot = engine.prison.permission_snapshot(session)
-        if not snapshot or "channels" not in snapshot:
-            logger.error("Preparing prison session %s has no permission snapshot; no Discord restrictions were safely initialized", session["session_id"])
+        if not snapshot or ("roles" not in snapshot and "channels" not in snapshot):
+            logger.error("Preparing prison session %s has no snapshot", session["session_id"])
             engine.prison.mark_failed(
                 int(session["session_id"]),
-                "Thiếu snapshot quyền trước khi bắt đầu; đánh dấu thất bại để tránh khóa người chơi vĩnh viễn.",
+                "Thiếu snapshot role trước khi bắt đầu; đánh dấu thất bại để tránh khóa người chơi vĩnh viễn.",
             )
             continue
         member = guild.get_member(int(session["user_id"]))
@@ -357,12 +395,13 @@ async def handle_prisoner_rejoin(member: discord.Member, client: discord.Client,
         return
     role, prison_channel, _, settings = await _configured_entities(member.guild, engine)
     bot_member = member.guild.me
-    if bot_member is None or not bot_member.guild_permissions.manage_roles or not bot_member.guild_permissions.manage_channels:
-        raise PrisonError("Bot thiếu Manage Roles hoặc Manage Channels để khôi phục trạng thái tù.")
-    if role not in member.roles:
-        await member.add_roles(role, reason="Kato Prison | Khôi phục phiên tù khi thành viên quay lại")
-    await _apply_prison_restrictions(
-        member.guild, member, prison_channel.id, "Khôi phục hạn chế khi tù nhân quay lại máy chủ"
+    if bot_member is None or not bot_member.guild_permissions.manage_roles:
+        raise PrisonError("Bot thiếu Manage Roles để khôi phục trạng thái tù.")
+    snapshot = engine.prison.permission_snapshot(session)
+    if not snapshot:
+        snapshot = _capture_permissions(member.guild, member, role)
+    await _strip_roles_and_jail(
+        member.guild, member, role, snapshot, "Khôi phục phiên tù khi thành viên quay lại"
     )
 
 
