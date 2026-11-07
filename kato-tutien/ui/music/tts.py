@@ -67,7 +67,8 @@ async def speak_in_channel(
         await asyncio.sleep(0.15)
 
     try:
-        source = discord.FFmpegPCMAudio(path)
+        from ui.music.ffmpeg_util import get_ffmpeg_executable
+        source = discord.FFmpegPCMAudio(path, executable=get_ffmpeg_executable())
         voice.play(source, after=_after)
     except Exception:
         Path(path).unlink(missing_ok=True)

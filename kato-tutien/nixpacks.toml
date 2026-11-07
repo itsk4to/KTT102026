@@ -1,2 +1,5 @@
 [phases.setup]
 nixPkgs = ["python311", "ffmpeg", "nodejs"]
+
+[phases.install]
+cmds = ["pip install -r kato-tutien/requirements.txt"]

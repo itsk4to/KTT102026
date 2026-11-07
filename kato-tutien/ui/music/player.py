@@ -12,19 +12,19 @@ import discord
 logger = logging.getLogger("kato.music")
 
 YTDL_OPTS = {
-    "format": "bestaudio/best",
+    # Prefer pure audio; fall back to best muxed video+audio then let FFmpeg strip video (-vn).
+    "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best/best",
     "quiet": True,
     "no_warnings": True,
     "default_search": "ytsearch",
     "source_address": "0.0.0.0",
     "noplaylist": True,
     "extract_flat": False,
+    "geo_bypass": True,
 }
 
-FFMPEG_OPTS = {
-    "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-    "options": "-vn",
-}
+FFMPEG_BEFORE = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -nostdin"
+FFMPEG_OPTIONS = "-vn -ac 2 -ar 48000"
 
 
 @dataclass
@@ -147,8 +147,14 @@ class GuildMusicPlayer:
             self.current = track
 
         try:
-            source = discord.FFmpegPCMAudio(track.url, **FFMPEG_OPTS)
-            # Volume transform optional
+            from ui.music.ffmpeg_util import get_ffmpeg_executable
+            executable = get_ffmpeg_executable()
+            source = discord.FFmpegPCMAudio(
+                track.url,
+                executable=executable,
+                before_options=FFMPEG_BEFORE,
+                options=FFMPEG_OPTIONS,
+            )
             self.voice.play(source, after=lambda err: self._on_track_end(err))
         except Exception:
             logger.exception("Failed to start track %s", track.title)
