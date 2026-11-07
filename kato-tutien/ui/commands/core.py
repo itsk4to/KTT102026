@@ -72,6 +72,13 @@ async def cmd_help(ctx, message: discord.Message, args: list[str] | None = None)
                 "• **`.bxh tien`** / **`.bxh ma`** — Thiên Bảng theo đạo lộ.",
                 "• **`.vatpham <tên>`** — tra đan dược, pháp bảo (không dấu cũng được).",
             ])
+        if page_index == 2:
+            lines.extend([
+                "",
+                "**QUY ƯỚC LỆNH**",
+                "• Lệnh **game** (tu luyện, túi, tông môn…) → tiền tố **`.`**",
+                "• Lệnh **hệ thống / nhạc / quản trị** → slash **`/`** (`/play`, `/admin`, `/kthac`…)",
+            ])
         pages.append(base_embed(title, "\n".join(lines)))
 
     # If future commands add a category, surface them instead of silently hiding them.

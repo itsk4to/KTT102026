@@ -17,6 +17,7 @@ from ui.commands.admin import cmd_admin
 from ui.commands.dao_lu import cmd_dao_lu, cmd_song_tu
 from ui.commands.quest import cmd_npc, cmd_quest, cmd_world
 from ui.commands.prison import cmd_prison_mine
+from ui.commands.music import cmd_join, cmd_leave, cmd_play, cmd_skip, cmd_stop, cmd_queue
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,9 @@ class CommandSpec:
     description: str
     handler: object
     takes_args: bool = False
+    # True = gõ được bằng tiền tố "." (lệnh game).
+    # False = chỉ slash "/" (nhạc, admin, hệ thống…).
+    prefix: bool = True
 
 
 COMMAND_SPECS: tuple[CommandSpec, ...] = (
@@ -72,8 +76,15 @@ COMMAND_SPECS: tuple[CommandSpec, ...] = (
     CommandSpec("xintong", (), "sect", ".xintong <sect_id>", "Xin gia nhập.", cmd_sect_apply, True),
     CommandSpec("congtong", (), "sect", ".congtong <số>", "Cống hiến.", cmd_sect_contribute, True),
     CommandSpec("roitong", (), "sect", ".roitong", "Rời tông môn.", cmd_sect_leave),
-    CommandSpec("kthac", (), "system", ".kthac", "Khai thác 10 linh thạch lao dịch mỗi lượt trong kênh lao ngục.", cmd_prison_mine),
-    CommandSpec("admin", (), "system", ".admin", "Mở bảng quản trị.", cmd_admin),
+    
+    CommandSpec("join", ("vao",), "music", "/join", "Bot vào kênh thoại của bạn.", cmd_join, False, False),
+    CommandSpec("leave", ("roi",), "music", "/leave", "Bot rời kênh thoại.", cmd_leave, False, False),
+    CommandSpec("play", ("p", "phat"), "music", "/play <link|tên bài>", "Phát nhạc YouTube / tìm tên bài.", cmd_play, True, False),
+    CommandSpec("skip", ("boqua", "next"), "music", "/skip", "Bỏ qua bài đang phát.", cmd_skip, False, False),
+    CommandSpec("stop", ("dungnhac",), "music", "/stop", "Dừng nhạc và xóa hàng chờ.", cmd_stop, False, False),
+    CommandSpec("queue", ("hangcho", "q"), "music", "/queue", "Xem hàng chờ nhạc.", cmd_queue, False, False),
+    CommandSpec("kthac", (), "system", "/kthac", "Khai thác 10 linh thạch lao dịch mỗi lượt trong kênh lao ngục.", cmd_prison_mine, False, False),
+    CommandSpec("admin", (), "system", "/admin", "Mở bảng quản trị.", cmd_admin, False, False),
 )
 
 COMMAND_LOOKUP: dict[str, CommandSpec] = {}

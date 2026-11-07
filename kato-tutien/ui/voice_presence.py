@@ -7,6 +7,7 @@ import logging
 import discord
 
 import config
+from ui.music.player import music_manager
 
 logger = logging.getLogger("kato.voice")
 
@@ -31,6 +32,10 @@ async def connect_voice_channel(client: discord.Client) -> discord.VoiceClient |
     self_deaf = bool(getattr(config, "VOICE_SELF_DEAF", True))
     if existing and existing.is_connected():
         if existing.channel and existing.channel.id == channel.id:
+            return existing
+        # Do not yank the bot away while music is active in another channel.
+        if music_manager.is_music_active(guild.id):
+            logger.info("Skip voice move — music active in guild %s", guild.id)
             return existing
         try:
             await existing.move_to(channel)
